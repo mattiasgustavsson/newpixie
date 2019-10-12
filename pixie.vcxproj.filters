@@ -21,10 +21,10 @@
     <ClInclude Include="source\pixie\thread.h">
       <Filter>pixie</Filter>
     </ClInclude>
-    <ClInclude Include="source\crt_frame.h">
+    <ClInclude Include="source\pixie\crt_frame.h">
       <Filter>pixie</Filter>
     </ClInclude>
-    <ClInclude Include="source\crtemu.h">
+    <ClInclude Include="source\pixie\crtemu.h">
       <Filter>pixie</Filter>
     </ClInclude>
   </ItemGroup>
