@@ -62,13 +62,12 @@ struct pixie_t {
 static thread_atomic_ptr_t g_tls_pixie = { NULL }; 
 
 
-struct pixie_t* pixie_instance( void ) 
-    { 
+struct pixie_t* pixie_instance( void ) { 
     struct pixie_t*  pixie = thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
     int force_exit = thread_atomic_int_load( &pixie->force_exit );
     if( force_exit ) longjmp( pixie->exit_jump, force_exit );
     return pixie; 
-    }
+}
 
 
 static int app_proc( app_t* app, void* user_data ) {
