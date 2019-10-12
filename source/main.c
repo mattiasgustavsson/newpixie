@@ -1,6 +1,7 @@
 #include "pixie/pixie.h"
 
 int pixmain( int argc, char** argv ) {
+
     print( "Hello world!" );
     if( argc > 0 ) print( argv[ 0 ] );
 

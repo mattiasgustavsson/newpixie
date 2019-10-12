@@ -209,7 +209,10 @@
     <ClCompile Include="source\main.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\pixie\app.h" />
+    <ClInclude Include="source\pixie\frametimer.h" />
     <ClInclude Include="source\pixie\pixie.h" />
+    <ClInclude Include="source\pixie\thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

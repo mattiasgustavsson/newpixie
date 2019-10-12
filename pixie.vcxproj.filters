@@ -12,5 +12,14 @@
     <ClInclude Include="source\pixie\pixie.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie\app.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\frametimer.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\thread.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
