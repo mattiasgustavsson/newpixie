@@ -30,6 +30,8 @@ void end( int return_code );
 #include <setjmp.h>
 
 #include "app.h"
+#include "crtemu.h"
+#include "crt_frame.h"
 #include "frametimer.h"
 #include "thread.h"
 
@@ -80,10 +82,20 @@ static int app_proc( app_t* app, void* user_data ) {
     app_screenmode( app, APP_SCREENMODE_WINDOW );
     app_interpolation( app, APP_INTERPOLATION_NONE );
 
+    crtemu_t* crtemu = crtemu_create( NULL );
+    CRTEMU_U64 crt_time_us = 0;
+
+    CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( sizeof( CRT_FRAME_U32 ) * CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT );
+    crt_frame( frame );
+    crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT );
+    free( frame );
+
     frametimer_t* frametimer = frametimer_create( NULL );
     frametimer_lock_rate( frametimer, 60 );
 
     thread_signal_raise( &pixie->app_initialized_signal );
+
+    APP_U64 prev_time = app_time_count( app );       
 
     // Main loop
     while( !thread_atomic_int_load( &pixie->app_exit ) ) {
@@ -99,12 +111,18 @@ static int app_proc( app_t* app, void* user_data ) {
         thread_signal_raise( &pixie->vbl_signal );    
 
         // Present
+        APP_U64 time = app_time_count( app );
+        APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
+        prev_time = time;
+        crt_time_us += delta_time_us;
         thread_mutex_lock( &pixie->screen_mutex );
-        app_present( app, pixie->screen_xbgr, pixie->screen_width, pixie->screen_height, 0xffffff, 0x1c1c1c );
+        crtemu_present( crtemu, crt_time_us, pixie->screen_xbgr, pixie->screen_width, pixie->screen_height, 0xffffff, 0x1c1c1c );
         thread_mutex_unlock( &pixie->screen_mutex );
+        app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
     }
 
     frametimer_destroy( frametimer );
+    crtemu_destroy( crtemu );
     free( pixie->screen_xbgr );
     return 0;
 }
@@ -136,11 +154,8 @@ int run( int (*main)( int, char** ) ) {
 
     int result = 0;
     
-    #pragma warning( push )
-    #pragma warning( disable: 4611 )
     thread_atomic_int_store( &pixie->force_exit, 0 ); 
     int jumpres = setjmp( pixie->exit_jump );
-    #pragma warning( pop )
 
     if( jumpres == 0 )
         result = main( __argc, __argv );
@@ -295,7 +310,16 @@ static u64* default_font( void ) {
 #endif
 #include "app.h"
 
-#define FRAMETIMER_IMPLEMENTATION
+#define CRTEMU_IMPLEMENTATION
+#pragma warning( push )
+#pragma warning( disable: 4204 )
+#include "crtemu.h"
+#pragma warning( pop )
+
+#define CRT_FRAME_IMPLEMENTATION
+#include "crt_frame.h"
+
+    #define FRAMETIMER_IMPLEMENTATION
 #include "frametimer.h"
 
 #define THREAD_IMPLEMENTATION
