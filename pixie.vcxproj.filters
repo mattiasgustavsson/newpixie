@@ -6,9 +6,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\main.c" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="source\pixie\pixie.h">
       <Filter>pixie</Filter>
     </ClInclude>
@@ -27,5 +24,8 @@
     <ClInclude Include="source\pixie\crtemu.h">
       <Filter>pixie</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\main.c" />
   </ItemGroup>
 </Project>

@@ -890,14 +890,12 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     crtemu->last_present_width = width;
     crtemu->last_present_height = height;
 
-    float x1 = -1.0f, y1 = -1.0f, x2 = 1.0f, y2 = 1.0f;
-
     CRTEMU_GLfloat vertices[] = 
         { 
-        x1, y1, 0.0f, 0.0f,
-        x2, y1, 1.0f, 0.0f,
-        x2, y2, 1.0f, 1.0f,
-        x1, y2, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 1.0f, 1.0f,
+        -1.0f,  1.0f, 0.0f, 1.0f,
         };
     crtemu->glBufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), vertices, CRTEMU_GL_STATIC_DRAW );
     crtemu->glBindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
@@ -987,10 +985,10 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
     float hborder = ( window_width - pixel_scale * width ) / 2.0f;
     float vborder = ( window_height - pixel_scale * height ) / 2.0f;
-    x1 = hborder;
-    y1 = vborder;
-    x2 = x1 + pixel_scale * width;
-    y2 = y1 + pixel_scale * height;
+    float x1 = hborder;
+    float y1 = vborder;
+    float x2 = x1 + pixel_scale * width;
+    float y2 = y1 + pixel_scale * height;
 
     x1 = ( x1 / window_width ) * 2.0f - 1.0f;
     x2 = ( x2 / window_width ) * 2.0f - 1.0f;
@@ -999,11 +997,20 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
     CRTEMU_GLfloat screen_vertices[] = 
         { 
-        x1, y1, 0.0f, 0.0f,
-        x2, y1, 1.0f, 0.0f,
-        x2, y2, 1.0f, 1.0f,
-        x1, y2, 0.0f, 1.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
         };
+    screen_vertices[  0 ] = x1;
+    screen_vertices[  1 ] = y1;
+    screen_vertices[  4 ] = x2;
+    screen_vertices[  5 ] = y1;
+    screen_vertices[  8 ] = x2;
+    screen_vertices[  9 ] = y2;
+    screen_vertices[ 12 ] = x1;
+    screen_vertices[ 13 ] = y2;
+
     crtemu->glBufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), screen_vertices, CRTEMU_GL_STATIC_DRAW );
     crtemu->glBindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
 

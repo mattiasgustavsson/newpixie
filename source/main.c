@@ -1,5 +1,9 @@
 #include "pixie/pixie.h"
 
+#ifdef __cplusplus
+using namespace pixie;
+#endif
+
 int pixmain( int argc, char** argv ) {
 
     print( "Hello world!" );
