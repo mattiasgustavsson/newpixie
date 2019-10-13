@@ -32,8 +32,8 @@ typedef unsigned long long u64;
 // API
 
 int run( int (*main)( int, char** ) );
-void wait_vbl( void );
 void end( int return_code );
+void wait_vbl( void );
 
 void print( char const* str );
 
@@ -58,9 +58,9 @@ void print( char const* str );
 // C runtime includes
 #define _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_SECURE_NO_WARNINGS
+#include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
 
 // Libaries includes
 #include "app.h"
@@ -87,22 +87,24 @@ namespace pixie {
 // user thread, so that every API method can access it to perform its function. The app thread gets a pointer to it 
 // through the user_data parameter to the app_proc.
 
-struct pixie_t {
-    jmp_buf exit_jump;
-    thread_atomic_int_t force_exit;
+typedef struct pixie_t {
+    struct {
+        jmp_buf exit_jump; // Jump target set in `run` function, to jump back to when `end` is called
+        thread_atomic_int_t force_exit; // Signals (when set to `INT_MAX`) that user thread should jump to `exit_jump`
+    } exit;
 
-    thread_ptr_t app_thread;
-    thread_atomic_int_t app_exit;
-    thread_signal_t app_initialization_complete;
+    struct {
+        thread_signal_t signal; // Raised by app thread when a frame is finished and the next frame is starting
+        thread_atomic_int_t count; // Incremented for every new frame
+    } vbl;
 
-    thread_signal_t vbl_signal;
-    thread_atomic_int_t vbl_count;
-
-    thread_mutex_t screen_mutex;
-    u32* screen_xbgr;
-    int screen_width;
-    int screen_height;
-};
+    struct { // Temporary screen data
+        thread_mutex_t mutex;
+        u32* xbgr;
+        int width;
+        int height;
+    } screen;
+} pixie_t;
 
 
 // A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
@@ -117,81 +119,99 @@ static thread_atomic_ptr_t g_tls_pixie = { NULL };
 // requesting a shutdown of the program, and in that case do a forced exit (using `longjmp`) no matter how deep down a
 // call stack `pixie_instance` was called from.
 
-struct pixie_t* pixie_instance( void ) { 
+static pixie_t* pixie_instance( void ) { 
     // Get the `pixie_t` pointer for this thread from the global TLS instance `g_tls_pixie`
-    struct pixie_t*  pixie = (struct pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
+    pixie_t*  pixie = (pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
 
     // Check if app thread is requesting a forced exit (the user closed the window) and if so, call the exit point
-    int force_exit = thread_atomic_int_load( &pixie->force_exit );
-    if( force_exit ) longjmp( pixie->exit_jump, force_exit );
+    int force_exit = thread_atomic_int_load( &pixie->exit.force_exit );
+    if( force_exit ) longjmp( pixie->exit.exit_jump, force_exit );
 
     return pixie; 
 }
 
 
-// Main body for the app thread (invoked by calling `app_run` in the `app_thread` thread entry point).
+// Holds the data needed for communicating between user thread and app thread. Most of this will be in pixie, but there
+// are also a few things which only needs to be accessed from within the `run` function and the app thread.
+
+typedef struct app_context_t {
+    pixie_t* pixie; // Main engine state
+    thread_atomic_int_t exit_flag; // Set to 1 by `run` function on user thread to indicate app thread should terminate
+    thread_signal_t init_complete; // Raised by app thread before entering main loop, to indicate `run` may continue
+} app_context_t;
+
+
+// Main body for the app thread (invoked by calling `app_run` in the `app_thread` entry point, invoked from `run`).
 // The app thread runs independently from the user thread, and handles the main window, rendering, audio and input.
-// After all initialization, and just before entering the main loop, it will raise the `app_initialization_complete`
-// signal, which lets the user thread (in the `run` function) know that it is safe to call the users entrypoint.
-// Every iteration through the main loop, the signal `vbl_signal` is raised, and the `vbl_count` value is incremented.
+// After all initialization, and just before entering the main loop, it will raise the `init_complete` signal, which 
+// lets the user thread (in the `run` function) know that it is safe to call the users entry point.
+// Every iteration through the main loop, the signal `vbl.signal` is raised, and the `vbl.count` value is incremented.
 // These are used by the `wait_vbl` function to pause the user thread until the start of the next frame.
 // If the main window is closed (by clicking on the close button), the app thread sets the `force_exit` value to
 // `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The `force_exit` value is
 // checked in the `pixie_instance` function, which is called at the start of every API call.
 
 static int app_proc( app_t* app, void* user_data ) {
-    struct pixie_t* pixie = (struct pixie_t*) user_data;
+    app_context_t* context = (app_context_t*) user_data;
+    pixie_t* pixie = context->pixie;
 
-    pixie->screen_width = 384;
-    pixie->screen_height = 288;
-    pixie->screen_xbgr = (u32*) malloc( sizeof( u32 ) * pixie->screen_width * pixie->screen_height );
-    memset( pixie->screen_xbgr, 0, sizeof( u32 ) * pixie->screen_width * pixie->screen_height );
-
+    // Set up initial app parameters
     app_screenmode( app, APP_SCREENMODE_WINDOW );
     app_interpolation( app, APP_INTERPOLATION_NONE );
 
+    // Create and set up the CRT emulation instance
     crtemu_t* crtemu = crtemu_create( NULL );
     CRTEMU_U64 crt_time_us = 0;
-
     CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( sizeof( CRT_FRAME_U32 ) * CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT );
     crt_frame( frame );
     crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT );
     free( frame );
 
+    // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
+    // even if the user have disabled vsync in their graphics card settings.
     frametimer_t* frametimer = frametimer_create( NULL );
     frametimer_lock_rate( frametimer, 60 );
 
+    // Signal to the `run` function on the user thread that app initialization is complete, and it can start running
+    thread_signal_raise( &context->init_complete );
+
+    // Main loop
     APP_U64 prev_time = app_time_count( app );       
-
-    thread_signal_raise( &pixie->app_initialization_complete );
-
-    while( !thread_atomic_int_load( &pixie->app_exit ) ) {
-        frametimer_update( frametimer );
-
-        if( app_yield( app ) == APP_STATE_EXIT_REQUESTED ) {
-            thread_atomic_int_store( &pixie->force_exit, INT_MAX );
-            thread_atomic_int_add( &pixie->vbl_count, 1 );
-            thread_signal_raise( &pixie->vbl_signal );    
-            break;
+    while( !thread_atomic_int_load( &context->exit_flag ) ) {
+        // Run app update (reading inputs etc)
+        app_state_t app_state = app_yield( app );
+        
+        // Check if the close button on the window was clicked (or Alt+F4 was pressed)
+        if( app_state == APP_STATE_EXIT_REQUESTED ) {
+            // Signal that we need to force the user thread to exit
+            thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX );
+            
+            // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
+            thread_atomic_int_add( &pixie->vbl.count, 1 );
+            thread_signal_raise( &pixie->vbl.signal );    
+            break; 
         }
     
-        // Present
+        // Present the screen buffer to the window
         APP_U64 time = app_time_count( app );
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
         crt_time_us += delta_time_us;
-        thread_mutex_lock( &pixie->screen_mutex );
-        crtemu_present( crtemu, crt_time_us, pixie->screen_xbgr, pixie->screen_width, pixie->screen_height, 0xffffff, 0x1c1c1c );
-        thread_mutex_unlock( &pixie->screen_mutex );
+        thread_mutex_lock( &pixie->screen.mutex );
+        crtemu_present( crtemu, crt_time_us, pixie->screen.xbgr, pixie->screen.width, pixie->screen.height, 0xffffff, 0x1c1c1c );
+        thread_mutex_unlock( &pixie->screen.mutex );
         app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
 
-        thread_atomic_int_add( &pixie->vbl_count, 1 );
-        thread_signal_raise( &pixie->vbl_signal );    
+        // Ensure we don't run faster than 60 frames per second
+        frametimer_update( frametimer );
+
+        // Signal to the game that the frame is completed, and that we are just starting the next one
+        thread_atomic_int_add( &pixie->vbl.count, 1 );
+        thread_signal_raise( &pixie->vbl.signal );    
     }
 
     frametimer_destroy( frametimer );
     crtemu_destroy( crtemu );
-    free( pixie->screen_xbgr );
     return 0;
 }
 
@@ -200,6 +220,45 @@ static int app_proc( app_t* app, void* user_data ) {
 
 static int app_thread( void* user_data ) {
     return app_run( app_proc, user_data, NULL, NULL, NULL );
+}
+
+
+// Create the instance for holding the main engine state. Called from `run` before app thread is started.
+
+static pixie_t* pixie_create( void ) {
+    // Allocate the state and clear it, to avoid uninitialized varible problems
+    pixie_t* pixie = (pixie_t*) malloc( sizeof( pixie_t ) );
+    memset( pixie, 0, sizeof( *pixie ) );
+
+    // Set up `exit` field. The `exit_jump` field is initialized from the `run` function at the desired point
+    thread_atomic_int_store( &pixie->exit.force_exit, 0 ); 
+
+    // Set up `vbl` field
+    thread_signal_init( &pixie->vbl.signal );
+    thread_atomic_int_store( &pixie->vbl.count, 0 );
+
+    // Set up the screen - this will change
+    thread_mutex_init( &pixie->screen.mutex );
+    pixie->screen.width = 384;
+    pixie->screen.height = 288;
+    pixie->screen.xbgr = (u32*) malloc( sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
+    memset( pixie->screen.xbgr, 0, sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
+
+    return pixie;
+}
+
+
+// Destroy the specified pixie instance. Called by `run` function, after app thread has finished.
+
+static void pixie_destroy( pixie_t* pixie ) {
+    // Cleanup `vbl` field
+    thread_signal_term( &pixie->vbl.signal );
+
+    // Cleanup screen
+    free( pixie->screen.xbgr );
+    thread_mutex_term( &pixie->screen.mutex );
+
+    free( pixie );
 }
 
 
@@ -219,45 +278,57 @@ static int app_thread( void* user_data ) {
 // still get back to the `run` function to perform a controlled shutdown.
 
 int run( int (*main)( int, char** ) ) {
+    // Create and initialize the main engine state used by all of pixie
+    pixie_t* pixie = pixie_create();
+
+    // A pointer to the `pixie_t` instance needs to be stored in thread local storage, and before we do, we must create
+    // the TLS instance. But only if it is not already created, and as there's nothing stopping a user from calling the
+    // `run` function from two parallel threads at the same time, we must avoid a race condition. We do this by always
+    // creating a new TLS instance, and then we do a compare-and-swap with the global instance, to only swap if it is 
+    // not already set. If the swap does not return NULL (thus indicating it already held a value), then we destroy the
+    // TLS instance we just created, as it will no longer be needed (we'll have to use the global one instead).
     thread_tls_t pixie_tls = thread_tls_create();
-    if( thread_atomic_ptr_compare_and_swap( &g_tls_pixie, NULL, pixie_tls ) )
-        thread_tls_destroy( pixie_tls );
-
-    struct pixie_t* pixie = (struct pixie_t*) malloc( sizeof( struct pixie_t ) );
-    memset( pixie, 0, sizeof( *pixie ) );
+    if( thread_atomic_ptr_compare_and_swap( &g_tls_pixie, NULL, pixie_tls ) ) thread_tls_destroy( pixie_tls );
+    
+    // Store the `pixie_t` pointer in the thread local storage for the current thread. It will be retrieved by all API
+    // functions so that we don't have to pass around an instance parameter to them.
     thread_tls_set( thread_atomic_ptr_load( &g_tls_pixie ), pixie );
-
-    thread_signal_init( &pixie->vbl_signal );
-    thread_atomic_int_store( &pixie->vbl_count,  0 );
-
-    thread_mutex_init( &pixie->screen_mutex );
-
-    thread_atomic_int_store( &pixie->force_exit, 0 ); 
-    thread_atomic_int_store( &pixie->app_exit, 0 );
-    thread_signal_init( &pixie->app_initialization_complete );
-    pixie->app_thread = thread_create( app_thread, pixie, NULL, THREAD_STACK_SIZE_DEFAULT );
-
-    int result = thread_signal_wait( &pixie->app_initialization_complete, 3000 ) ? EXIT_SUCCESS : EXIT_FAILURE;
+    
+    // Define the `app_context_t` instance which will be shared between `run` function and `app_proc` thread.
+    app_context_t app_context = { NULL };
+    app_context.pixie = pixie;
+    thread_atomic_int_store( &app_context.exit_flag, 0 );
+    thread_signal_init( &app_context.init_complete );
+    
+    // Start the app thread. The entry point `app_thread` will just run `app_proc`
+    thread_ptr_t thread = thread_create( app_thread, &app_context, NULL, THREAD_STACK_SIZE_DEFAULT );
+    
+    // Wait until the app thread have completed its initialization. If it takes more than 5 seconds, we just quit.
+    int result = thread_signal_wait( &app_context.init_complete, 5000 ) ? EXIT_SUCCESS : EXIT_FAILURE;
     if( result == EXIT_SUCCESS ) {
+        // Set up the jump target for the `end` function
         #pragma warning( push )
         #pragma warning( disable: 4611 ) // interaction between '_setjmp' and C++ object destruction is non-portable
-        int jumpres = setjmp( pixie->exit_jump );
+        int jumpres = setjmp( pixie->exit.exit_jump );
         #pragma warning( pop )
 
-        if( jumpres == 0 )
+        // Run the user provided entry point (will be `pixmain` unless `PIXIE_NO_MAIN` was defined)
+        if( jumpres == 0 ) // First time we get here we call `main`. If `exit_jump` was jumped to we will get here again
             result = main( __argc, __argv );
-        else
-            result = jumpres;
+        else // Second time we save the result (`INT_MAX` is mapped to 0, as a jumpres of 0 would call main again)
+            result = ( result == INT_MAX ? EXIT_SUCCESS : result );
     }
 
-    thread_atomic_int_store( &pixie->app_exit, 1 );
-    thread_join( pixie->app_thread );
-    thread_signal_term( &pixie->app_initialization_complete );
-    thread_mutex_term( &pixie->screen_mutex );
-    thread_signal_term( &pixie->vbl_signal );
+    // Terminate the app thread
+    thread_atomic_int_store( &app_context.exit_flag, 1 );
+    thread_join( thread );
+    thread_signal_term( &app_context.init_complete );
+    
+    // Destroy pixie instance, and clear the thread local pointer to it
+    pixie_destroy( pixie );
+    thread_tls_set( thread_atomic_ptr_load( &g_tls_pixie ), NULL );
 
-    free( pixie );
-    return ( result == INT_MAX ? EXIT_SUCCESS : result );
+    return result;
 }
 
 
@@ -265,19 +336,28 @@ int run( int (*main)( int, char** ) ) {
 // as it will use `longjmp` to branch back to the top level of the `run` function.
 
 void end( int return_code ) {
-    struct pixie_t* pixie = pixie_instance();
-    longjmp( pixie->exit_jump, return_code );
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+   
+    // Jump back into the middle of the `run` function, to where `setjmp` was called, regardless of where we called from
+    longjmp( pixie->exit.exit_jump, return_code );
 }
 
 
 // Waits until the start of the next frame. 
 
 void wait_vbl( void ) {
-    struct pixie_t* pixie = pixie_instance();
-    int current_vbl = thread_atomic_int_load( &pixie->vbl_count );
-    while( current_vbl == thread_atomic_int_load( &pixie->vbl_count ) ) {
-        thread_signal_wait( &pixie->vbl_signal, 1000 );    
-        pixie = pixie_instance();
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    // Get the vbl count before we start - we want to wait until it has changed
+    int current_vbl_count = thread_atomic_int_load( &pixie->vbl.count );
+
+    // Since signals might suffer spurious wakeups, we want to loop until we get a new vbl count
+    while( current_vbl_count == thread_atomic_int_load( &pixie->vbl.count ) ) {
+        // Wait until app thread says there is a new frame, or timeout after one second.
+        thread_signal_wait( &pixie->vbl.signal, 1000 );
+
+        // Call `pixie_intance` again, just to trigger the check for `force_exit`, so we can terminate if need be
+        pixie_instance();
     }
 }
 
@@ -285,8 +365,10 @@ void wait_vbl( void ) {
 // Prints the specified string to the screen using the default font.
 
 void print( char const* str ) {
-    struct pixie_t* pixie = pixie_instance();
-    thread_mutex_lock( &pixie->screen_mutex );
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    // Very placeholder font rendering
+    thread_mutex_lock( &pixie->screen.mutex );
     static int x = 32;
     static int y = 44;
     while( *str ) {
@@ -294,7 +376,7 @@ void print( char const* str ) {
         for( int iy = 0; iy < 8; ++iy )
             for( int ix = 0; ix < 8; ++ix )
                 if( chr & ( 1ull << ( ix + iy * 8 ) ) )
-                    pixie->screen_xbgr[ x + ix + ( y + iy ) * pixie->screen_width ] = 0xffffffff; 
+                    pixie->screen.xbgr[ x + ix + ( y + iy ) * pixie->screen.width ] = 0xffffffff; 
         x += 8;
         if( x - 32 >= 320 ) {
             x = 32;
@@ -303,7 +385,7 @@ void print( char const* str ) {
     }
     x = 32;
     y += 8;
-    thread_mutex_unlock( &pixie->screen_mutex );
+    thread_mutex_unlock( &pixie->screen.mutex );
 }
 
 
