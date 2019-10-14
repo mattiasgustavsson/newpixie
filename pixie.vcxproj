@@ -213,7 +213,10 @@
     <ClInclude Include="source\pixie\crtemu.h" />
     <ClInclude Include="source\pixie\crt_frame.h" />
     <ClInclude Include="source\pixie\frametimer.h" />
+    <ClInclude Include="source\pixie\palettize.h" />
     <ClInclude Include="source\pixie\pixie.h" />
+    <ClInclude Include="source\pixie\pixie_data.h" />
+    <ClInclude Include="source\pixie\stb_image.h" />
     <ClInclude Include="source\pixie\thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

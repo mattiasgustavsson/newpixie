@@ -36,8 +36,10 @@ void end( int return_code );
 void wait_vbl( void );
 
 void print( char const* str );
-
-
+void load_palette( char const* string );
+void load_sprite( int data_index, char const* filename );
+void sprite( int spr_index, int x, int y, int data_index );
+void sprite_pos( int spr_index, int x, int y );
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
@@ -67,7 +69,9 @@ void print( char const* str );
 #include "crtemu.h"
 #include "crt_frame.h"
 #include "frametimer.h"
+#include "palettize.h"
 #include "pixie_data.h"
+#include "stb_image.h"
 #include "thread.h"
 
 
@@ -80,6 +84,32 @@ namespace pixie {
     INTERNALS
 ----------------
 */
+
+// In C, a void* can be implicitly cast to any other kind of pointer, while in C++ you need an explicit cast. In most
+// cases, the explicit cast works for both C and C++, but if we consider the case where we have nested structs, then
+// the way you refer to them differs between C and C++ (in C++, `parent_type::nested_type`, in C just `nested_type`).
+// In addition, with the automatic cast in C, it is possible to use unnamed nested structs and still dynamically 
+// allocate arrays of that type - this would be desirable when the code is compiled from C++ as well.
+// This VOID_CAST macro allows for automatic cast from void* in C++. In C, it does nothing, but for C++ it uses a simple
+// template function to define a cast-to-anything operator.
+// Use like this:
+//      struct {
+//          struct {
+//              int x;
+//          } *nested;
+//      } parent;
+//      parent.nested = VOID_CAST( malloc( sizeof( *parent.nested ) * count ) );
+//
+#ifdef __cplusplus
+    struct void_cast {   
+        inline void_cast( void* x_ ) : x( x_ ) { }
+        template< typename U > inline operator U() { return (U)x; } // cast to whatever requested
+        void* x;
+    };
+    #define VOID_CAST( x ) void_cast( x )
+#else
+    #define VOID_CAST( x ) x
+#endif
 
 
 // Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread
@@ -98,13 +128,39 @@ typedef struct pixie_t {
         thread_atomic_int_t count; // Incremented for every new frame
     } vbl;
 
-    struct { // Temporary screen data
+    struct { 
         thread_mutex_t mutex;
+        u32 palette[ 256 ];
+        u8* pixels;
+        u8* composite;
         u32* xbgr;
         int width;
         int height;
     } screen;
+
+    struct {
+        thread_mutex_t mutex;
+        int sprite_count;
+        struct
+            {
+            int x;
+            int y;
+            int data;
+            }* sprites;
+
+        int data_count;
+        struct {
+            u8* pixels;
+            int width;
+            int height;
+        }* data;
+    } sprites;
 } pixie_t;
+
+
+// Forward declares
+
+static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
 
 
 // A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
@@ -156,7 +212,7 @@ static int app_proc( app_t* app, void* user_data ) {
     pixie_t* pixie = context->pixie;
 
     // Set up initial app parameters
-    app_screenmode( app, APP_SCREENMODE_WINDOW );
+    //app_screenmode( app, APP_SCREENMODE_WINDOW );
     app_interpolation( app, APP_INTERPOLATION_NONE );
 
     // Create and set up the CRT emulation instance
@@ -191,23 +247,25 @@ static int app_proc( app_t* app, void* user_data ) {
             thread_signal_raise( &pixie->vbl.signal );    
             break; 
         }
+
+        int screen_width = 0;
+        int screen_height = 0;
+        APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height );
     
+        // Signal to the game that the frame is completed, and that we are just starting the next one
+        thread_atomic_int_add( &pixie->vbl.count, 1 );
+        thread_signal_raise( &pixie->vbl.signal );    
+
         // Present the screen buffer to the window
         APP_U64 time = app_time_count( app );
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
         crt_time_us += delta_time_us;
-        thread_mutex_lock( &pixie->screen.mutex );
-        crtemu_present( crtemu, crt_time_us, pixie->screen.xbgr, pixie->screen.width, pixie->screen.height, 0xffffff, 0x1c1c1c );
-        thread_mutex_unlock( &pixie->screen.mutex );
+        crtemu_present( crtemu, crt_time_us, xbgr, screen_width, screen_height, 0xffffff, 0x1c1c1c );
         app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
 
         // Ensure we don't run faster than 60 frames per second
         frametimer_update( frametimer );
-
-        // Signal to the game that the frame is completed, and that we are just starting the next one
-        thread_atomic_int_add( &pixie->vbl.count, 1 );
-        thread_signal_raise( &pixie->vbl.signal );    
     }
 
     frametimer_destroy( frametimer );
@@ -237,12 +295,26 @@ static pixie_t* pixie_create( void ) {
     thread_signal_init( &pixie->vbl.signal );
     thread_atomic_int_store( &pixie->vbl.count, 0 );
 
-    // Set up the screen - this will change
+    // Set up the screen 
+    memcpy( pixie->screen.palette, default_palette(), sizeof( pixie->screen.palette ) );
     thread_mutex_init( &pixie->screen.mutex );
     pixie->screen.width = 384;
     pixie->screen.height = 288;
+    pixie->screen.pixels = (u8*) malloc( sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
+    memset( pixie->screen.pixels, 0, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
+    pixie->screen.composite = (u8*) malloc( sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
+    memset( pixie->screen.composite, 0, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
     pixie->screen.xbgr = (u32*) malloc( sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
     memset( pixie->screen.xbgr, 0, sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
+
+    // Set up sprites
+    thread_mutex_init( &pixie->sprites.mutex );
+    pixie->sprites.sprite_count = 256;
+    pixie->sprites.sprites = VOID_CAST( malloc( sizeof( *pixie->sprites.sprites ) * pixie->sprites.sprite_count ) );
+    memset( pixie->sprites.sprites, 0, sizeof( *pixie->sprites.sprites ) * pixie->sprites.sprite_count );
+    pixie->sprites.data_count = 4096;
+    pixie->sprites.data = VOID_CAST( malloc( sizeof( *pixie->sprites.data ) * pixie->sprites.data_count ) );
+    memset( pixie->sprites.data, 0, sizeof( *pixie->sprites.data ) * pixie->sprites.data_count );
 
     return pixie;
 }
@@ -256,10 +328,65 @@ static void pixie_destroy( pixie_t* pixie ) {
 
     // Cleanup screen
     free( pixie->screen.xbgr );
+    free( pixie->screen.composite );
+    free( pixie->screen.pixels );
     thread_mutex_term( &pixie->screen.mutex );
+
+    // Cleanup sprites
+    free( pixie->sprites.sprites );
+    for( int i = 0; i < pixie->sprites.data_count; ++i ) 
+        if( pixie->sprites.data[ i ].pixels ) free( pixie->sprites.data[ i ].pixels );
+    free( pixie->sprites.data );
+    thread_mutex_term( &pixie->sprites.mutex );
 
     free( pixie );
 }
+
+
+static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
+    {
+    // Make a copy of the screen so we can draw sprites on top of it
+    thread_mutex_lock( &pixie->screen.mutex );
+    memcpy( pixie->screen.composite, pixie->screen.pixels, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
+    thread_mutex_unlock( &pixie->screen.mutex );
+    
+    // Draw sprites
+    thread_mutex_lock( &pixie->sprites.mutex );
+    for( int i = 0; i < pixie->sprites.sprite_count; ++i )
+        {    
+        int data_index = pixie->sprites.sprites[ i ].data;
+        if( data_index < 1 || data_index > pixie->sprites.data_count ) continue;
+        --data_index;
+        if( !pixie->sprites.data[ data_index ].pixels ) continue;        
+        for( int y = 0; y < pixie->sprites.data[ data_index ].height; ++y )
+            {
+            for( int x = 0; x < pixie->sprites.data[ data_index ].width; ++x )
+                {
+                u8 p = pixie->sprites.data[ data_index ].pixels[ x + y * pixie->sprites.data[ data_index ].width ];
+                if( ( p & 0x80 ) == 0 )
+                    {
+                    int xp = pixie->sprites.sprites[ i ].x + x;
+                    int yp = pixie->sprites.sprites[ i ].y + y;
+                    if( xp >= 0 && yp >= 0 && xp < pixie->screen.width && yp < pixie->screen.height )
+                        pixie->screen.composite[ xp + yp * pixie->screen.width ] = p;                    
+                    }
+                }
+            }
+        }
+    thread_mutex_unlock( &pixie->sprites.mutex );
+
+
+    // Render screen
+    for( int y = 0; y < pixie->screen.height; ++y )
+        for( int x = 0; x < pixie->screen.width; ++x )
+            pixie->screen.xbgr[ x + y * pixie->screen.width ] = 
+                pixie->screen.palette[ pixie->screen.composite[ x + y * pixie->screen.width ] ];
+
+    *width = pixie->screen.width;
+    *height = pixie->screen.height;
+    return pixie->screen.xbgr;
+    }
+
 
 
 /*
@@ -376,7 +503,7 @@ void print( char const* str ) {
         for( int iy = 0; iy < 8; ++iy )
             for( int ix = 0; ix < 8; ++ix )
                 if( chr & ( 1ull << ( ix + iy * 8 ) ) )
-                    pixie->screen.xbgr[ x + ix + ( y + iy ) * pixie->screen.width ] = 0xffffffff; 
+                    pixie->screen.pixels[ x + ix + ( y + iy ) * pixie->screen.width ] = 10; 
         x += 8;
         if( x - 32 >= 320 ) {
             x = 32;
@@ -386,6 +513,121 @@ void print( char const* str ) {
     x = 32;
     y += 8;
     thread_mutex_unlock( &pixie->screen.mutex );
+}
+
+
+void load_palette( char const* string ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    int w, h, c;
+    stbi_uc* img = stbi_load( string, &w, &h, &c, 4 );
+    if( !img ) return;
+
+    u32 palette[ 256 ] = { 0 };
+    int count = 0;      
+    for( int y = 0; y < h; ++y ) {
+        for( int x = 0; x < w; ++x ) {
+            u32 pixel = ((u32*)img)[ x + y * w ];
+            if( ( pixel & 0xff000000 ) == 0 ) goto skip;
+            if( count < 256 ) {
+                for( int i = 0; i < count; ++i ) {
+                    if( palette[ i ] == pixel )
+                        goto skip;
+                }
+                palette[ count ] = pixel;       
+            }
+            ++count;
+        skip:
+            ;
+        }
+    }   
+    if( count > 256 )  {
+        memset( palette, 0, sizeof( palette ) );
+        count = palettize_generate_palette_xbgr32( (PALETTIZE_U32*) img, w, h, palette, 256, 0 );        
+    }
+    stbi_image_free( img );     
+    memcpy( pixie->screen.palette, palette, sizeof( palette ) );
+}
+
+
+void load_sprite( int data_index, char const* filename ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( data_index < 1 || data_index > pixie->sprites.data_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+    --data_index;
+
+    if( pixie->sprites.data[ data_index ].pixels )
+        {
+        free( pixie->sprites.data[ data_index ].pixels );
+        pixie->sprites.data[ data_index ].pixels = NULL;
+        pixie->sprites.data[ data_index ].width = 0;
+        pixie->sprites.data[ data_index ].height = 0;
+        }
+
+    int w, h, c;
+    stbi_uc* img = stbi_load( filename, &w, &h, &c, 4 );
+    if( !img ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+   
+    pixie->sprites.data[ data_index ].width = w;
+    pixie->sprites.data[ data_index ].height = h;
+    pixie->sprites.data[ data_index ].pixels = (u8*) malloc( sizeof( u8 ) * w * h );
+    memset( pixie->sprites.data[ data_index ].pixels, 0, sizeof( u8 ) * w * h ); 
+    palettize_remap_xbgr32( (PALETTIZE_U32*) img, w, h, pixie->screen.palette, 32, pixie->sprites.data[ data_index ].pixels );
+    
+    for( int i = 0; i < w * h; ++i )
+        if( ( ( (PALETTIZE_U32*) img )[ i ] & 0xff000000 ) >> 24 < 0x80 )
+            pixie->sprites.data[ data_index ].pixels[ i ] |=  0x80u;       
+    
+    stbi_image_free( img );     
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+void sprite( int spr_index, int x, int y, int data_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( data_index < 1 || data_index > pixie->sprites.data_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+    if( !pixie->sprites.data[ data_index - 1 ].pixels ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+    --spr_index;
+    pixie->sprites.sprites[ spr_index ].data = data_index;
+    pixie->sprites.sprites[ spr_index ].x = x;
+    pixie->sprites.sprites[ spr_index ].y = y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+void sprite_pos( int spr_index, int x, int y ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+    pixie->sprites.sprites[ spr_index ].x = x;
+    pixie->sprites.sprites[ spr_index ].y = y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
 
@@ -466,9 +708,22 @@ void print( char const* str ) {
 #define FRAMETIMER_IMPLEMENTATION
 #include "frametimer.h"
 
+#define PALETTIZE_IMPLEMENTATION
+#include "palettize.h"
+
 #define PIXIE_DATA_IMPLEMENTATION
 #include "pixie_data.h"
         
+#define STB_IMAGE_IMPLEMENTATION
+#pragma warning( push )
+#pragma warning( disable: 4296 ) 
+#pragma warning( disable: 4365 )
+#pragma warning( disable: 4255 )
+#pragma warning( disable: 4668 )
+#include "stb_image.h"
+#undef STB_IMAGE_IMPLEMENTATION
+#pragma warning( pop )
+
 #define THREAD_IMPLEMENTATION
 #include "thread.h"
 

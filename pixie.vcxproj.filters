@@ -24,6 +24,15 @@
     <ClInclude Include="source\pixie\crtemu.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie\palettize.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\pixie_data.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\stb_image.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />
