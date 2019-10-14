@@ -33,6 +33,12 @@
     <ClInclude Include="source\pixie\stb_image.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie\mid.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\tsf.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />

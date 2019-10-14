@@ -15,7 +15,10 @@ int pixmain( int argc, char** argv ) {
     load_palette( "pal.png" );
     load_sprite( 1, "ball.png" );
     for( int i = 1; i <= 8; ++i ) sprite( i, 100,100, 1 );
-    
+
+    load_song( 1, "Jambala8.mid" );
+    play_song( 1 );
+
     int c = 0;
 mainloop: 
     wait_vbl();

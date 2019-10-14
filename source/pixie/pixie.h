@@ -40,6 +40,8 @@ void load_palette( char const* string );
 void load_sprite( int data_index, char const* filename );
 void sprite( int spr_index, int x, int y, int data_index );
 void sprite_pos( int spr_index, int x, int y );
+void load_song( int song_index, char const* filename );
+void play_song( int song_index );
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
@@ -69,6 +71,7 @@ void sprite_pos( int spr_index, int x, int y );
 #include "crtemu.h"
 #include "crt_frame.h"
 #include "frametimer.h"
+#include "mid.h"
 #include "palettize.h"
 #include "pixie_data.h"
 #include "stb_image.h"
@@ -155,12 +158,25 @@ typedef struct pixie_t {
             int height;
         }* data;
     } sprites;
+
+
+    struct {
+        int sound_buffer_size;
+        i16* mix_buffers;
+
+        thread_mutex_t song_mutex;
+        int songs_count;
+        mid_t** songs;
+        int current_song;
+
+    } audio;
 } pixie_t;
 
 
 // Forward declares
 
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
+static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
 
 
 // A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
@@ -187,11 +203,22 @@ static pixie_t* pixie_instance( void ) {
 }
 
 
+// Audio playback is started by the app thread, and works with a streaming sound buffer. Every time the stream have 
+// played enough to need more samples, it calls this callback function, which just pass the call on to the
+// `pixie_render_samples` which renders all currently playing sounds and mix all samples together for the sound buffer.
+
+void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
+    pixie_t* pixie = (pixie_t*) user_data;
+    pixie_render_samples( pixie, sample_pairs, sample_pairs_count ); 
+}
+
+
 // Holds the data needed for communicating between user thread and app thread. Most of this will be in pixie, but there
 // are also a few things which only needs to be accessed from within the `run` function and the app thread.
 
 typedef struct app_context_t {
     pixie_t* pixie; // Main engine state
+    int sound_buffer_size; // The `run` function defines how big a sound buffer to use, and that value is passed here
     thread_atomic_int_t exit_flag; // Set to 1 by `run` function on user thread to indicate app thread should terminate
     thread_signal_t init_complete; // Raised by app thread before entering main loop, to indicate `run` may continue
 } app_context_t;
@@ -222,6 +249,9 @@ static int app_proc( app_t* app, void* user_data ) {
     crt_frame( frame );
     crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT );
     free( frame );
+
+    // Start sound playback
+    app_sound( app, context->sound_buffer_size * 2, app_sound_callback, pixie );
 
     // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
     // even if the user have disabled vsync in their graphics card settings.
@@ -268,6 +298,9 @@ static int app_proc( app_t* app, void* user_data ) {
         frametimer_update( frametimer );
     }
 
+    // Stop sound playback
+    app_sound( app, 0, NULL, NULL );
+
     frametimer_destroy( frametimer );
     crtemu_destroy( crtemu );
     return 0;
@@ -283,7 +316,7 @@ static int app_thread( void* user_data ) {
 
 // Create the instance for holding the main engine state. Called from `run` before app thread is started.
 
-static pixie_t* pixie_create( void ) {
+static pixie_t* pixie_create( int sound_buffer_size ) {
     // Allocate the state and clear it, to avoid uninitialized varible problems
     pixie_t* pixie = (pixie_t*) malloc( sizeof( pixie_t ) );
     memset( pixie, 0, sizeof( *pixie ) );
@@ -316,6 +349,13 @@ static pixie_t* pixie_create( void ) {
     pixie->sprites.data = VOID_CAST( malloc( sizeof( *pixie->sprites.data ) * pixie->sprites.data_count ) );
     memset( pixie->sprites.data, 0, sizeof( *pixie->sprites.data ) * pixie->sprites.data_count );
 
+    // Set up audio
+    pixie->audio.sound_buffer_size = sound_buffer_size ;
+    pixie->audio.mix_buffers = (i16*) malloc( sizeof( i16 ) * sound_buffer_size * 2 * 6 ); // 6 buffers (song, speech + 4 sounds)
+    thread_mutex_init( &pixie->audio.song_mutex );
+    pixie->audio.songs_count = 16;
+    pixie->audio.songs = VOID_CAST( malloc( sizeof( *pixie->audio.songs ) * pixie->audio.songs_count ) );
+    memset( pixie->audio.songs, 0, sizeof( *pixie->audio.songs ) * pixie->audio.songs_count );
     return pixie;
 }
 
@@ -338,6 +378,13 @@ static void pixie_destroy( pixie_t* pixie ) {
         if( pixie->sprites.data[ i ].pixels ) free( pixie->sprites.data[ i ].pixels );
     free( pixie->sprites.data );
     thread_mutex_term( &pixie->sprites.mutex );
+
+    // Cleanup audio
+    for( int i = 0; i < pixie->audio.songs_count; ++i ) 
+        if( pixie->audio.songs[ i ] ) mid_destroy( pixie->audio.songs[ i ] );
+    free( pixie->audio.songs );
+    thread_mutex_term( &pixie->audio.song_mutex );
+    free( pixie->audio.mix_buffers );
 
     free( pixie );
 }
@@ -388,6 +435,27 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     }
 
 
+static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count )
+    {
+    // render midi song to local buffer
+    i16* song = pixie->audio.mix_buffers;
+    thread_mutex_lock( &pixie->audio.song_mutex );
+    if( pixie->audio.current_song < 1 || pixie->audio.current_song > 16 || !pixie->audio.songs[ pixie->audio.current_song - 1 ] ) 
+        memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
+    else    
+        mid_render_short( pixie->audio.songs[ pixie->audio.current_song - 1 ], song, sample_pairs_count );
+    thread_mutex_unlock( &pixie->audio.song_mutex );
+
+    // mix all local buffers
+    for( int i = 0; i < sample_pairs_count * 2; ++i )
+        {
+        int sample = song[ i ] * 3;
+        sample = sample > 32767 ? 32767 : sample < -32727 ? -32727 : sample;
+        sample_pairs[ i ] = (i16) sample;
+        }
+    }
+
+
 
 /*
 --------------------
@@ -405,8 +473,10 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
 // still get back to the `run` function to perform a controlled shutdown.
 
 int run( int (*main)( int, char** ) ) {
+    int const SOUND_BUFFER_SIZE = 735 * 3; // Three frames worth of sound buffering
+
     // Create and initialize the main engine state used by all of pixie
-    pixie_t* pixie = pixie_create();
+    pixie_t* pixie = pixie_create( SOUND_BUFFER_SIZE );
 
     // A pointer to the `pixie_t` instance needs to be stored in thread local storage, and before we do, we must create
     // the TLS instance. But only if it is not already created, and as there's nothing stopping a user from calling the
@@ -424,6 +494,7 @@ int run( int (*main)( int, char** ) ) {
     // Define the `app_context_t` instance which will be shared between `run` function and `app_proc` thread.
     app_context_t app_context = { NULL };
     app_context.pixie = pixie;
+    app_context.sound_buffer_size = SOUND_BUFFER_SIZE;
     thread_atomic_int_store( &app_context.exit_flag, 0 );
     thread_signal_init( &app_context.init_complete );
     
@@ -631,6 +702,52 @@ void sprite_pos( int spr_index, int x, int y ) {
 }
 
 
+void load_song( int song_index, char const* filename ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    if( song_index < 1 || song_index > 16 ) return;
+    --song_index;
+
+    FILE* fp = fopen( filename, "rb" );
+    fseek( fp, 0, SEEK_END );
+    size_t size = ftell( fp );
+    fseek( fp, 0, SEEK_SET );
+    u8* mid_file = malloc( size );
+    fread( mid_file, size, 1, fp );
+    fclose( fp );
+
+    mid_t* mid = NULL;
+    if( mid_file ) 
+        {
+        int soundfont_size = 0;
+        u8 const* soundfont = default_soundfont( &soundfont_size );
+        mid = mid_create( mid_file, size, soundfont, soundfont_size, 0 );
+        free( mid_file );
+        mid_skip_leading_silence( mid );
+        }
+
+    thread_mutex_lock( &pixie->audio.song_mutex );
+    if( pixie->audio.songs[ song_index ] )
+        {
+        mid_destroy( pixie->audio.songs[ song_index ] );
+        pixie->audio.songs[ song_index ] = NULL; 
+        }
+    pixie->audio.songs[ song_index ] = mid;
+    thread_mutex_unlock( &pixie->audio.song_mutex );
+}
+
+
+void play_song( int song_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    if( song_index < 1 || song_index > 16 ) return;
+    thread_mutex_lock( &pixie->audio.song_mutex );
+    if( pixie->audio.songs[ song_index - 1 ] ) 
+        pixie->audio.current_song = song_index;
+    thread_mutex_unlock( &pixie->audio.song_mutex );
+}
+
+
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
 #endif
@@ -707,6 +824,9 @@ void sprite_pos( int spr_index, int x, int y ) {
 
 #define FRAMETIMER_IMPLEMENTATION
 #include "frametimer.h"
+
+#define MID_IMPLEMENTATION
+#include "mid.h"
 
 #define PALETTIZE_IMPLEMENTATION
 #include "palettize.h"
