@@ -710,9 +710,9 @@ void load_song( int song_index, char const* filename ) {
 
     FILE* fp = fopen( filename, "rb" );
     fseek( fp, 0, SEEK_END );
-    size_t size = ftell( fp );
+    size_t size = (size_t) ftell( fp );
     fseek( fp, 0, SEEK_SET );
-    u8* mid_file = malloc( size );
+    u8* mid_file = (u8*) malloc( size );
     fread( mid_file, size, 1, fp );
     fclose( fp );
 
@@ -721,7 +721,7 @@ void load_song( int song_index, char const* filename ) {
         {
         int soundfont_size = 0;
         u8 const* soundfont = default_soundfont( &soundfont_size );
-        mid = mid_create( mid_file, size, soundfont, soundfont_size, 0 );
+        mid = mid_create( mid_file, size, soundfont, (size_t) soundfont_size, 0 );
         free( mid_file );
         mid_skip_leading_silence( mid );
         }
