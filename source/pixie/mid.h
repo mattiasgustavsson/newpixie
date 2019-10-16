@@ -746,8 +746,8 @@ mid_t* mid_create( void const* midi_data, size_t midi_size, void const* sf2_data
         ++track_current_merge_pos[ lowest_time_track ];
         }
     
-    MID_FREE( mid->memctx, track_entry_counts );
-    MID_FREE( mid->memctx, track_data );
+    MID_FREE( memctx, track_entry_counts );
+    MID_FREE( memctx, track_data );
 
     mid_t* mid = (mid_t*) MID_MALLOC( memctx, sizeof( mid_t ) );
     mid->memctx = memctx;
