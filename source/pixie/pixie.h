@@ -45,8 +45,7 @@ void wait_vbl( void );
 
 void print( char const* str );
 void load_palette( int asset );
-void load_sprite( int data_index, int asset );
-void sprite( int spr_index, int x, int y, int data_index );
+void sprite( int spr_index, int x, int y, int asset );
 void sprite_pos( int spr_index, int x, int y );
 void load_song( int song_index, int asset );
 void play_song( int song_index );
@@ -62,59 +61,30 @@ void play_song( int song_index );
     ASSET BUILD/BUNDLE SUPPORT
 ----------------------------------
 */
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
-
-struct asset_definitions_t {
-    char const* bundle_filename;
-    char const* build_time;
-    char const* definitions_file;
-    int definitions_line;
-    int assets_count;
-};
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
-
-#define ASSETS_BEGIN( bundle_filename_param ) \
-    inline void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( struct asset_definitions_t* definitions ) \
-        { definitions->bundle_filename = bundle_filename_param; definitions->definitions_line = __LINE__; } \
-    enum assets_t {
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        namespace pixie { \
-            void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
-            inline void load_assets( void ) { \
-                struct asset_definitions_t definitions; \
-                multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &definitions ); \
-                definitions.build_time = __DATE__ " " __TIME__; \
-                definitions.definitions_file = __FILE__; \
-                definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
-                build_and_load_assets( &definitions ); \
-            } \
-        } /* namespace pixie */
+#ifdef PIXIE_NO_BUILD
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        #define ASSETS_BEGIN( bundle_filename ) \
+            namespace pixie { \
+                int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
+                inline void load_assets( void ) { load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+                enum assets_t {
+        #define ASSETS_END() \
+                } /* enum assets_t */; \
+            } /* namespace pixie */
+    #else
+        #define ASSETS_BEGIN( bundle_filename ) \
+            int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
+            inline void load_assets( void ) { load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+            enum assets_t {
+        #define ASSETS_END() \
+            } /* enum assets_t */;
+    #endif
+    #define ASSET_PALETTE( id, filename ) id,
+    #define ASSET_SPRITE( id, filename ) id,
+    #define ASSET_SONG( id, filename ) id,
 #else
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
-        inline void load_assets( void ) { \
-            struct asset_definitions_t definitions; \
-                multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &definitions ); \
-            definitions.definitions_file = __FILE__; \
-            definitions.build_time = __DATE__ " " __TIME__; \
-            definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
-            build_and_load_assets( &definitions ); \
-        }
+    #include "pixie_build.h"
 #endif
-
-#define ASSET_PALETTE( id, filename ) id,
-#define ASSET_SPRITE( id, filename ) id,
-#define ASSET_SONG( id, filename ) id,
-
-
 
 
 
@@ -317,10 +287,10 @@ struct asset_definitions_t {
 
 
 // C runtime includes
-#include <ctype.h>
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 
 // Libraries includes
@@ -329,6 +299,7 @@ struct asset_definitions_t {
 #include "crt_frame.h"
 #include "frametimer.h"
 #include "mid.h"
+#include "mmap.h"
 #include "palettize.h"
 #include "pixie_data.h"
 #include "stb_image.h"
@@ -373,6 +344,7 @@ typedef struct pixie_t pixie_t;
 static void pixie_force_exit( pixie_t* pixie );
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
 static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
+static void* pixie_find_asset( pixie_t* pixie, int id, int* size );
 
 
 /*
@@ -507,14 +479,14 @@ typedef struct pixie_t {
         thread_atomic_int_t count; // Incremented for every new frame
     } vbl;
 
-    // Placeholder asset data storage. Will be replaced by just an asset index and a memory mapped file
     struct {
+        mmap_t* bundle;
         int count;
         struct {
             int id;
-            size_t size;
-            void* data;
-        }* files;
+            int offset;
+            int size;
+        }* assets;
     } assets;
 
     struct { 
@@ -534,15 +506,8 @@ typedef struct pixie_t {
             {
             int x;
             int y;
-            int data;
+            int asset;
             }* sprites;
-
-        int data_count;
-        struct {
-            u8* pixels;
-            int width;
-            int height;
-        }* data;
     } sprites;
 
 
@@ -614,9 +579,6 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     pixie->sprites.sprite_count = 256;
     pixie->sprites.sprites = VOID_CAST( malloc( sizeof( *pixie->sprites.sprites ) * pixie->sprites.sprite_count ) );
     memset( pixie->sprites.sprites, 0, sizeof( *pixie->sprites.sprites ) * pixie->sprites.sprite_count );
-    pixie->sprites.data_count = 4096;
-    pixie->sprites.data = VOID_CAST( malloc( sizeof( *pixie->sprites.data ) * pixie->sprites.data_count ) );
-    memset( pixie->sprites.data, 0, sizeof( *pixie->sprites.data ) * pixie->sprites.data_count );
 
     // Set up audio
     pixie->audio.sound_buffer_size = sound_buffer_size ;
@@ -643,9 +605,6 @@ static void pixie_destroy( pixie_t* pixie ) {
 
     // Cleanup sprites
     free( pixie->sprites.sprites );
-    for( int i = 0; i < pixie->sprites.data_count; ++i ) 
-        if( pixie->sprites.data[ i ].pixels ) free( pixie->sprites.data[ i ].pixels );
-    free( pixie->sprites.data );
     thread_mutex_term( &pixie->sprites.mutex );
 
     // Cleanup audio
@@ -655,9 +614,8 @@ static void pixie_destroy( pixie_t* pixie ) {
     thread_mutex_term( &pixie->audio.song_mutex );
     free( pixie->audio.mix_buffers );
 
-    for( int i = 0; i < pixie->assets.count; ++i ) 
-        if( pixie->assets.files[ i ].data ) free( pixie->assets.files[ i ].data );
-    free( pixie->assets.files );
+    mmap_close( pixie->assets.bundle );
+
 
     free( pixie );
 }
@@ -683,15 +641,21 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     thread_mutex_lock( &pixie->sprites.mutex );
     for( int i = 0; i < pixie->sprites.sprite_count; ++i )
         {    
-        int data_index = pixie->sprites.sprites[ i ].data;
-        if( data_index < 1 || data_index > pixie->sprites.data_count ) continue;
-        --data_index;
-        if( !pixie->sprites.data[ data_index ].pixels ) continue;        
-        for( int y = 0; y < pixie->sprites.data[ data_index ].height; ++y )
+        int asset = pixie->sprites.sprites[ i ].asset;
+        if( asset < 1 || asset > pixie->assets.count ) continue;
+        --asset;
+        
+        struct {
+            u32 width;
+            u32 height;
+            u8 pixels[ 1 ];
+        }* data = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
+
+        for( u32 y = 0; y < data->height; ++y )
             {
-            for( int x = 0; x < pixie->sprites.data[ data_index ].width; ++x )
+            for( u32 x = 0; x < data->width; ++x )
                 {
-                u8 p = pixie->sprites.data[ data_index ].pixels[ x + y * pixie->sprites.data[ data_index ].width ];
+                u8 p = data->pixels[ x + y * data->width ];
                 if( ( p & 0x80 ) == 0 )
                     {
                     int xp = pixie->sprites.sprites[ i ].x + x;
@@ -741,197 +705,36 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
     }
 
 
+static void* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
+    if( id < 0 || id >= pixie->assets.count ) {
+        if( size ) *size = 0;
+        return NULL;
+    }
+
+    if( size ) *size = pixie->assets.assets[ id ].size;
+    return (void*)( ( (uintptr_t) mmap_data( pixie->assets.bundle ) ) + pixie->assets.assets[ id ].offset );    
+}
+
+
 /*
-----------------------------------
-    ASSET BUILD/BUNDLE SUPPORT
-----------------------------------
+----------------------------
+    ASSET BUNDLE SUPPORT
+----------------------------
 */
 
-struct item_t {
-    int id;
-    char filename[ 256 ];
-    char type[ 64 ];
-};
 
-static struct item_t* read_asset_definitions( char const* asset_definitions_file, int* count, char out_bundle_filename[ 256 ] ) { 
-    FILE* fp = fopen( asset_definitions_file, "r" );
-    if( fp == NULL ) {
-        printf( "Asset definition file '%s' could not be opened\n", asset_definitions_file );
-        return NULL;;
-    }
-    fseek( fp, 0, SEEK_END );
-    size_t size = (size_t) ftell( fp );
-    fseek( fp, 0, SEEK_SET );
-    char* file = (char*) malloc( size + 1 );
-    size = fread( file, 1, size, fp );
-    file[ size ] = '\0';
-    fclose( fp );
-
-    char const* start = strstr( file, "ASSETS_BEGIN" );
-    if( start == NULL ) {
-        printf( "Asset definition file '%s' does not contain an 'ASSETS_BEGIN' definition\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    char const* end = strstr( start, "ASSETS_END" );
-    if( end == NULL ) {
-        printf( "Asset definition file '%s' does not contain an 'ASSETS_END' definition\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    char const* ptr = start + strlen( "ASSETS_BEGIN" );
-    while( ptr < end && *ptr <= ' ' ) ++ptr;
-    if( *ptr != '(' ) {
-        printf( "Asset definition file '%s': expected '(' after ASSETS_BEGIN\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    ++ptr;
-    while( ptr < end && *ptr <= ' ' ) ++ptr;
-    if( *ptr != '\"' ) {
-        printf( "Asset definition file '%s': expected asset bundle filename\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    ++ptr;
-    char const* bundle_filename_start = ptr;
-    while( ptr < end && *ptr != '\"' ) ++ptr;
-    if( *ptr != '\"' ) {
-        printf( "Asset definition file '%s': asset bundle filename not ending with \"\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    char const* bundle_filename_end = ptr;
-    ++ptr;
-    while( ptr < end && *ptr <= ' ' ) ++ptr;
-    if( *ptr != ')' ) {
-        printf( "Asset definition file '%s': expected ')' at the end of ASSETS_BEGIN definition\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    ++ptr;
-
-    char bundle_filename[ 256 ] = "";
-    if( bundle_filename_end - bundle_filename_start >= sizeof( bundle_filename ) ) {
-        printf( "Asset definition file '%s': Asset bundle filename exceeds maximum length\n", asset_definitions_file );
-        free( file );
-        return NULL;;
-    }
-    strncpy( bundle_filename, bundle_filename_start, (size_t)( bundle_filename_end - bundle_filename_start ) );
-    strcpy( out_bundle_filename, bundle_filename );
-
-    int items_capacity = 256;
-    struct item_t* items = (struct item_t*) malloc( sizeof( struct item_t ) * items_capacity );
-
-    int index = 0;
-    while( ptr < end ) {
-        while( ptr < end && *ptr <= ' ' ) ++ptr;
-        if( ptr >= end ) break;
-        if( strncmp( ptr, "ASSET_", strlen( "ASSET_" ) ) != 0 ) {
-            printf( "Asset definition file '%s': ASSET_... definition expected\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        ptr += strlen( "ASSET_" );
-        char const* asset_type_start = ptr;
-        while( ptr < end && isalnum( *ptr ) ) ++ptr;
-        while( ptr < end && *ptr <= ' ' ) ++ptr;
-        if( *ptr != '(' ) {
-            printf( "Asset definition file '%s': expected '(' after ASSET_...\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        char const* asset_type_end = ptr;
-        ++ptr;
-        while( ptr < end && *ptr <= ' ' ) ++ptr;
-        if( !isalpha( *ptr ) ) {
-            printf( "Asset definition file '%s': invalid ASSET identifier\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        while( ptr < end && ( isalnum( *ptr ) || *ptr == '_' ) ) ++ptr;
-        if( *ptr != ',' ) {
-            printf( "Asset definition file '%s': expected ',' after ASSET identifier\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        ++ptr;
-        while( ptr < end && *ptr <= ' ' ) ++ptr;
-        if( *ptr != '\"' ) {
-            printf( "Asset definition file '%s': expected filename in ASSET definition\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        ++ptr;
-        char const* asset_filename_start = ptr;
-        while( ptr < end && *ptr != '\"' ) ++ptr;
-        if( *ptr != '\"' ) {
-            printf( "Asset definition file '%s': asset filename not ending with \"\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        char const* asset_filename_end = ptr;
-        ++ptr;
-
-        while( ptr < end && *ptr <= ' ' ) ++ptr;
-        if( *ptr != ')' ) {
-            printf( "Asset definition file '%s': expected ')' at the end of ASSET definition\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        ++ptr;
-
-        char asset_filename[ 256 ] = "";
-        if( asset_filename_end - asset_filename_start >= sizeof( asset_filename ) ) {
-            printf( "Asset definition file '%s': Asset filename exceeds maximum length\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        strncpy( asset_filename, asset_filename_start, (size_t)( asset_filename_end - asset_filename_start ) );
-
-        char asset_type[ 64 ] = "";
-        if( asset_type_end - asset_type_start >= sizeof( asset_type ) ) {
-            printf( "Asset definition file '%s': Asset type name exceeds maximum length\n", asset_definitions_file );
-            free( items );
-            free( file );
-            return NULL;;
-        }
-        strncpy( asset_type, asset_type_start, (size_t)( asset_type_end - asset_type_start ) );
-
-        items[ index ].id = index;
-        strcpy( items[ index ].filename, asset_filename );
-        strcpy( items[ index ].type, asset_type );
-        ++index;
-    }
-    while( ptr < end && *ptr <= ' ' ) ++ptr;
-    if( strncmp( ptr, "ASSETS_END", strlen( "ASSETS_END" ) ) != 0 ) {
-        printf( "Asset definition file '%s': 'ASSETS_END' expected at the end asset list\n", asset_definitions_file );
-        free( items );
-        free( file );
-        return NULL;;
-    }
-
-    free( file );
-    *count = index;
-    return items;
-}
-
-
-int load_bundle( struct asset_definitions_t const* asset_definitions ) {
+int load_bundle( char const* filename, char const* time, char const* definitions, int count ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
-    FILE* bundle = fopen( asset_definitions->bundle_filename, "rb" );
-    if( !bundle ) return EXIT_FAILURE;
+    struct stat s;
+    if( stat( filename, &s ) ) return EXIT_FAILURE;
 
-    struct 
+    mmap_t* bundle = mmap_open_read_only( filename, (size_t) s.st_size );
+    if( !bundle ) return EXIT_FAILURE;
+    
+    void* data = mmap_data( bundle );
+
+    struct  h_t
     {
         char file_id[ 20 ];
         int header_size;
@@ -939,190 +742,28 @@ int load_bundle( struct asset_definitions_t const* asset_definitions ) {
         char bundle_file[ 256 ];
         char definitions_file[ 256 ];
         char build_time[ 64 ];
-    } header;
-    memset( &header, 0, sizeof( header ) );
-    if( fread( &header, 1, sizeof( header ), bundle ) != sizeof( header ) || header.header_size != sizeof( header )) {
-        fclose( bundle );
+    }* header = VOID_CAST( data );
+
+    if( mmap_size( bundle ) < sizeof( *header ) || header->header_size != sizeof( *header ) ) {
+        mmap_close( bundle );
         return EXIT_FAILURE;
     }
 
-    if( strcmp( header.file_id, "PIXIE_ASSETS_BUNDLE" ) != 0 || 
-        strcmp( header.bundle_file, asset_definitions->bundle_filename ) != 0 ||  
-        strcmp( header.definitions_file, asset_definitions->definitions_file ) != 0 ||  
-        strcmp( header.build_time, asset_definitions->build_time ) != 0 ||  
-        header.assets_count != asset_definitions->assets_count ) {
-            fclose( bundle );
+    if( strcmp( header->file_id, "PIXIE_ASSETS_BUNDLE" ) != 0 || 
+        strcmp( header->bundle_file, filename ) != 0 ||  
+        ( definitions && strcmp( header->definitions_file, definitions ) != 0 ) ||  
+        ( time && strcmp( header->build_time, time ) != 0 ) ||  
+        ( count > 0 && header->assets_count != count ) ) {
+            mmap_close( bundle );
             return EXIT_FAILURE;
     }
 
-    struct file_list_t {
-        int id;
-        int offset;
-        int size;
-    };
-    struct file_list_t* file_list = (struct file_list_t*) malloc( sizeof( struct file_list_t ) * header.assets_count );
-    memset( file_list, 0, sizeof( struct file_list_t ) * header.assets_count );
-    if( fread( file_list, 1, sizeof( struct file_list_t ) * header.assets_count, bundle ) != sizeof( struct file_list_t ) * header.assets_count ) {
-        free( file_list );
-        fclose( bundle );
-        return EXIT_FAILURE;
-    }
-
-    pixie->assets.count = header.assets_count;
-    pixie->assets.files = VOID_CAST( malloc( sizeof( *pixie->assets.files ) * pixie->assets.count ) );
-    for( int i = 0; i < header.assets_count; ++i ) {
-        pixie->assets.files[ i ].id = file_list[ i ].id;   
-        pixie->assets.files[ i ].size = (size_t) file_list[ i ].size;
-        pixie->assets.files[ i ].data = malloc( (size_t) file_list[ i ].size );
-        if( (int) fread( pixie->assets.files[ i ].data, 1, (size_t) file_list[ i ].size, bundle ) != file_list[ i ].size ) {
-            for( int j = 0; j <= i; ++j )
-                free( pixie->assets.files[ j ].data );
-            pixie->assets.count = 0;
-            free( file_list );
-            fclose( bundle );
-            return EXIT_FAILURE;
-        }
-    }
-
-    free( file_list );
-    fclose( bundle );
+    pixie->assets.bundle = bundle;
+    pixie->assets.count = header->assets_count;
+    pixie->assets.assets = VOID_CAST( (void*)( header + 1 ) );
+    
     return EXIT_SUCCESS;
 }
-
-
-void* build_palette( char const* filename, int* size ) {
-    int w, h, c;
-    stbi_uc* img = stbi_load( filename, &w, &h, &c, 4 );
-    if( !img ) return NULL;
-
-    u32 palette[ 256 ] = { 0 };
-    int count = 0;      
-    for( int y = 0; y < h; ++y ) {
-        for( int x = 0; x < w; ++x ) {
-            u32 pixel = ((u32*)img)[ x + y * w ];
-            if( ( pixel & 0xff000000 ) == 0 ) goto skip;
-            if( count < 256 ) {
-                for( int i = 0; i < count; ++i ) {
-                    if( palette[ i ] == pixel )
-                        goto skip;
-                }
-                palette[ count ] = pixel;       
-            }
-            ++count;
-        skip:
-            ;
-        }
-    }   
-    if( count > 256 )  {
-        memset( palette, 0, sizeof( palette ) );
-        count = palettize_generate_palette_xbgr32( (PALETTIZE_U32*) img, w, h, palette, 256, 0 );        
-    }
-    stbi_image_free( img );     
-    *size = sizeof( palette );
-    void* ret = malloc( sizeof( palette ) );
-    memcpy( ret, palette, sizeof( palette ) );
-    return ret;
-}
-
-
-void build_and_load_assets( struct asset_definitions_t const* asset_definitions ) { 
-    if( load_bundle( asset_definitions ) == EXIT_SUCCESS ) {
-        return;
-    }
-
-    char bundle_filename[ 256 ];
-
-    int count = 0;
-    struct item_t* items = read_asset_definitions( asset_definitions->definitions_file, &count, bundle_filename );
-    if( !items ) return;
-
-    if( count != asset_definitions->assets_count || strcmp( bundle_filename, asset_definitions->bundle_filename ) != 0 ) {
-        printf( "bundle out of date\n" );
-        return;
-    }
-
-    printf( "%s\n", bundle_filename );
-
-    FILE* bundle = fopen( bundle_filename, "wb" );
-    struct 
-    {
-        char file_id[ 20 ];
-        int header_size;
-        int assets_count;
-        char bundle_file[ 256 ];
-        char definitions_file[ 256 ];
-        char build_time[ 64 ];
-    } header;
-    memset( &header, 0, sizeof( header ) );
-    strcpy( header.file_id, "PIXIE_ASSETS_BUNDLE" );
-    header.header_size = (int) sizeof( header );
-    header.assets_count = count;
-    strcpy( header.bundle_file, asset_definitions->bundle_filename );
-    strcpy( header.definitions_file, asset_definitions->definitions_file );
-    strcpy( header.build_time, asset_definitions->build_time);
-    fwrite( &header, 1, sizeof( header ), bundle );
-    
-    struct file_list_t {
-        int id;
-        int offset;
-        int size;
-    };
-    struct file_list_t* file_list = (struct file_list_t*) malloc( sizeof( struct file_list_t ) * count );
-    memset( file_list, 0, sizeof( struct file_list_t ) * count  );
-    int file_list_pos = (int) ftell( bundle );
-    fwrite( file_list, sizeof( struct file_list_t ), (size_t) count, bundle );
-
-    int running_offset = (int) ftell( bundle );
-    for( int i = 0; i < count; ++i ) {
-        printf( "%d %s %s\n", items[ i ].id, items[ i ].type, items[ i ].filename );
-
-        if( strcmp( items[ i ].type, "PALETTE" ) == 0 ) {
-            int size = 0;
-            void* data = build_palette( items[ i ].filename, &size );
-            if( data == NULL ) {
-                printf( "Asset file '%s' could not be opened\n", items[ i ].filename );
-                free( items );
-                free( file_list );
-                return;
-            }
-            file_list[ i ].id = i;
-            file_list[ i ].offset = running_offset;
-            file_list[ i ].size = size;
-            running_offset += size;
-            fwrite( data, 1, (size_t) size, bundle );
-            free( data );
-        } else {
-            FILE* fp = fopen( items[ i ].filename, "rb" );
-            if( fp == NULL ) {
-                printf( "Asset file '%s' could not be opened\n", items[ i ].filename );
-                free( items );
-                free( file_list );
-                return;
-            }
-            fseek( fp, 0, SEEK_END );
-            size_t sz = (size_t) ftell( fp );
-            fseek( fp, 0, SEEK_SET );
-            void* data = malloc( sz );
-            sz = fread( data, 1, sz, fp );
-            fclose( fp );
-
-            file_list[ i ].id = i;
-            file_list[ i ].offset = running_offset;
-            file_list[ i ].size = (int)sz;
-            running_offset += (int)sz;
-            fwrite( data, 1, sz, bundle );
-            free( data );
-        }
-    }
-    fseek( bundle, file_list_pos, SEEK_SET );
-    fwrite( file_list, sizeof( struct file_list_t ), (size_t) count, bundle );
-    free( file_list );
-    fclose( bundle );
-    free( items );
-
-    load_bundle( asset_definitions );
-}
-
 
 
 /*
@@ -1257,72 +898,45 @@ void print( char const* str ) {
 
 void load_palette( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
-    if( pixie->assets.files[ asset ].size == sizeof( pixie->screen.palette ) )
-        memcpy( pixie->screen.palette, pixie->assets.files[ asset ].data, sizeof( pixie->screen.palette ) );
+
+    int size = 0;
+    void* data = pixie_find_asset( pixie, asset, &size );
+    if( size == sizeof( pixie->screen.palette ) )
+        memcpy( pixie->screen.palette, data, sizeof( pixie->screen.palette ) );
 }
 
 
-void load_sprite( int data_index, int asset ) {
+void sprite( int spr_index, int x, int y, int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
-
-    if( data_index < 1 || data_index > pixie->sprites.data_count ) {
-        thread_mutex_unlock( &pixie->sprites.mutex );
-        return;
-    }
-    --data_index;
-
-    if( pixie->sprites.data[ data_index ].pixels )
-        {
-        free( pixie->sprites.data[ data_index ].pixels );
-        pixie->sprites.data[ data_index ].pixels = NULL;
-        pixie->sprites.data[ data_index ].width = 0;
-        pixie->sprites.data[ data_index ].height = 0;
-        }
-
-    int w, h, c;
-    stbi_uc* img = stbi_load_from_memory( (stbi_uc*) pixie->assets.files[ asset ].data, (int) pixie->assets.files[ asset ].size, &w, &h, &c, 4 );
-    if( !img ) {
-        thread_mutex_unlock( &pixie->sprites.mutex );
-        return;
-    }
-   
-    pixie->sprites.data[ data_index ].width = w;
-    pixie->sprites.data[ data_index ].height = h;
-    pixie->sprites.data[ data_index ].pixels = (u8*) malloc( sizeof( u8 ) * w * h );
-    memset( pixie->sprites.data[ data_index ].pixels, 0, sizeof( u8 ) * w * h ); 
-    palettize_remap_xbgr32( (PALETTIZE_U32*) img, w, h, pixie->screen.palette, 32, pixie->sprites.data[ data_index ].pixels );
     
-    for( int i = 0; i < w * h; ++i )
-        if( ( ( (PALETTIZE_U32*) img )[ i ] & 0xff000000 ) >> 24 < 0x80 )
-            pixie->sprites.data[ data_index ].pixels[ i ] |=  0x80u;       
-    
-    stbi_image_free( img );     
-    thread_mutex_unlock( &pixie->sprites.mutex );
-}
-
-
-void sprite( int spr_index, int x, int y, int data_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
-
-    thread_mutex_lock( &pixie->sprites.mutex );
-
-    if( data_index < 1 || data_index > pixie->sprites.data_count ) {
+    if( asset < 0 || asset >= pixie->assets.count ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
         return;
     }
+
+    int size = 0;
+    struct {
+        u32 width;
+        u32 height;
+        u8 pixels[ 1 ];
+    }* data = pixie_find_asset( pixie, asset, &size );
+
+    if( size < sizeof( *data ) || size != (int) ( sizeof( *data ) + ( data->width * data->height - 1 ) * sizeof( u8 ) ) ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
     if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
     }
-    if( !pixie->sprites.data[ data_index - 1 ].pixels ) {
-        thread_mutex_unlock( &pixie->sprites.mutex );
-        return;
-    }
+    
     --spr_index;
-    pixie->sprites.sprites[ spr_index ].data = data_index;
+    pixie->sprites.sprites[ spr_index ].asset = asset + 1;
     pixie->sprites.sprites[ spr_index ].x = x;
     pixie->sprites.sprites[ spr_index ].y = y;
+
     thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
@@ -1351,7 +965,9 @@ void load_song( int song_index, int asset ) {
 
     int soundfont_size = 0;
     u8 const* soundfont = default_soundfont( &soundfont_size );
-    mid_t* mid = mid_create( pixie->assets.files[ asset ].data, (size_t) pixie->assets.files[ asset ].size, soundfont, (size_t) soundfont_size, 0 );
+    int mid_size = 0;
+    void* mid_data = pixie_find_asset( pixie, asset, &mid_size );
+    mid_t* mid = mid_create( mid_data, (size_t) mid_size, soundfont, (size_t) soundfont_size, 0 );
     mid_skip_leading_silence( mid );
 
     thread_mutex_lock( &pixie->audio.song_mutex );
@@ -1490,8 +1106,16 @@ void play_song( int song_index ) {
 #define MID_IMPLEMENTATION
 #include "mid.h"
 
+#define MMAP_IMPLEMENTATION
+#include "mmap.h"
+
 #define PALETTIZE_IMPLEMENTATION
 #include "palettize.h"
+
+#ifndef PIXIE_NO_BUILD
+    #define PIXIE_BUILD_IMPLEMENTATION
+    #include "pixie_build.h"
+#endif
 
 #define PIXIE_DATA_IMPLEMENTATION
 #include "pixie_data.h"

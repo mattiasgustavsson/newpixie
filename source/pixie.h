@@ -11,5 +11,6 @@
 //#define PIXIE_NO_MATH
 //#define PIXIE_NO_NAMESPACE
 //#define PIXIE_NO_MAIN
+//#define PIXIE_NO_BUILD
 
 #include "pixie/pixie.h"

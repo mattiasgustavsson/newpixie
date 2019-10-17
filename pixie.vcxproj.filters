@@ -40,6 +40,12 @@
       <Filter>pixie</Filter>
     </ClInclude>
     <ClInclude Include="source\pixie.h" />
+    <ClInclude Include="source\pixie\pixie_build.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\mmap.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />

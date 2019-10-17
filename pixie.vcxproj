@@ -215,8 +215,10 @@
     <ClInclude Include="source\pixie\crt_frame.h" />
     <ClInclude Include="source\pixie\frametimer.h" />
     <ClInclude Include="source\pixie\mid.h" />
+    <ClInclude Include="source\pixie\mmap.h" />
     <ClInclude Include="source\pixie\palettize.h" />
     <ClInclude Include="source\pixie\pixie.h" />
+    <ClInclude Include="source\pixie\pixie_build.h" />
     <ClInclude Include="source\pixie\pixie_data.h" />
     <ClInclude Include="source\pixie\stb_image.h" />
     <ClInclude Include="source\pixie\thread.h" />

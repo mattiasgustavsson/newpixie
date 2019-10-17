@@ -10,7 +10,7 @@ ASSET_PALETTE( PAL, "pal.png" )
 ASSET_SPRITE( BALL, "ball.png" )
 ASSET_SONG( JAMBALA8, "jambala8.mid" )
 ASSETS_END()
-
+ 
 
 int pixmain( int argc, char** argv ) {
     (void) argc, argv;
@@ -19,8 +19,7 @@ int pixmain( int argc, char** argv ) {
     print( "Hello world!" );
 
     load_palette( PAL );
-    load_sprite( 1, BALL );
-    for( int i = 1; i <= 8; ++i ) sprite( i, 100,100, 1 );
+    for( int i = 1; i <= 8; ++i ) sprite( i, 100,100, BALL );
 
     load_song( 1, JAMBALA8 );
     play_song( 1 );
