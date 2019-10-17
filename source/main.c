@@ -1,4 +1,4 @@
-#include "pixie/pixie.h"
+#include "pixie.h"
 
 #ifdef __cplusplus
 using namespace pixie;
@@ -39,5 +39,5 @@ mainloop:
 
 
 #define PIXIE_IMPLEMENTATION
-#include "pixie/pixie.h"
+#include "pixie.h"
 

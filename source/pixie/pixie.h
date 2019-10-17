@@ -14,51 +14,19 @@ before you include this file in *one* C/C++ file to create the implementation.
 #ifndef pixie_h
 #define pixie_h
 
+/*
+----------
+    API 
+----------
+*/
+
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 namespace pixie {
 #endif
 
-struct asset_definitions_t {
-    char const* bundle_filename;
-    char const* definitions_file;
-    char const* build_time;
-    int assets_count;
-};
-
-
-#define ASSETS_BEGIN( bundle_filename ) inline char const* multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( void ) { return bundle_filename; } enum assets_t {
-#define ASSET_PALETTE( id, filename ) id,
-#define ASSET_SPRITE( id, filename ) id,
-#define ASSET_SONG( id, filename ) id,
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        namespace pixie { \
-        void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
-        inline void load_assets( void ) { \
-            struct asset_definitions_t definitions; \
-            definitions.bundle_filename = multiple_pixie_ASSETS_BEGIN_declarations_not_allowed(); \
-            definitions.definitions_file = __FILE__; \
-            definitions.build_time = __DATE__ " " __TIME__; \
-            definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
-            build_and_load_assets( &definitions ); \
-        } \
-        } /* namespace pixie */
-#else
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
-        inline void load_assets( void ) { \
-            struct asset_definitions_t definitions; \
-            definitions.bundle_filename = multiple_pixie_ASSETS_BEGIN_declarations_not_allowed(); \
-            definitions.definitions_file = __FILE__; \
-            definitions.build_time = __DATE__ " " __TIME__; \
-            definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
-            build_and_load_assets( &definitions ); \
-        }
-#endif
-
 
 // Sized types
+
 typedef signed char i8;
 typedef signed short i16;
 typedef signed int i32;
@@ -69,7 +37,7 @@ typedef unsigned int u32;
 typedef unsigned long long u64;
 
 
-// API
+// API Functions
 
 int run( int (*main)( int, char** ) );
 void end( int return_code );
@@ -89,83 +57,139 @@ void play_song( int song_index );
 #endif
 
 
-// Math wrappers
-
-#ifndef PIXIE_NO_MATH
+/*
+----------------------------------
+    ASSET BUILD/BUNDLE SUPPORT
+----------------------------------
+*/
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-
 namespace pixie {
+#endif
 
-float acos( float x );
-float asin( float x );
-float atan( float x );
-float atan2( float x, float y );
-float ceil( float x );
-float cos( float x );
-float cosh( float x );
-float exp( float x );
-float fabs( float x );
-float floor( float x );
-float fmod( float x, float y );
-float log( float x );
-float log10( float x );
-float modf( float x, float* y );
-float pow( float x, float y );
-float sqrt( float x );
-float sin( float x );
-float sinh( float x );
-float tan( float x );
-float tanh( float x );
+struct asset_definitions_t {
+    char const* bundle_filename;
+    char const* build_time;
+    char const* definitions_file;
+    int definitions_line;
+    int assets_count;
+};
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
+#endif
 
-#else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+#define ASSETS_BEGIN( bundle_filename_param ) \
+    inline void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( struct asset_definitions_t* definitions ) \
+        { definitions->bundle_filename = bundle_filename_param; definitions->definitions_line = __LINE__; } \
+    enum assets_t {
 
-float internal_pixie_acos( float x );
-float internal_pixie_asin( float x );
-float internal_pixie_atan( float x );
-float internal_pixie_atan2( float x, float y );
-float internal_pixie_ceil( float x );
-float internal_pixie_cos( float x );
-float internal_pixie_cosh( float x );
-float internal_pixie_exp( float x );
-float internal_pixie_fabs( float x );
-float internal_pixie_floor( float x );
-float internal_pixie_fmod( float x, float y );
-float internal_pixie_log( float x );
-float internal_pixie_log10( float x );
-float internal_pixie_modf( float x, float* y );
-float internal_pixie_pow( float x, float y );
-float internal_pixie_sqrt( float x );
-float internal_pixie_sin( float x );
-float internal_pixie_sinh( float x );
-float internal_pixie_tan( float x );
-float internal_pixie_tanh( float x );
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
+        namespace pixie { \
+            void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
+            inline void load_assets( void ) { \
+                struct asset_definitions_t definitions; \
+                multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &definitions ); \
+                definitions.build_time = __DATE__ " " __TIME__; \
+                definitions.definitions_file = __FILE__; \
+                definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
+                build_and_load_assets( &definitions ); \
+            } \
+        } /* namespace pixie */
+#else
+    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
+        void build_and_load_assets( struct asset_definitions_t const* asset_definitions ); \
+        inline void load_assets( void ) { \
+            struct asset_definitions_t definitions; \
+                multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &definitions ); \
+            definitions.definitions_file = __FILE__; \
+            definitions.build_time = __DATE__ " " __TIME__; \
+            definitions.assets_count = TEMP_PIXIE_ASSETS_COUNT; \
+            build_and_load_assets( &definitions ); \
+        }
+#endif
 
-#define acos internal_pixie_acos
-#define asin internal_pixie_asin
-#define atan internal_pixie_atan
-#define atan2 internal_pixie_atan2
-#define ceil internal_pixie_ceil
-#define cos internal_pixie_cos 
-#define cosh internal_pixie_cosh
-#define exp internal_pixie_exp 
-#define fabs internal_pixie_fabs
-#define floor internal_pixie_floor
-#define fmod internal_pixie_fmod
-#define log internal_pixie_log 
-#define log10 internal_pixie_log10
-#define modf internal_pixie_modf
-#define pow internal_pixie_pow 
-#define sqrt internal_pixie_sqrt
-#define sin internal_pixie_sin 
-#define sinh internal_pixie_sinh
-#define tan internal_pixie_tan 
-#define tanh internal_pixie_tanh
+#define ASSET_PALETTE( id, filename ) id,
+#define ASSET_SPRITE( id, filename ) id,
+#define ASSET_SONG( id, filename ) id,
 
-#endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 
+
+
+
+/*
+---------------------
+    MATH WRAPPERS
+---------------------
+*/
+
+#ifndef PIXIE_NO_MATH
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        namespace pixie {
+            float acos( float x );
+            float asin( float x );
+            float atan( float x );
+            float atan2( float x, float y );
+            float ceil( float x );
+            float cos( float x );
+            float cosh( float x );
+            float exp( float x );
+            float fabs( float x );
+            float floor( float x );
+            float fmod( float x, float y );
+            float log( float x );
+            float log10( float x );
+            float modf( float x, float* y );
+            float pow( float x, float y );
+            float sqrt( float x );
+            float sin( float x );
+            float sinh( float x );
+            float tan( float x );
+            float tanh( float x );
+        } /* namespace pixie */
+    #else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+        float internal_pixie_acos( float x );
+        float internal_pixie_asin( float x );
+        float internal_pixie_atan( float x );
+        float internal_pixie_atan2( float x, float y );
+        float internal_pixie_ceil( float x );
+        float internal_pixie_cos( float x );
+        float internal_pixie_cosh( float x );
+        float internal_pixie_exp( float x );
+        float internal_pixie_fabs( float x );
+        float internal_pixie_floor( float x );
+        float internal_pixie_fmod( float x, float y );
+        float internal_pixie_log( float x );
+        float internal_pixie_log10( float x );
+        float internal_pixie_modf( float x, float* y );
+        float internal_pixie_pow( float x, float y );
+        float internal_pixie_sqrt( float x );
+        float internal_pixie_sin( float x );
+        float internal_pixie_sinh( float x );
+        float internal_pixie_tan( float x );
+        float internal_pixie_tanh( float x );
+        #define acos internal_pixie_acos
+        #define asin internal_pixie_asin
+        #define atan internal_pixie_atan
+        #define atan2 internal_pixie_atan2
+        #define ceil internal_pixie_ceil
+        #define cos internal_pixie_cos 
+        #define cosh internal_pixie_cosh
+        #define exp internal_pixie_exp 
+        #define fabs internal_pixie_fabs
+        #define floor internal_pixie_floor
+        #define fmod internal_pixie_fmod
+        #define log internal_pixie_log 
+        #define log10 internal_pixie_log10
+        #define modf internal_pixie_modf
+        #define pow internal_pixie_pow 
+        #define sqrt internal_pixie_sqrt
+        #define sin internal_pixie_sin 
+        #define sinh internal_pixie_sinh
+        #define tan internal_pixie_tan 
+        #define tanh internal_pixie_tanh
+    #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
 
 
@@ -182,128 +206,124 @@ float internal_pixie_tanh( float x );
 #undef PIXIE_IMPLEMENTATION
 
 
-// C runtime includes
 #define _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_SECURE_NO_WARNINGS
+
+
+/*
+---------------------
+    MATH WRAPPERS
+---------------------
+*/
+
+#ifndef PIXIE_NO_MATH
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        #pragma warning( push )
+        #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
+        #include <math.h>
+        #pragma warning( pop )
+        namespace pixie {
+            float acos( float x ) { return acosf( x ); }
+            float asin( float x ) { return asinf( x ); }
+            float atan( float x ) { return atanf( x ); }
+            float atan2( float x, float y ) { return atan2f( x, y ); }
+            float ceil( float x ) { return ceilf( x ); }
+            float cos( float x ) { return cosf( x ); }
+            float cosh( float x ) { return coshf( x ); }
+            float exp( float x ) { return expf( x ); }
+            float fabs( float x ) { return fabsf( x ); }
+            float floor( float x ) { return floorf( x ); }
+            float fmod( float x, float y ) { return fmodf( x, y ); }
+            float log( float x ) { return logf( x ); }
+            float log10( float x ) { return log10f( x ); }
+            float modf( float x, float* y ) { return modff( x, y ); }
+            float pow( float x, float y ) { return powf( x, y ); }
+            float sqrt( float x ) { return sqrtf( x ); }
+            float sin( float x ) { return sinf( x ); }
+            float sinh( float x ) { return sinhf( x ); }
+            float tan( float x ) { return tanf( x ); }
+            float tanh( float x ) { return tanhf( x ); }
+        } /* namespace pixie */
+    #else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+        #undef acos 
+        #undef asin 
+        #undef atan 
+        #undef atan2
+        #undef ceil 
+        #undef cos  
+        #undef cosh 
+        #undef exp  
+        #undef fabs 
+        #undef floor
+        #undef fmod 
+        #undef log  
+        #undef log10
+        #undef modf 
+        #undef pow  
+        #undef sqrt 
+        #undef sin  
+        #undef sinh 
+        #undef tan  
+        #undef tanh 
+
+        #pragma warning( push )
+        #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
+        #include <math.h>
+        #pragma warning( pop )
+
+        float internal_pixie_acos( float x ) { return acosf( x ); }
+        float internal_pixie_asin( float x ) { return asinf( x ); }
+        float internal_pixie_atan( float x ) { return atanf( x ); }
+        float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
+        float internal_pixie_ceil( float x ) { return ceilf( x ); }
+        float internal_pixie_cos( float x ) { return cosf( x ); }
+        float internal_pixie_cosh( float x ) { return coshf( x ); }
+        float internal_pixie_exp( float x ) { return expf( x ); }
+        float internal_pixie_fabs( float x ) { return fabsf( x ); }
+        float internal_pixie_floor( float x ) { return floorf( x ); }
+        float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
+        float internal_pixie_log( float x ) { return logf( x ); }
+        float internal_pixie_log10( float x ) { return log10f( x ); }
+        float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
+        float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
+        float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
+        float internal_pixie_sin( float x ) { return sinf( x ); }
+        float internal_pixie_sinh( float x ) { return sinhf( x ); }
+        float internal_pixie_tan( float x ) { return tanf( x ); }
+        float internal_pixie_tanh( float x ) { return tanhf( x ); }
+
+        #define acos internal_pixie_acos
+        #define asin internal_pixie_asin
+        #define atan internal_pixie_atan
+        #define atan2 internal_pixie_atan2
+        #define ceil internal_pixie_ceil
+        #define cos internal_pixie_cos 
+        #define cosh internal_pixie_cosh
+        #define exp internal_pixie_exp 
+        #define fabs internal_pixie_fabs
+        #define floor internal_pixie_floor
+        #define fmod internal_pixie_fmod
+        #define log internal_pixie_log 
+        #define log10 internal_pixie_log10
+        #define modf internal_pixie_modf
+        #define pow internal_pixie_pow 
+        #define sqrt internal_pixie_sqrt
+        #define sin internal_pixie_sin 
+        #define sinh internal_pixie_sinh
+        #define tan internal_pixie_tan 
+        #define tanh internal_pixie_tanh
+    #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+#endif /* PIXIE_NO_MATH */
+
+
+// C runtime includes
 #include <ctype.h>
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-// Math wrappers
-
-#ifndef PIXIE_NO_MATH
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-
-
-#pragma warning( push )
-#pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
-#include <math.h>
-#pragma warning( pop )
-
-namespace pixie {
-
-float acos( float x ) { return acosf( x ); }
-float asin( float x ) { return asinf( x ); }
-float atan( float x ) { return atanf( x ); }
-float atan2( float x, float y ) { return atan2f( x, y ); }
-float ceil( float x ) { return ceilf( x ); }
-float cos( float x ) { return cosf( x ); }
-float cosh( float x ) { return coshf( x ); }
-float exp( float x ) { return expf( x ); }
-float fabs( float x ) { return fabsf( x ); }
-float floor( float x ) { return floorf( x ); }
-float fmod( float x, float y ) { return fmodf( x, y ); }
-float log( float x ) { return logf( x ); }
-float log10( float x ) { return log10f( x ); }
-float modf( float x, float* y ) { return modff( x, y ); }
-float pow( float x, float y ) { return powf( x, y ); }
-float sqrt( float x ) { return sqrtf( x ); }
-float sin( float x ) { return sinf( x ); }
-float sinh( float x ) { return sinhf( x ); }
-float tan( float x ) { return tanf( x ); }
-float tanh( float x ) { return tanhf( x ); }
-
-} /* namespace pixie */
-
-#else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
-
-#undef acos 
-#undef asin 
-#undef atan 
-#undef atan2
-#undef ceil 
-#undef cos  
-#undef cosh 
-#undef exp  
-#undef fabs 
-#undef floor
-#undef fmod 
-#undef log  
-#undef log10
-#undef modf 
-#undef pow  
-#undef sqrt 
-#undef sin  
-#undef sinh 
-#undef tan  
-#undef tanh 
-
-#pragma warning( push )
-#pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
-#include <math.h>
-#pragma warning( pop )
-
-float internal_pixie_acos( float x ) { return acosf( x ); }
-float internal_pixie_asin( float x ) { return asinf( x ); }
-float internal_pixie_atan( float x ) { return atanf( x ); }
-float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
-float internal_pixie_ceil( float x ) { return ceilf( x ); }
-float internal_pixie_cos( float x ) { return cosf( x ); }
-float internal_pixie_cosh( float x ) { return coshf( x ); }
-float internal_pixie_exp( float x ) { return expf( x ); }
-float internal_pixie_fabs( float x ) { return fabsf( x ); }
-float internal_pixie_floor( float x ) { return floorf( x ); }
-float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
-float internal_pixie_log( float x ) { return logf( x ); }
-float internal_pixie_log10( float x ) { return log10f( x ); }
-float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
-float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
-float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
-float internal_pixie_sin( float x ) { return sinf( x ); }
-float internal_pixie_sinh( float x ) { return sinhf( x ); }
-float internal_pixie_tan( float x ) { return tanf( x ); }
-float internal_pixie_tanh( float x ) { return tanhf( x ); }
-
-#define acos internal_pixie_acos
-#define asin internal_pixie_asin
-#define atan internal_pixie_atan
-#define atan2 internal_pixie_atan2
-#define ceil internal_pixie_ceil
-#define cos internal_pixie_cos 
-#define cosh internal_pixie_cosh
-#define exp internal_pixie_exp 
-#define fabs internal_pixie_fabs
-#define floor internal_pixie_floor
-#define fmod internal_pixie_fmod
-#define log internal_pixie_log 
-#define log10 internal_pixie_log10
-#define modf internal_pixie_modf
-#define pow internal_pixie_pow 
-#define sqrt internal_pixie_sqrt
-#define sin internal_pixie_sin 
-#define sinh internal_pixie_sinh
-#define tan internal_pixie_tan 
-#define tanh internal_pixie_tanh
-
-#endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
-
-#endif /* PIXIE_NO_MATH */
-
-
-// Libaries includes
+// Libraries includes
 #include "app.h"
 #include "crtemu.h"
 #include "crt_frame.h"
@@ -319,12 +339,6 @@ float internal_pixie_tanh( float x ) { return tanhf( x ); }
 namespace pixie {
 #endif
 
-
-/*
-----------------
-    INTERNALS
-----------------
-*/
 
 // In C, a void* can be implicitly cast to any other kind of pointer, while in C++ you need an explicit cast. In most
 // cases, the explicit cast works for both C and C++, but if we consider the case where we have nested structs, then
@@ -353,102 +367,19 @@ namespace pixie {
 #endif
 
 
-// Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread
-// The instance is created within the `run` function, and a pointer to it is stored in thread local storage for the
-// user thread, so that every API method can access it to perform its function. The app thread gets a pointer to it 
-// through the user_data parameter to the app_proc.
-
-typedef struct pixie_t {
-    struct {
-        jmp_buf exit_jump; // Jump target set in `run` function, to jump back to when `end` is called
-        thread_atomic_int_t force_exit; // Signals (when set to `INT_MAX`) that user thread should jump to `exit_jump`
-    } exit;
-
-    struct {
-        thread_signal_t signal; // Raised by app thread when a frame is finished and the next frame is starting
-        thread_atomic_int_t count; // Incremented for every new frame
-    } vbl;
-
-    struct {
-        int count;
-        struct {
-            int id;
-            size_t size;
-            void* data;
-        }* files;
-    } assets;
-
-    struct { 
-        thread_mutex_t mutex;
-        u32 palette[ 256 ];
-        u8* pixels;
-        u8* composite;
-        u32* xbgr;
-        int width;
-        int height;
-    } screen;
-
-    struct {
-        thread_mutex_t mutex;
-        int sprite_count;
-        struct
-            {
-            int x;
-            int y;
-            int data;
-            }* sprites;
-
-        int data_count;
-        struct {
-            u8* pixels;
-            int width;
-            int height;
-        }* data;
-    } sprites;
-
-
-    struct {
-        int sound_buffer_size;
-        i16* mix_buffers;
-
-        thread_mutex_t song_mutex;
-        int songs_count;
-        mid_t** songs;
-        int current_song;
-
-    } audio;
-} pixie_t;
-
-
 // Forward declares
 
+typedef struct pixie_t pixie_t;
+static void pixie_force_exit( pixie_t* pixie );
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
 static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
 
 
-// A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
-// unless it has already been created (through a compare-and-swap). The `run` method then sets the TLS value on the 
-// instance, for the current thread.
-
-static thread_atomic_ptr_t g_tls_pixie = { NULL }; 
-
-
-// Retrieves the pointer to the `pixie_t` state for the current thread, as stored in the `g_tls_pixie` TLS storage
-// As this has to be called in every API function, it was also a convenient place to check if the app thread is 
-// requesting a shutdown of the program, and in that case do a forced exit (using `longjmp`) no matter how deep down a
-// call stack `pixie_instance` was called from.
-
-static pixie_t* pixie_instance( void ) { 
-    // Get the `pixie_t` pointer for this thread from the global TLS instance `g_tls_pixie`
-    pixie_t*  pixie = (pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
-
-    // Check if app thread is requesting a forced exit (the user closed the window) and if so, call the exit point
-    int force_exit = thread_atomic_int_load( &pixie->exit.force_exit );
-    if( force_exit ) longjmp( pixie->exit.exit_jump, force_exit );
-
-    return pixie; 
-}
-
+/*
+------------------
+    APP THREAD
+------------------
+*/
 
 // Audio playback is started by the app thread, and works with a streaming sound buffer. Every time the stream have 
 // played enough to need more samples, it calls this callback function, which just pass the call on to the
@@ -517,11 +448,7 @@ static int app_proc( app_t* app, void* user_data ) {
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
             // Signal that we need to force the user thread to exit
-            thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX );
-            
-            // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
-            thread_atomic_int_add( &pixie->vbl.count, 1 );
-            thread_signal_raise( &pixie->vbl.signal );    
+            pixie_force_exit( pixie );
             break; 
         }
 
@@ -529,10 +456,6 @@ static int app_proc( app_t* app, void* user_data ) {
         int screen_height = 0;
         APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height );
     
-        // Signal to the game that the frame is completed, and that we are just starting the next one
-        thread_atomic_int_add( &pixie->vbl.count, 1 );
-        thread_signal_raise( &pixie->vbl.signal );    
-
         // Present the screen buffer to the window
         APP_U64 time = app_time_count( app );
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
@@ -558,6 +481,105 @@ static int app_proc( app_t* app, void* user_data ) {
 
 static int app_thread( void* user_data ) {
     return app_run( app_proc, user_data, NULL, NULL, NULL );
+}
+
+
+/*
+-----------------------
+    PIXIE INTERNALS
+-----------------------
+*/
+
+
+// Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread
+// The instance is created within the `run` function, and a pointer to it is stored in thread local storage for the
+// user thread, so that every API method can access it to perform its function. The app thread gets a pointer to it 
+// through the user_data parameter to the app_proc.
+
+typedef struct pixie_t {
+    struct {
+        jmp_buf exit_jump; // Jump target set in `run` function, to jump back to when `end` is called
+        thread_atomic_int_t force_exit; // Signals (when set to `INT_MAX`) that user thread should jump to `exit_jump`
+    } exit;
+
+    struct {
+        thread_signal_t signal; // Raised by app thread when a frame is finished and the next frame is starting
+        thread_atomic_int_t count; // Incremented for every new frame
+    } vbl;
+
+    // Placeholder asset data storage. Will be replaced by just an asset index and a memory mapped file
+    struct {
+        int count;
+        struct {
+            int id;
+            size_t size;
+            void* data;
+        }* files;
+    } assets;
+
+    struct { 
+        thread_mutex_t mutex;
+        u32 palette[ 256 ];
+        u8* pixels;
+        u8* composite;
+        u32* xbgr;
+        int width;
+        int height;
+    } screen;
+
+    struct {
+        thread_mutex_t mutex;
+        int sprite_count;
+        struct
+            {
+            int x;
+            int y;
+            int data;
+            }* sprites;
+
+        int data_count;
+        struct {
+            u8* pixels;
+            int width;
+            int height;
+        }* data;
+    } sprites;
+
+
+    struct {
+        int sound_buffer_size;
+        i16* mix_buffers;
+
+        thread_mutex_t song_mutex;
+        int songs_count;
+        mid_t** songs;
+        int current_song;
+
+    } audio;
+} pixie_t;
+
+
+// A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
+// unless it has already been created (through a compare-and-swap). The `run` method then sets the TLS value on the 
+// instance, for the current thread.
+
+static thread_atomic_ptr_t g_tls_pixie = { NULL }; 
+
+
+// Retrieves the pointer to the `pixie_t` state for the current thread, as stored in the `g_tls_pixie` TLS storage
+// As this has to be called in every API function, it was also a convenient place to check if the app thread is 
+// requesting a shutdown of the program, and in that case do a forced exit (using `longjmp`) no matter how deep down a
+// call stack `pixie_instance` was called from.
+
+static pixie_t* pixie_instance( void ) { 
+    // Get the `pixie_t` pointer for this thread from the global TLS instance `g_tls_pixie`
+    pixie_t*  pixie = (pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
+
+    // Check if app thread is requesting a forced exit (the user closed the window) and if so, call the exit point
+    int force_exit = thread_atomic_int_load( &pixie->exit.force_exit );
+    if( force_exit ) longjmp( pixie->exit.exit_jump, force_exit );
+
+    return pixie; 
 }
 
 
@@ -641,6 +663,15 @@ static void pixie_destroy( pixie_t* pixie ) {
 }
 
 
+static void pixie_force_exit( pixie_t* pixie ) {
+    thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX );
+            
+    // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
+    thread_atomic_int_add( &pixie->vbl.count, 1 );
+    thread_signal_raise( &pixie->vbl.signal );    
+}
+
+
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     {
     // Make a copy of the screen so we can draw sprites on top of it
@@ -673,6 +704,9 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
         }
     thread_mutex_unlock( &pixie->sprites.mutex );
 
+    // Signal to the game that the frame is completed, and that we are just starting the next one
+    thread_atomic_int_add( &pixie->vbl.count, 1 );
+    thread_signal_raise( &pixie->vbl.signal );    
 
     // Render screen
     for( int y = 0; y < pixie->screen.height; ++y )
@@ -708,9 +742,9 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
 
 
 /*
---------------------------
-    ASSET BUILD SUPPORT
---------------------------
+----------------------------------
+    ASSET BUILD/BUNDLE SUPPORT
+----------------------------------
 */
 
 struct item_t {
@@ -1092,9 +1126,9 @@ void build_and_load_assets( struct asset_definitions_t const* asset_definitions 
 
 
 /*
---------------------
+---------------------
     API FUNCTIONS
---------------------
+---------------------
 */
 
 
@@ -1188,7 +1222,7 @@ void wait_vbl( void ) {
         // Wait until app thread says there is a new frame, or timeout after one second.
         thread_signal_wait( &pixie->vbl.signal, 1000 );
 
-        // Call `pixie_intance` again, just to trigger the check for `force_exit`, so we can terminate if need be
+        // Call `pixie_instance` again, just to trigger the check for `force_exit`, so we can terminate if need be
         pixie_instance();
     }
 }
@@ -1352,8 +1386,7 @@ void play_song( int song_index ) {
 -------------------------
     ENTRY POINT (MAIN)
 -------------------------
-*/
-     
+*/     
 
 #ifndef PIXIE_NO_MAIN
 
@@ -1404,13 +1437,40 @@ void play_song( int song_index ) {
 #endif /* PIXIE_NO_MAIN */
 
 
+// Undefine math wrappers in case libraries include math.h
+
+#ifndef PIXIE_NO_MATH
+    #if !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE )
+        #undef acos 
+        #undef asin 
+        #undef atan 
+        #undef atan2
+        #undef ceil 
+        #undef cos  
+        #undef cosh 
+        #undef exp  
+        #undef fabs 
+        #undef floor
+        #undef fmod 
+        #undef log  
+        #undef log10
+        #undef modf 
+        #undef pow  
+        #undef sqrt 
+        #undef sin  
+        #undef sinh 
+        #undef tan  
+        #undef tanh 
+    #endif /* !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE ) */
+#endif /* PIXIE_NO_MATH */
+
+
 /*
---------------------------------
+---------------------------------
     LIBRARIES IMPLEMENTATIONS
---------------------------------
+---------------------------------
 */
       
-
 #define APP_IMPLEMENTATION
 #ifdef _WIN32
     #define APP_WINDOWS
@@ -1450,6 +1510,32 @@ void play_song( int song_index ) {
 #include "thread.h"
 
 
+// Redefine math wrappers again so they can be used by the file that included implementation
+
+#ifndef PIXIE_NO_MATH
+    #if !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE )
+        #define acos internal_pixie_acos
+        #define asin internal_pixie_asin
+        #define atan internal_pixie_atan
+        #define atan2 internal_pixie_atan2
+        #define ceil internal_pixie_ceil
+        #define cos internal_pixie_cos 
+        #define cosh internal_pixie_cosh
+        #define exp internal_pixie_exp 
+        #define fabs internal_pixie_fabs
+        #define floor internal_pixie_floor
+        #define fmod internal_pixie_fmod
+        #define log internal_pixie_log 
+        #define log10 internal_pixie_log10
+        #define modf internal_pixie_modf
+        #define pow internal_pixie_pow 
+        #define sqrt internal_pixie_sqrt
+        #define sin internal_pixie_sin 
+        #define sinh internal_pixie_sinh
+        #define tan internal_pixie_tan 
+        #define tanh internal_pixie_tanh
+    #endif /* !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE ) */
+#endif /* PIXIE_NO_MATH */
 
 #endif /* PIXIE_IMPLEMENTATION */
 

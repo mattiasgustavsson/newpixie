@@ -209,6 +209,7 @@
     <ClCompile Include="source\main.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\pixie.h" />
     <ClInclude Include="source\pixie\app.h" />
     <ClInclude Include="source\pixie\crtemu.h" />
     <ClInclude Include="source\pixie\crt_frame.h" />

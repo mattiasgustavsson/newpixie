@@ -39,6 +39,7 @@
     <ClInclude Include="source\pixie\tsf.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />
