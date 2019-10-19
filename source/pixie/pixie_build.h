@@ -459,6 +459,39 @@ void build_and_load_assets( char const* bundle_filename, char const* build_time,
             running_offset += size;
             fwrite( data, 1, (size_t) size, bundle );
             free( data );
+        } else if( strcmp( items[ i ].type, "SONG" ) == 0 ) {
+            FILE* fp = fopen( items[ i ].filename, "rb" );
+            if( fp == NULL ) {
+                printf( "Asset file '%s' could not be opened\n", items[ i ].filename );
+                free( items );
+                free( file_list );
+                return;
+            }
+            fseek( fp, 0, SEEK_END );
+            size_t sz = (size_t) ftell( fp );
+            fseek( fp, 0, SEEK_SET );
+            void* filedata = malloc( sz );
+            sz = fread( filedata, 1, sz, fp );
+            fclose( fp );
+            if( filedata == NULL ) {
+                printf( "Asset file '%s' could not be opened\n", items[ i ].filename );
+                free( items );
+                free( file_list );
+                return;
+            }
+
+            mid_t* mid = mid_create( filedata, sz, NULL, NULL ); 
+            free( filedata );
+            size_t size = mid_save_raw( mid, NULL, 0 );
+            void* data = malloc( size );
+            mid_save_raw( mid, data, size );
+            mid_destroy( mid );
+            file_list[ i ].id = i;
+            file_list[ i ].offset = running_offset;
+            file_list[ i ].size = (int)size;
+            running_offset += (int) size;
+            fwrite( data, 1, (size_t) size, bundle );
+            free( data );
         } else {
             FILE* fp = fopen( items[ i ].filename, "rb" );
             if( fp == NULL ) {

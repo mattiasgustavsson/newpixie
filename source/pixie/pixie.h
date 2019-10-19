@@ -47,8 +47,7 @@ void print( char const* str );
 void load_palette( int asset );
 void sprite( int spr_index, int x, int y, int asset );
 void sprite_pos( int spr_index, int x, int y );
-void load_song( int song_index, int asset );
-void play_song( int song_index );
+void play_song( int asset );
 
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
@@ -297,6 +296,7 @@ void play_song( int song_index );
 #include "pixie_data.h"
 #include "stb_image.h"
 #include "thread.h"
+#include "tsf.h"
 
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
@@ -518,9 +518,8 @@ typedef struct pixie_t {
         i16* mix_buffers;
 
         thread_mutex_t song_mutex;
-        int songs_count;
-        mid_t** songs;
-        int current_song;
+        tsf* sound_font;
+        mid_t* current_song;
 
     } audio;
 } pixie_t;
@@ -586,9 +585,13 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     pixie->audio.sound_buffer_size = sound_buffer_size ;
     pixie->audio.mix_buffers = (i16*) malloc( sizeof( i16 ) * sound_buffer_size * 2 * 6 ); // 6 buffers (song, speech + 4 sounds)
     thread_mutex_init( &pixie->audio.song_mutex );
-    pixie->audio.songs_count = 16;
-    pixie->audio.songs = VOID_CAST( malloc( sizeof( *pixie->audio.songs ) * pixie->audio.songs_count ) );
-    memset( pixie->audio.songs, 0, sizeof( *pixie->audio.songs ) * pixie->audio.songs_count );
+    pixie->audio.current_song = NULL;
+
+    int soundfont_size = 0;
+    u8 const* soundfont = default_soundfont( &soundfont_size );
+    pixie->audio.sound_font = tsf_load_memory( soundfont, soundfont_size );
+    tsf_set_output( pixie->audio.sound_font, TSF_STEREO_INTERLEAVED, 44100, 0.0f );
+
     return pixie;
 }
 
@@ -610,11 +613,10 @@ static void pixie_destroy( pixie_t* pixie ) {
     thread_mutex_term( &pixie->sprites.mutex );
 
     // Cleanup audio
-    for( int i = 0; i < pixie->audio.songs_count; ++i ) 
-        if( pixie->audio.songs[ i ] ) mid_destroy( pixie->audio.songs[ i ] );
-    free( pixie->audio.songs );
+    if( pixie->audio.current_song ) mid_destroy( pixie->audio.current_song );
     thread_mutex_term( &pixie->audio.song_mutex );
     free( pixie->audio.mix_buffers );
+    tsf_close( pixie->audio.sound_font );
 
     mmap_close( pixie->assets.bundle );
 
@@ -705,16 +707,16 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
     // Render midi song to local buffer
     i16* song = pixie->audio.mix_buffers;
     thread_mutex_lock( &pixie->audio.song_mutex ); 
-    if( pixie->audio.current_song < 1 || pixie->audio.current_song > 16 || !pixie->audio.songs[ pixie->audio.current_song - 1 ] ) 
+    if( !pixie->audio.current_song ) 
         memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
     else    
-        mid_render_short( pixie->audio.songs[ pixie->audio.current_song - 1 ], song, sample_pairs_count );
+        mid_render_short( pixie->audio.current_song, song, sample_pairs_count );
     thread_mutex_unlock( &pixie->audio.song_mutex );
 
     // Mix all local buffers
     for( int i = 0; i < sample_pairs_count * 2; ++i )
         {
-        int sample = song[ i ] * 3;
+        int sample = song[ i ];
         sample = sample > 32767 ? 32767 : sample < -32727 ? -32727 : sample;
         sample_pairs[ i ] = (i16) sample;
         }
@@ -1010,42 +1012,38 @@ void sprite_pos( int spr_index, int x, int y ) {
 }
 
 
-// TODO: midi files should be pre-processed so they can be bundled in memory-ready for, and we should use a single
-// soundfont and the "reset" option. Then get rid of this function and just have `play_song`
 
-void load_song( int song_index, int asset ) {
+void play_song( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
-    if( song_index < 1 || song_index > 16 ) return;
-    --song_index;
+    if( asset < 0 || asset >= pixie->assets.count ) {
+        return;
+    }
 
-    int soundfont_size = 0;
-    u8 const* soundfont = default_soundfont( &soundfont_size );
+    thread_mutex_lock( &pixie->audio.song_mutex );
+
+    if( pixie->audio.current_song ) {
+        mid_destroy( pixie->audio.current_song );
+        pixie->audio.current_song = NULL; 
+    }
+
     int mid_size = 0;
     void* mid_data = pixie_find_asset( pixie, asset, &mid_size );
-    mid_t* mid = mid_create( mid_data, (size_t) mid_size, soundfont, (size_t) soundfont_size, 0 );
+    if( !mid_data ) {
+        thread_mutex_unlock( &pixie->audio.song_mutex );
+        return;
+    }
+
+    mid_t* mid = mid_create_from_raw( mid_data, (size_t) mid_size,  pixie->audio.sound_font, NULL );
+    if( !mid ) {
+        thread_mutex_unlock( &pixie->audio.song_mutex );
+        return;
+    }
+
+    pixie->audio.current_song = mid;
+    tsf_reset( pixie->audio.sound_font );
     mid_skip_leading_silence( mid );
 
-    thread_mutex_lock( &pixie->audio.song_mutex );
-    if( pixie->audio.songs[ song_index ] )
-        {
-        mid_destroy( pixie->audio.songs[ song_index ] );
-        pixie->audio.songs[ song_index ] = NULL; 
-        }
-    pixie->audio.songs[ song_index ] = mid;
-    thread_mutex_unlock( &pixie->audio.song_mutex );
-}
-
-
-// TODO: after removing `load_song`, change this function to take an asset id instead
-
-void play_song( int song_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
-
-    if( song_index < 1 || song_index > 16 ) return;
-    thread_mutex_lock( &pixie->audio.song_mutex );
-    if( pixie->audio.songs[ song_index - 1 ] ) 
-        pixie->audio.current_song = song_index;
     thread_mutex_unlock( &pixie->audio.song_mutex );
 }
 
@@ -1165,6 +1163,7 @@ void play_song( int song_index ) {
 #include "frametimer.h"
 
 #define MID_IMPLEMENTATION
+#define MID_NO_TSF_IMPLEMENTATION
 #include "mid.h"
 
 #define MMAP_IMPLEMENTATION
@@ -1193,6 +1192,18 @@ void play_song( int song_index ) {
 
 #define THREAD_IMPLEMENTATION
 #include "thread.h"
+
+#pragma warning( push )
+#pragma warning( disable: 4242 )
+#pragma warning( disable: 4244 )
+#pragma warning( disable: 4365 )
+#pragma warning( disable: 4668 )
+#pragma warning( disable: 4701 )
+#pragma warning( disable: 4703 )
+#define TSF_NO_STDIO
+#define TSF_IMPLEMENTATION
+#include "tsf.h"
+#pragma warning( pop )
 
 
 // Redefine math wrappers again so they can be used by the file that included implementation

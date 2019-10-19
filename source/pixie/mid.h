@@ -18,10 +18,14 @@ before you include this file in *one* C/C++ file to create the implementation.
 #include <stddef.h>
 
 typedef struct mid_t mid_t;
+typedef struct tsf tsf;
     
-mid_t* mid_create( void const* midi_data, size_t midi_size, void const* sf2_data, size_t sf2_size, void* memctx );
+mid_t* mid_create( void const* midi_data, size_t midi_size, tsf* sound_font, void* memctx );
+mid_t* mid_create_from_raw( void const* raw_data, size_t raw_size, tsf* sound_font, void* memctx );
 
 void mid_destroy( mid_t* mid ); 
+
+size_t mid_save_raw( mid_t* mid, void* data, size_t capacity ); 
 
 int mid_render_short( mid_t* mid, short* sample_pairs, int sample_pairs_count );
 int mid_render_float( mid_t* mid, float* sample_pairs, int sample_pairs_count );
@@ -296,7 +300,7 @@ typedef struct mid_track_data_t
     } mid_track_data_t;
 
 
-mid_t* mid_create( void const* midi_data, size_t midi_size, void const* sf2_data, size_t sf2_size, void* memctx )
+mid_t* mid_create( void const* midi_data, size_t midi_size, tsf* sound_font, void* memctx )
     {
     mid_file_t mid_file;
     mid_file.ptr = (uintptr_t)midi_data;
@@ -758,14 +762,7 @@ mid_t* mid_create( void const* midi_data, size_t midi_size, void const* sf2_data
     mid->playback_sample_pos = 0;
     mid->playback_event_pos = 0;
 
-    tsf* sound_font = tsf_load_memory( sf2_data, (int) sf2_size );
-    if( !sound_font ) 
-        {
-        mid_destroy( mid );
-        return NULL;
-        }
-    tsf_set_output( sound_font, TSF_STEREO_INTERLEAVED, 44100, -18.0f );
-    tsf_channel_set_presetnumber( sound_font, 9, 0, 1 ); // drums
+    if( sound_font ) tsf_channel_set_presetnumber( sound_font, 9, 0, 1 ); // drums
     mid->sound_font = sound_font;
 
     return mid; 
@@ -775,8 +772,43 @@ mid_t* mid_create( void const* midi_data, size_t midi_size, void const* sf2_data
 void mid_destroy( mid_t* mid )
     {
     if( mid->song.events ) MID_FREE( mid->memctx, mid->song.events );
-    if( mid->sound_font ) tsf_close( mid->sound_font );
     MID_FREE( mid->memctx, mid );
+    }
+
+
+mid_t* mid_create_from_raw( void const* raw_data, size_t raw_size, tsf* sound_font, void* memctx )
+    {
+    int events_count = *(int*)raw_data;
+    if( sizeof( mid_event_t ) * events_count != raw_size - sizeof( int ) ) return NULL;
+
+    mid_event_t* events = (mid_event_t*) MID_MALLOC( memctx, sizeof( *events ) * events_count );
+    memcpy( events, ( (int*)raw_data ) + 1, sizeof( *events ) * events_count );
+
+    mid_t* mid = (mid_t*) MID_MALLOC( memctx, sizeof( mid_t ) );
+    mid->memctx = memctx;
+    mid->song.event_count = events_count;
+    mid->song.events = events;
+
+    mid->playback_accumulated_time_us = 0ull;
+    mid->playback_sample_pos = 0;
+    mid->playback_event_pos = 0;
+
+    if( sound_font ) tsf_channel_set_presetnumber( sound_font, 9, 0, 1 ); // drums
+    mid->sound_font = sound_font;
+
+    return mid; 
+    }
+
+
+size_t mid_save_raw( mid_t* mid, void* data, size_t capacity ) 
+    {
+    size_t size = sizeof( mid_event_t ) * mid->song.event_count + sizeof( int );
+    if( data && capacity >= size ) 
+        {
+        *(int*)data = mid->song.event_count;
+        memcpy( ( (int*)data ) + 1, mid->song.events, sizeof( mid_event_t ) * mid->song.event_count );
+        }
+    return size;
     }
 
 
