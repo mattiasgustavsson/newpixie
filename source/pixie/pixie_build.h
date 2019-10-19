@@ -76,10 +76,26 @@ before you include this file in *one* C/C++ file to create the implementation.
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+// In C, a void* can be implicitly cast to any other kind of pointer, while in C++ you need an explicit cast. In most
+// cases, the explicit cast works for both C and C++, but if we consider the case where we have nested structs, then
+// the way you refer to them differs between C and C++ (in C++, `parent_type::nested_type`, in C just `nested_type`).
+// In addition, with the automatic cast in C, it is possible to use unnamed nested structs and still dynamically 
+// allocate arrays of that type - this would be desirable when the code is compiled from C++ as well.
+// This VOID_CAST macro allows for automatic cast from void* in C++. In C, it does nothing, but for C++ it uses a 
+// simple template function to define a cast-to-anything operator.
+// Use like this:
+//      struct {
+//          struct {
+//              int x;
+//          } *nested;
+//      } parent;
+//      parent.nested = VOID_CAST( malloc( sizeof( *parent.nested ) * count ) );
+//
+
 #ifdef __cplusplus
     struct void_cast {   
         inline void_cast( void* x_ ) : x( x_ ) { }
-        template< typename U > inline operator U() { return (U)x; } // cast to whatever requested
+        template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
         void* x;
     };
     #define VOID_CAST( x ) void_cast( x )
@@ -480,7 +496,7 @@ void build_and_load_assets( char const* bundle_filename, char const* build_time,
 } /* namespace pixie */
 #endif
 
-
+#undef VOID_CAST
 
 #endif /* PIXIE_BUILD_IMPLEMENTATION */
 

@@ -17,7 +17,7 @@ before you include this file in *one* C/C++ file to create the implementation.
 /*
 ----------
     API 
-----------
+---------
 */
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
@@ -61,7 +61,9 @@ void play_song( int song_index );
     ASSET BUILD/BUNDLE SUPPORT
 ----------------------------------
 */
+
 #ifdef PIXIE_NO_BUILD
+    // If data builds are disabled, we just define the functions to load a bundle, not create it. With/without namespace
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
         #define ASSETS_BEGIN( bundle_filename ) \
             namespace pixie { \
@@ -83,6 +85,8 @@ void play_song( int song_index );
     #define ASSET_SPRITE( id, filename ) id,
     #define ASSET_SONG( id, filename ) id,
 #else
+    // If data builds are enabled, include the build function declarations from external file. Definitions are included
+    // in the implementation section with other external library implementations
     #include "pixie_build.h"
 #endif
 
@@ -94,8 +98,13 @@ void play_song( int song_index );
 ---------------------
 */
 
+// As we want pixie to provide everything needed, we want it to expose math functions line `sin` and `cos`, so you don't
+// have to include <math.h>. But the good names are already taken, so we use some #defines to "steal" the names which
+// are already used by <math.h>. It's a bit iffy though, and if you'd rather just use <math.h>, this whole thing can be
+// disabled with `PIXIE_NO_MATH`. 
 #ifndef PIXIE_NO_MATH
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        // If namespace is enabled, we can just declared namespaced functions with the names we want, no macros needed
         namespace pixie {
             float acos( float x );
             float asin( float x );
@@ -119,6 +128,10 @@ void play_song( int song_index );
             float tanh( float x );
         } /* namespace pixie */
     #else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+        // If we are in C or have disabled namespace, we forward declare our functions with unique names, and then use
+        // macros to give them the good names. In the implementation, we will temporarily undefine them while including
+        // <math.h> to avoid name conflicts, and then redefine them again, so the exposed symbols of `sin`, `cos` etc.
+        // will be mapped to `internal_pixie_sin`, `internal_pixie_cos` etc. which will call the <math.h> `sin`, `cos`
         float internal_pixie_acos( float x );
         float internal_pixie_asin( float x );
         float internal_pixie_atan( float x );
@@ -215,6 +228,7 @@ void play_song( int song_index );
             float tanh( float x ) { return tanhf( x ); }
         } /* namespace pixie */
     #else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+        // Undefine the math macros so they won't conflict with symbols in <math.h>
         #undef acos 
         #undef asin 
         #undef atan 
@@ -261,27 +275,6 @@ void play_song( int song_index );
         float internal_pixie_sinh( float x ) { return sinhf( x ); }
         float internal_pixie_tan( float x ) { return tanf( x ); }
         float internal_pixie_tanh( float x ) { return tanhf( x ); }
-
-        #define acos internal_pixie_acos
-        #define asin internal_pixie_asin
-        #define atan internal_pixie_atan
-        #define atan2 internal_pixie_atan2
-        #define ceil internal_pixie_ceil
-        #define cos internal_pixie_cos 
-        #define cosh internal_pixie_cosh
-        #define exp internal_pixie_exp 
-        #define fabs internal_pixie_fabs
-        #define floor internal_pixie_floor
-        #define fmod internal_pixie_fmod
-        #define log internal_pixie_log 
-        #define log10 internal_pixie_log10
-        #define modf internal_pixie_modf
-        #define pow internal_pixie_pow 
-        #define sqrt internal_pixie_sqrt
-        #define sin internal_pixie_sin 
-        #define sinh internal_pixie_sinh
-        #define tan internal_pixie_tan 
-        #define tanh internal_pixie_tanh
     #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
 
@@ -316,8 +309,8 @@ namespace pixie {
 // the way you refer to them differs between C and C++ (in C++, `parent_type::nested_type`, in C just `nested_type`).
 // In addition, with the automatic cast in C, it is possible to use unnamed nested structs and still dynamically 
 // allocate arrays of that type - this would be desirable when the code is compiled from C++ as well.
-// This VOID_CAST macro allows for automatic cast from void* in C++. In C, it does nothing, but for C++ it uses a simple
-// template function to define a cast-to-anything operator.
+// This VOID_CAST macro allows for automatic cast from void* in C++. In C, it does nothing, but for C++ it uses a 
+// simple template function to define a cast-to-anything operator.
 // Use like this:
 //      struct {
 //          struct {
@@ -329,7 +322,7 @@ namespace pixie {
 #ifdef __cplusplus
     struct void_cast {   
         inline void_cast( void* x_ ) : x( x_ ) { }
-        template< typename U > inline operator U() { return (U)x; } // cast to whatever requested
+        template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
         void* x;
     };
     #define VOID_CAST( x ) void_cast( x )
@@ -378,18 +371,18 @@ typedef struct app_context_t {
 // The app thread runs independently from the user thread, and handles the main window, rendering, audio and input.
 // After all initialization, and just before entering the main loop, it will raise the `init_complete` signal, which 
 // lets the user thread (in the `run` function) know that it is safe to call the users entry point.
-// Every iteration through the main loop, the signal `vbl.signal` is raised, and the `vbl.count` value is incremented.
-// These are used by the `wait_vbl` function to pause the user thread until the start of the next frame.
-// If the main window is closed (by clicking on the close button), the app thread sets the `force_exit` value to
-// `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The `force_exit` value is
-// checked in the `pixie_instance` function, which is called at the start of every API call.
+// Every iteration through the main loop, the signal `vbl.signal` is raised (as part of pixie_render_screen), and the 
+// `vbl.count` value is incremented. These are used by the `wait_vbl` function to pause the user thread until the start 
+// of the next frame. If the main window is closed (by clicking on the close button), the app thread sets the 
+// `force_exit` value to `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The 
+// `force_exit` value is checked in the `pixie_instance` function, which is called at the start of every API call.
 
 static int app_proc( app_t* app, void* user_data ) {
     app_context_t* context = (app_context_t*) user_data;
     pixie_t* pixie = context->pixie;
 
     // Set up initial app parameters
-    //app_screenmode( app, APP_SCREENMODE_WINDOW );
+    app_screenmode( app, APP_SCREENMODE_WINDOW );
     app_interpolation( app, APP_INTERPOLATION_NONE );
 
     // Create and set up the CRT emulation instance
@@ -424,6 +417,7 @@ static int app_proc( app_t* app, void* user_data ) {
             break; 
         }
 
+        // Render screen buffer
         int screen_width = 0;
         int screen_height = 0;
         APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height );
@@ -463,30 +457,38 @@ static int app_thread( void* user_data ) {
 */
 
 
-// Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread
-// The instance is created within the `run` function, and a pointer to it is stored in thread local storage for the
-// user thread, so that every API method can access it to perform its function. The app thread gets a pointer to it 
-// through the user_data parameter to the app_proc.
+// Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread,
+// with various mutexes being used to limit concurrent access where necessary. The instance is created within the `run` 
+// function, and a pointer to it is stored in thread local storage for the user thread, so that every API method can 
+// access it to perform its function. The app thread gets a pointer to it through the user_data parameter to the 
+// app_proc.
 
 typedef struct pixie_t {
+    // Controls the exit of the program, both via the `end` call and the window being closed
     struct {
         jmp_buf exit_jump; // Jump target set in `run` function, to jump back to when `end` is called
         thread_atomic_int_t force_exit; // Signals (when set to `INT_MAX`) that user thread should jump to `exit_jump`
     } exit;
 
+    // Emulates the "vertical blank" event of screens. Every iteration through the render loop on the app thread, the
+    // vbl.count value will be incremented and the vbl.signal raised. Used by the `wait_vbl` function.
     struct {
         thread_signal_t signal; // Raised by app thread when a frame is finished and the next frame is starting
         thread_atomic_int_t count; // Incremented for every new frame
     } vbl;
 
+    // Assets are loaded through the use of a memory mapped file, mapping to an asset bundle file. The file contains
+    // all assets of the game in a ready-to-use format, so they can be used directly from the memory mapping. There is
+    // no load operation done, that will be handles by the OS as the data is referenced.
+    // TODO: background thread which touch all parts of the mapped memory to preload all data
     struct {
-        mmap_t* bundle;
-        int count;
+        mmap_t* bundle; // Memory mapped file containing all assets
+        int count; // Total number of assets
         struct {
-            int id;
-            int offset;
-            int size;
-        }* assets;
+            int id; // The id as given in the enum defined by the user through the ASSET_... macros
+            int offset; // Offset, in bytes from the start of the bundle, to this asset
+            int size; // Size, in bytes, of the asset
+        }* assets; // Index of all assets in the bundle
     } assets;
 
     struct { 
@@ -621,8 +623,11 @@ static void pixie_destroy( pixie_t* pixie ) {
 }
 
 
+// When the window is closed, this is called (from app thread) to signal that the program should exit. The `force_exit`
+// flag is checked in the `pixie_instance` function, which is called from every public API function.
+
 static void pixie_force_exit( pixie_t* pixie ) {
-    thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX );
+    thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX ); // INT_MAX is used to signal forced exit
             
     // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
     thread_atomic_int_add( &pixie->vbl.count, 1 );
@@ -630,38 +635,48 @@ static void pixie_force_exit( pixie_t* pixie ) {
 }
 
 
+// Render all sprites and convert the screen from palettized to 24-bit XBGR
+
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     {
-    // Make a copy of the screen so we can draw sprites on top of it
-    thread_mutex_lock( &pixie->screen.mutex );
-    memcpy( pixie->screen.composite, pixie->screen.pixels, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
+    u32 palette[ 256 ]; // Temporary local copy of palette to reduce scope of mutex
+
+    // Make a copy of the screen so we can draw sprites on top of it, and copy the palette and width/height as well
+    thread_mutex_lock( &pixie->screen.mutex ); // `screen` and `palette` fields are shared, so must protect access
+    int screen_width = pixie->screen.width;
+    int screen_height = pixie->screen.height;
+    memcpy( pixie->screen.composite, pixie->screen.pixels, sizeof( u8 ) * screen_width * screen_height );
+    memcpy( palette, pixie->screen.palette, sizeof( palette ) );
     thread_mutex_unlock( &pixie->screen.mutex );
     
     // Draw sprites
-    thread_mutex_lock( &pixie->sprites.mutex );
+    thread_mutex_lock( &pixie->sprites.mutex ); /* `sprites` data is shared. `screen.composite` is not, it is a temp
+        buffer accessed only here. `assets` is immutable after startup, so don't need to be protected. */
     for( int i = 0; i < pixie->sprites.sprite_count; ++i )
         {    
         int asset = pixie->sprites.sprites[ i ].asset;
         if( asset < 1 || asset > pixie->assets.count ) continue;
         --asset;
         
+        // Find the sprite data in the memory mapped file
         struct {
             u32 width;
             u32 height;
             u8 pixels[ 1 ];
         }* data = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
 
+        // Render pixels
         for( u32 y = 0; y < data->height; ++y )
             {
             for( u32 x = 0; x < data->width; ++x )
                 {
                 u8 p = data->pixels[ x + y * data->width ];
-                if( ( p & 0x80 ) == 0 )
+                if( ( p & 0x80 ) == 0 ) // TODO: Currently, the top bit is transparency - this should be changed
                     {
                     int xp = pixie->sprites.sprites[ i ].x + x;
                     int yp = pixie->sprites.sprites[ i ].y + y;
-                    if( xp >= 0 && yp >= 0 && xp < pixie->screen.width && yp < pixie->screen.height )
-                        pixie->screen.composite[ xp + yp * pixie->screen.width ] = p;                    
+                    if( xp >= 0 && yp >= 0 && xp < screen_width && yp < screen_height ) // TODO: clipping outside loops
+                        pixie->screen.composite[ xp + yp * screen_width ] = p;                    
                     }
                 }
             }
@@ -672,30 +687,31 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     thread_atomic_int_add( &pixie->vbl.count, 1 );
     thread_signal_raise( &pixie->vbl.signal );    
 
-    // Render screen
-    for( int y = 0; y < pixie->screen.height; ++y )
-        for( int x = 0; x < pixie->screen.width; ++x )
-            pixie->screen.xbgr[ x + y * pixie->screen.width ] = 
-                pixie->screen.palette[ pixie->screen.composite[ x + y * pixie->screen.width ] ];
+    // Convert palette based screen composite to 24-bit XBGR. Both `xbgr` and `composite` are only used from here
+    for( int y = 0; y < screen_height; ++y )
+        for( int x = 0; x < screen_width; ++x )
+            pixie->screen.xbgr[ x + y * screen_width ] = palette[ pixie->screen.composite[ x + y * screen_width ] ];
 
-    *width = pixie->screen.width;
-    *height = pixie->screen.height;
+    *width = screen_width;
+    *height = screen_height;
     return pixie->screen.xbgr;
     }
 
 
+// Called by audio thread (via app_sound_callback) when it needs new audio samples
+
 static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count )
     {
-    // render midi song to local buffer
+    // Render midi song to local buffer
     i16* song = pixie->audio.mix_buffers;
-    thread_mutex_lock( &pixie->audio.song_mutex );
+    thread_mutex_lock( &pixie->audio.song_mutex ); 
     if( pixie->audio.current_song < 1 || pixie->audio.current_song > 16 || !pixie->audio.songs[ pixie->audio.current_song - 1 ] ) 
         memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
     else    
         mid_render_short( pixie->audio.songs[ pixie->audio.current_song - 1 ], song, sample_pairs_count );
     thread_mutex_unlock( &pixie->audio.song_mutex );
 
-    // mix all local buffers
+    // Mix all local buffers
     for( int i = 0; i < sample_pairs_count * 2; ++i )
         {
         int sample = song[ i ] * 3;
@@ -704,6 +720,8 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
         }
     }
 
+
+// Retrieves pointer to and size of the specified asset
 
 static void* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
     if( id < 0 || id >= pixie->assets.count ) {
@@ -722,19 +740,27 @@ static void* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
 ----------------------------
 */
 
+// Creates a memory mapping for the specified bundle file. If the other parameters are given, it will validate the
+// file contents against them - this is the case when data builds are enabled (the default), so that the bundle can be
+// rebuilt if the values don't match. If data builds are disabled (through the define PIXIE_NO_BUILD), this checking
+// does not take place, and the bundle will be assumed to be valid. Undefined behaviour is to be expected if it is not.
 
 int load_bundle( char const* filename, char const* time, char const* definitions, int count ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
+    // Get size of bundle file
     struct stat s;
     if( stat( filename, &s ) ) return EXIT_FAILURE;
 
+    // Create memory mapping for the bundle file
     mmap_t* bundle = mmap_open_read_only( filename, (size_t) s.st_size );
     if( !bundle ) return EXIT_FAILURE;
     
     void* data = mmap_data( bundle );
 
-    struct  h_t
+    // Take a look at the header data, by just casting it to expected format 
+    // TODO: this is currently duplicated from pixie_build.h. Is that fine or should it be a shared definition?
+    struct
     {
         char file_id[ 20 ];
         int header_size;
@@ -744,11 +770,13 @@ int load_bundle( char const* filename, char const* time, char const* definitions
         char build_time[ 64 ];
     }* header = VOID_CAST( data );
 
+    // Check that the bundle is big enough to contain a full header, and that the header is the expected size.
     if( mmap_size( bundle ) < sizeof( *header ) || header->header_size != sizeof( *header ) ) {
         mmap_close( bundle );
         return EXIT_FAILURE;
     }
 
+    // Verify the header data. If `definitions` or `time` are NULL, or `count` is negative, they are not checked against
     if( strcmp( header->file_id, "PIXIE_ASSETS_BUNDLE" ) != 0 || 
         strcmp( header->bundle_file, filename ) != 0 ||  
         ( definitions && strcmp( header->definitions_file, definitions ) != 0 ) ||  
@@ -758,10 +786,29 @@ int load_bundle( char const* filename, char const* time, char const* definitions
             return EXIT_FAILURE;
     }
 
+    // Check that the size of all files match the size of the bundle, and that IDs and offsets are as expected.
+    struct { int id; int offset; int size; }* assets = VOID_CAST( (void*)( header + 1 ) );
+    size_t total_size = sizeof( *header ) + sizeof( *assets ) * header->assets_count;
+    int offset = (int) total_size;
+    for( int i = 0; i < header->assets_count; ++i ) {
+        if( assets[ i ].size < 0 || assets[ i ].offset != offset || assets[ i ].id != i ) {
+            mmap_close( bundle );
+            return EXIT_FAILURE;
+        }
+        offset += assets[ i ].size;
+        total_size += assets[ i ].size;
+    }
+
+    if( total_size != (size_t) s.st_size ) {
+        mmap_close( bundle );
+        return EXIT_FAILURE;
+    }
+
+
     pixie->assets.bundle = bundle;
     pixie->assets.count = header->assets_count;
-    pixie->assets.assets = VOID_CAST( (void*)( header + 1 ) );
-    
+    pixie->assets.assets = VOID_CAST( (void*) assets );
+
     return EXIT_SUCCESS;
 }
 
@@ -896,6 +943,8 @@ void print( char const* str ) {
 }
 
 
+// Apply palette from file to the global palette
+
 void load_palette( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
@@ -905,6 +954,8 @@ void load_palette( int asset ) {
         memcpy( pixie->screen.palette, data, sizeof( pixie->screen.palette ) );
 }
 
+
+// Assign a bitmap to a sprite, and give it a position
 
 void sprite( int spr_index, int x, int y, int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
@@ -941,6 +992,8 @@ void sprite( int spr_index, int x, int y, int asset ) {
 }
 
 
+// Update sprite position without changing bitmap
+
 void sprite_pos( int spr_index, int x, int y ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
@@ -956,6 +1009,9 @@ void sprite_pos( int spr_index, int x, int y ) {
     thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
+
+// TODO: midi files should be pre-processed so they can be bundled in memory-ready for, and we should use a single
+// soundfont and the "reset" option. Then get rid of this function and just have `play_song`
 
 void load_song( int song_index, int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
@@ -980,6 +1036,8 @@ void load_song( int song_index, int asset ) {
     thread_mutex_unlock( &pixie->audio.song_mutex );
 }
 
+
+// TODO: after removing `load_song`, change this function to take an asset id instead
 
 void play_song( int song_index ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
@@ -1081,6 +1139,9 @@ void play_song( int song_index ) {
 #endif /* PIXIE_NO_MATH */
 
 
+#undef VOID_CAST
+
+
 /*
 ---------------------------------
     LIBRARIES IMPLEMENTATIONS
@@ -1135,7 +1196,6 @@ void play_song( int song_index ) {
 
 
 // Redefine math wrappers again so they can be used by the file that included implementation
-
 #ifndef PIXIE_NO_MATH
     #if !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE )
         #define acos internal_pixie_acos
