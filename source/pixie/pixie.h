@@ -290,6 +290,7 @@ void play_song( int asset );
 #include "crtemu.h"
 #include "crt_frame.h"
 #include "frametimer.h"
+#define MID_ENABLE_RAW
 #include "mid.h"
 #include "mmap.h"
 #include "palettize.h"
@@ -519,7 +520,7 @@ typedef struct pixie_t {
 
         thread_mutex_t song_mutex;
         tsf* sound_font;
-        mid_t* current_song;
+        struct mid_t current_song;
 
     } audio;
 } pixie_t;
@@ -585,7 +586,6 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     pixie->audio.sound_buffer_size = sound_buffer_size ;
     pixie->audio.mix_buffers = (i16*) malloc( sizeof( i16 ) * sound_buffer_size * 2 * 6 ); // 6 buffers (song, speech + 4 sounds)
     thread_mutex_init( &pixie->audio.song_mutex );
-    pixie->audio.current_song = NULL;
 
     int soundfont_size = 0;
     u8 const* soundfont = default_soundfont( &soundfont_size );
@@ -613,7 +613,6 @@ static void pixie_destroy( pixie_t* pixie ) {
     thread_mutex_term( &pixie->sprites.mutex );
 
     // Cleanup audio
-    if( pixie->audio.current_song ) mid_destroy( pixie->audio.current_song );
     thread_mutex_term( &pixie->audio.song_mutex );
     free( pixie->audio.mix_buffers );
     tsf_close( pixie->audio.sound_font );
@@ -707,10 +706,10 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
     // Render midi song to local buffer
     i16* song = pixie->audio.mix_buffers;
     thread_mutex_lock( &pixie->audio.song_mutex ); 
-    if( !pixie->audio.current_song ) 
+    if( !pixie->audio.current_song.song.event_count ) 
         memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
     else    
-        mid_render_short( pixie->audio.current_song, song, sample_pairs_count );
+        mid_render_short( &pixie->audio.current_song, song, sample_pairs_count );
     thread_mutex_unlock( &pixie->audio.song_mutex );
 
     // Mix all local buffers
@@ -1022,10 +1021,7 @@ void play_song( int asset ) {
 
     thread_mutex_lock( &pixie->audio.song_mutex );
 
-    if( pixie->audio.current_song ) {
-        mid_destroy( pixie->audio.current_song );
-        pixie->audio.current_song = NULL; 
-    }
+    memset( &pixie->audio.current_song, 0, sizeof( pixie->audio.current_song ) );
 
     int mid_size = 0;
     void* mid_data = pixie_find_asset( pixie, asset, &mid_size );
@@ -1034,15 +1030,13 @@ void play_song( int asset ) {
         return;
     }
 
-    mid_t* mid = mid_create_from_raw( mid_data, (size_t) mid_size,  pixie->audio.sound_font, NULL );
-    if( !mid ) {
+    if( !mid_init_raw( &pixie->audio.current_song, mid_data, (size_t) mid_size,  pixie->audio.sound_font ) ) {
         thread_mutex_unlock( &pixie->audio.song_mutex );
         return;
     }
 
-    pixie->audio.current_song = mid;
     tsf_reset( pixie->audio.sound_font );
-    mid_skip_leading_silence( mid );
+    mid_skip_leading_silence( &pixie->audio.current_song );
 
     thread_mutex_unlock( &pixie->audio.song_mutex );
 }

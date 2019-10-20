@@ -21,11 +21,7 @@ typedef struct mid_t mid_t;
 typedef struct tsf tsf;
     
 mid_t* mid_create( void const* midi_data, size_t midi_size, tsf* sound_font, void* memctx );
-mid_t* mid_create_from_raw( void const* raw_data, size_t raw_size, tsf* sound_font, void* memctx );
-
 void mid_destroy( mid_t* mid ); 
-
-size_t mid_save_raw( mid_t* mid, void* data, size_t capacity ); 
 
 int mid_render_short( mid_t* mid, short* sample_pairs, int sample_pairs_count );
 int mid_render_float( mid_t* mid, float* sample_pairs, int sample_pairs_count );
@@ -34,6 +30,72 @@ void mid_skip_leading_silence( mid_t* mid );
 
 #endif /* mid_h */
 
+#ifdef MID_ENABLE_RAW
+
+#ifndef mid_raw_h
+#define mid_raw_h
+
+#ifndef MID_U8
+    #define MID_U8 unsigned char
+#endif
+
+#ifndef MID_U16
+    #define MID_U16 unsigned short
+#endif
+
+#ifndef MID_U32
+    #define MID_U32 unsigned int
+#endif
+
+#ifndef MID_U64
+    #define MID_U64 unsigned long long
+#endif
+
+typedef struct mid_event_t
+    {
+    MID_U32 delay_us;
+    MID_U8 channel;
+    MID_U8 type;
+    union 
+        {
+        struct { MID_U16 index; } bank;
+        struct { MID_U8 preset; } program;
+        struct { MID_U8 note; MID_U8 velocity; } note_on;
+        struct { MID_U8 note; } note_off;
+        struct { MID_U16 level; } volume;
+        struct { MID_U16 value; } pan;
+        struct { MID_U16 value; } pitch_bend;
+        struct { MID_U8 data1, data2; } cc;
+        } data;
+    } mid_event_t;
+
+
+typedef struct mid_song_t
+    {
+    int event_count;
+    mid_event_t* events;
+    } mid_song_t;
+
+
+struct mid_t
+    {
+    void* memctx;
+    mid_song_t song;
+    int percussion_preset;
+    MID_U64 playback_accumulated_time_us;
+    int playback_sample_pos;
+    int playback_event_pos;
+    tsf* sound_font;
+    };
+
+int mid_init_raw( mid_t* mid, void const* raw_data, size_t raw_size, tsf* sound_font );
+
+size_t mid_save_raw( mid_t* mid, void* data, size_t capacity ); 
+
+
+#endif /* MID_ENABLE_RAW */
+
+#endif /* mid_raw_h */
 
 /*
 ----------------------
@@ -255,6 +317,16 @@ typedef enum mid_event_type_t
     } mid_event_type_t;
 
 
+
+typedef struct mid_track_data_t
+    {
+    MID_U64 time_us;
+    mid_event_t event;
+    } mid_track_data_t;
+
+
+#ifndef MID_ENABLE_RAW
+
 typedef struct mid_event_t
     {
     MID_U32 delay_us;
@@ -289,15 +361,11 @@ struct mid_t
     MID_U64 playback_accumulated_time_us;
     int playback_sample_pos;
     int playback_event_pos;
-    tsf* sound_font;
+    struct tsf* sound_font;
     };
 
 
-typedef struct mid_track_data_t
-    {
-    MID_U64 time_us;
-    mid_event_t event;
-    } mid_track_data_t;
+#endif /* MID_ENABLE_RAW */
 
 
 mid_t* mid_create( void const* midi_data, size_t midi_size, tsf* sound_font, void* memctx )
@@ -776,18 +844,15 @@ void mid_destroy( mid_t* mid )
     }
 
 
-mid_t* mid_create_from_raw( void const* raw_data, size_t raw_size, tsf* sound_font, void* memctx )
+int mid_init_raw( mid_t* mid, void const* raw_data, size_t raw_size, tsf* sound_font )
     {
     int events_count = *(int*)raw_data;
-    if( sizeof( mid_event_t ) * events_count != raw_size - sizeof( int ) ) return NULL;
+    if( sizeof( mid_event_t ) * events_count != raw_size - sizeof( int ) ) return 0;
 
-    mid_event_t* events = (mid_event_t*) MID_MALLOC( memctx, sizeof( *events ) * events_count );
-    memcpy( events, ( (int*)raw_data ) + 1, sizeof( *events ) * events_count );
+    mid->memctx = NULL;
 
-    mid_t* mid = (mid_t*) MID_MALLOC( memctx, sizeof( mid_t ) );
-    mid->memctx = memctx;
     mid->song.event_count = events_count;
-    mid->song.events = events;
+    mid->song.events = (mid_event_t*)( ( (int*)raw_data ) + 1 );
 
     mid->playback_accumulated_time_us = 0ull;
     mid->playback_sample_pos = 0;
@@ -796,7 +861,7 @@ mid_t* mid_create_from_raw( void const* raw_data, size_t raw_size, tsf* sound_fo
     if( sound_font ) tsf_channel_set_presetnumber( sound_font, 9, 0, 1 ); // drums
     mid->sound_font = sound_font;
 
-    return mid; 
+    return 1; 
     }
 
 
