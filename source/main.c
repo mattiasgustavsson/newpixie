@@ -27,7 +27,8 @@ int pixmain( int argc, char** argv ) {
     int c = 0;
 mainloop: 
     wait_vbl();
-    if( c++ == 1000 ) play_song( LARRY );
+    ++c;
+    if( c == 1000 ) play_song( LARRY );
     if( c > 2000 ) end( 0 );
     for( int i = 1; i <= 8; ++i ) {
         int x = (int)( sin( ( c + 6 * i ) * 0.04f ) * cos( ( c + 6 * i ) * 0.027f ) * 150 + 160 );

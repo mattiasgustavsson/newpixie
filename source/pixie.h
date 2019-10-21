@@ -12,5 +12,7 @@
 //#define PIXIE_NO_NAMESPACE
 //#define PIXIE_NO_MAIN
 //#define PIXIE_NO_BUILD
+//#define PIXIE_ASSERT_IN_RELEASE_BUILD
+//#define ASSERT( expression, message ) assert( expression )
 
 #include "pixie/pixie.h"

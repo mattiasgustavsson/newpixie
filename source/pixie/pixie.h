@@ -55,6 +55,53 @@ void play_song( int asset );
 #endif
 
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+    namespace pixie {
+        int display_assert_message( char const* expression, char const* message, char const* file, int line );
+        char const* format_assert_message( char const* format, ... );
+    } /* namespace pixie */
+
+    #ifndef ASSERT
+	    #if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
+		    #define ASSERT( expression, message )
+	    #else
+		    #define ASSERT( expression, message ) \
+		        __pragma( warning( push ) ) \
+		        __pragma( warning( disable: 4127 ) ) \
+			    do { \
+				    if( !( expression ) ) \
+					    if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__ ) ) \
+						    __debugbreak(); \
+			    } while( 0 ) \
+			    __pragma( warning( pop ) )
+	    #endif
+    #endif
+
+    #define ASSERTF( expression, message ) ASSERTF( expression, pixie::internal::format_assert_message message )
+#else
+    int display_assert_message( char const* expression, char const* message, char const* file, int line );
+    char const* format_assert_message( char const* format, ... );
+
+    #ifndef ASSERT
+	    #if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
+		    #define ASSERT( expression, message )
+	    #else
+		    #define ASSERT( expression, message ) \
+		        __pragma( warning( push ) ) \
+		        __pragma( warning( disable: 4127 ) ) \
+			    do { \
+				    if( !( expression ) ) \
+					    if( display_assert_message( #expression, message, __FILE__, __LINE__ ) ) \
+						    __debugbreak(); \
+			    } while( 0 ) \
+			    __pragma( warning( pop ) )
+	    #endif
+    #endif
+
+    #define ASSERTF( expression, message ) ASSERT( expression, format_assert_message message )
+#endif
+
+
 /*
 ----------------------------------
     ASSET BUILD/BUNDLE SUPPORT
@@ -190,7 +237,6 @@ void play_song( int asset );
 
 #define _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_SECURE_NO_WARNINGS
-
 
 /*
 ---------------------
@@ -330,6 +376,8 @@ namespace pixie {
 #else
     #define VOID_CAST( x ) x
 #endif
+
+
 
 
 // Forward declares
@@ -521,7 +569,6 @@ typedef struct pixie_t {
         thread_mutex_t song_mutex;
         tsf* sound_font;
         struct mid_t current_song;
-
     } audio;
 } pixie_t;
 
@@ -706,7 +753,7 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
     // Render midi song to local buffer
     i16* song = pixie->audio.mix_buffers;
     thread_mutex_lock( &pixie->audio.song_mutex ); 
-    if( !pixie->audio.current_song.song.event_count ) 
+    if( !pixie->audio.current_song.song.event_count || !pixie->audio.current_song.song.events ) 
         memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
     else    
         mid_render_short( &pixie->audio.current_song, song, sample_pairs_count );
@@ -1226,9 +1273,58 @@ void play_song( int asset ) {
     #endif /* !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
 
+
+char const* format_assert_message( char const* format, ... ) {
+	static char buffer[ 256 ];
+	va_list args;
+	va_start( args, format );
+	_vsnprintf( buffer, sizeof( buffer ), format, args );
+	va_end( args );
+	return buffer;
+}
+
+
+#ifdef _WIN32
+	int display_assert_message( char const* expression, char const* message, char const* file, int line ) {
+	    char buf[ 4096 ];
+	    _snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\n%s(%d)\n", message, expression, file, line );
+	    OutputDebugString( "\n******************************************\n" );
+	    OutputDebugString( buf );
+	    OutputDebugString( "******************************************\n\n" );
+	    printf( "\n******************************************\n" );
+	    printf( "%s", buf );
+	    printf( "******************************************\n\n" );
+		strcat( buf, "\nBreak into debugger?\n" );
+	    int result = MessageBox( 0, buf, "Pixie Assert", MB_ICONERROR | MB_YESNOCANCEL | MB_SYSTEMMODAL | MB_SETFOREGROUND );
+	    switch( result ) {
+		    case IDCANCEL: {
+			    // Turn off memory leak reports for faster exit
+			    #ifndef NDEBUG
+				    int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
+				    flag ^= _CRTDBG_LEAK_CHECK_DF; // Turn off leak-checking bit
+				    _CrtSetDbgFlag( flag ); // Set flag to the new value
+			    #endif
+			    _exit( 3 ); // Exit application immediately, without calling crt's _atexit
+			} break;
+		    case IDYES: {
+			    return 1; // Break to editor
+			} break;
+		    case IDNO: {
+			    return 0; // Continue execution
+			} break;
+		}
+		return 0;
+	}
+#else /* _WIN32 */
+	#error Platform not supported
+#endif /* _WIN32 */
+
+
+
 #endif /* PIXIE_IMPLEMENTATION */
 
-        
+
+
 /*
 ------------------------------------------------------------------------------
 
