@@ -45,19 +45,84 @@ void wait_vbl( void );
 
 void print( char const* str );
 void load_palette( int asset );
-void sprite( int spr_index, int x, int y, int asset );
+int sprite( int spr_index, int x, int y, int asset );
 void sprite_pos( int spr_index, int x, int y );
+int sprite_x( int spr_index );
+int sprite_y( int spr_index );
 void play_song( int asset );
+char const* load_text( int asset_id );
+int asset_size( int asset_id );
+void const* asset_data( int asset_id );
+
+typedef enum ease_t {
+    DELAY, EASE_LINEAR, EASE_SMOOTHSTEP, EASE_SMOOTHERSTEP, EASE_OUT_QUAD, EASE_OUT_BACK, EASE_OUT_BOUNCE, 
+    EASE_OUT_SINE, EASE_OUT_ELASTIC, EASE_OUT_EXPO, EASE_OUT_CUBIC, EASE_OUT_QUART, EASE_OUT_QUINT, EASE_OUT_CIRCLE,
+    EASE_IN_QUAD, EASE_IN_BACK, EASE_IN_BOUNCE, EASE_IN_SINE, EASE_IN_ELASTIC, EASE_IN_EXPO, EASE_IN_CUBIC, 
+    EASE_IN_QUART, EASE_IN_QUINT, EASE_IN_CIRCLE, EASE_IN_OUT_QUAD, EASE_IN_OUT_BACK, EASE_IN_OUT_BOUNCE, 
+    EASE_IN_OUT_SINE, EASE_IN_OUT_ELASTIC, EASE_IN_OUT_EXPO, EASE_IN_OUT_CUBIC, EASE_IN_OUT_QUART, EASE_IN_OUT_QUINT,
+    EASE_IN_OUT_CIRCLE,
+} ease_t;
+
+typedef struct move_t {
+    int target;
+    int duration;
+    ease_t ease;
+} move_t;
+
+void move_sprite_x( int spr_index, move_t* moves, int moves_count );
+void move_sprite_y( int spr_index, move_t* moves, int moves_count );
+
+#define ARRAY_COUNT( x ) ( (int)( sizeof( x ) / sizeof( *x ) ) )
+
+void text( int x, int y, char const* str, int color, int font_asset 
+	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */);
+
+// String functions
+
+#ifndef PIXIE_MAX_STRING_LENGTH 
+    #define PIXIE_MAX_STRING_LENGTH 256
+#endif
+
+typedef struct string {
+    char c_str[ PIXIE_MAX_STRING_LENGTH ];
+} string;
+
+string str( char const* c_str ); // create a pixie string from a c string
+int length( string str ); // number of characters in a string
+string concat( string a, string b ); // concatenate string a and string b
+int compare( string a, string b ); // returns 0 of strings are equal, <0 if a comes before b, >0 if b comes before a
+string trim( string str ); // remove leading and trailing whitespace
+string ltrim( string str ); // remove leading whitespace 
+string rtrim( string str );  // remove trailing whitespace
+string left( string source, int number ); // return the leftmost characters of a string
+string right( string source, int number );  // return the rightmost characters of a string
+string mid( string source, int offset, int number );  // return a number of characters from the middle of a string
+int instr( string haystack, string needle, int start );  // search for occurrences of one string within another string
+int any( string haystack, string needles, int start );  // search for the next occurrence of any character of one string within another string
+string upper( string str );  // convert a string of text to upper case
+string lower( string str ); // convert a string of text to lower case
+string string_from_int( int x ); // convert a number into a string
+string string_from_float( float x ); // convert a number into a string
+float float_from_string( string str ); // convert a string of digits into a floating point value
+int int_from_string( string str ); // convert a string of digits into an integer value
+string space ( int number ); // space out a string
+string flip( string original ); //invert a string
+string repeat( string text, int number ); // repeat a string
+string chr( int code ); // return the character with a given ASCII code
+int asc( string str ); // give the ASCII code of a character
+int len( string str ); // give the length of a string
+string format( string format_string, ... ); // printf style formatting
 
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
 #endif
 
+#define LOOP for( ; ; )
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
     namespace pixie {
-        int display_assert_message( char const* expression, char const* message, char const* file, int line );
+        int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function );
         char const* format_assert_message( char const* format, ... );
     } /* namespace pixie */
 
@@ -70,16 +135,16 @@ void play_song( int asset );
 		        __pragma( warning( disable: 4127 ) ) \
 			    do { \
 				    if( !( expression ) ) \
-					    if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__ ) ) \
+					    if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
 						    __debugbreak(); \
 			    } while( 0 ) \
 			    __pragma( warning( pop ) )
 	    #endif
     #endif
 
-    #define ASSERTF( expression, message ) ASSERTF( expression, pixie::internal::format_assert_message message )
+    #define ASSERTF( expression, message ) ASSERT( expression, pixie::format_assert_message message )
 #else
-    int display_assert_message( char const* expression, char const* message, char const* file, int line );
+    int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function );
     char const* format_assert_message( char const* format, ... );
 
     #ifndef ASSERT
@@ -91,7 +156,7 @@ void play_song( int asset );
 		        __pragma( warning( disable: 4127 ) ) \
 			    do { \
 				    if( !( expression ) ) \
-					    if( display_assert_message( #expression, message, __FILE__, __LINE__ ) ) \
+					    if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
 						    __debugbreak(); \
 			    } while( 0 ) \
 			    __pragma( warning( pop ) )
@@ -108,13 +173,20 @@ void play_song( int asset );
 ----------------------------------
 */
 
+#define ASSET_BINARY( id, filename ) id,
+#define ASSET_TEXT( id, filename ) id,
+#define ASSET_PALETTE( id, filename ) id,
+#define ASSET_SPRITE( id, filename ) id,
+#define ASSET_SONG( id, filename ) id,
+#define ASSET_FONT( id, filename ) id,
+
 #ifdef PIXIE_NO_BUILD
     // If data builds are disabled, we just define the functions to load a bundle, not create it. With/without namespace
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
         #define ASSETS_BEGIN( bundle_filename ) \
             namespace pixie { \
                 int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-                inline void load_assets( void ) { load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+                inline int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
                 enum assets_t {
         #define ASSETS_END() \
                 } /* enum assets_t */; \
@@ -122,14 +194,11 @@ void play_song( int asset );
     #else
         #define ASSETS_BEGIN( bundle_filename ) \
             int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-            inline void load_assets( void ) { load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+            inline int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
             enum assets_t {
         #define ASSETS_END() \
             } /* enum assets_t */;
     #endif
-    #define ASSET_PALETTE( id, filename ) id,
-    #define ASSET_SPRITE( id, filename ) id,
-    #define ASSET_SONG( id, filename ) id,
 #else
     // If data builds are enabled, include the build function declarations from external file. Definitions are included
     // in the implementation section with other external library implementations
@@ -335,11 +404,15 @@ void play_song( int asset );
 #include "app.h"
 #include "crtemu.h"
 #include "crt_frame.h"
+#include "ease.h"
 #include "frametimer.h"
 #define MID_ENABLE_RAW
 #include "mid.h"
 #include "mmap.h"
 #include "palettize.h"
+#define PIXELFONT_FUNC_NAME pixelfont_blit_u8
+#include "pixelfont.h"
+#undef PIXELFONT_FUNC_NAME 
 #include "pixie_data.h"
 #include "stb_image.h"
 #include "thread.h"
@@ -369,6 +442,7 @@ namespace pixie {
 #ifdef __cplusplus
     struct void_cast {   
         inline void_cast( void* x_ ) : x( x_ ) { }
+        inline void_cast( void const* x_ ) : x( (void*) x_ ) { }
         template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
         void* x;
     };
@@ -386,7 +460,7 @@ typedef struct pixie_t pixie_t;
 static void pixie_force_exit( pixie_t* pixie );
 static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
 static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
-static void* pixie_find_asset( pixie_t* pixie, int id, int* size );
+static void const* pixie_find_asset( pixie_t* pixie, int id, int* size );
 
 
 /*
@@ -526,6 +600,16 @@ typedef struct pixie_t {
         thread_atomic_int_t count; // Incremented for every new frame
     } vbl;
 
+    #ifndef PIXIE_NO_BUILD
+        struct {
+            int count;
+            struct {
+                char name[ 64 ];
+                asset_build_function_t func;
+            } types[ 256 ];
+        } build;
+    #endif
+
     // Assets are loaded through the use of a memory mapped file, mapping to an asset bundle file. The file contains
     // all assets of the game in a ready-to-use format, so they can be used directly from the memory mapping. There is
     // no load operation done, that will be handles by the OS as the data is referenced.
@@ -546,8 +630,10 @@ typedef struct pixie_t {
         u8* pixels;
         u8* composite;
         u32* xbgr;
-        int width;
-        int height;
+        int screen_width;
+        int screen_height;
+        int border_width;
+        int border_height;
     } screen;
 
     struct {
@@ -558,7 +644,15 @@ typedef struct pixie_t {
             int x;
             int y;
             int asset;
+            int move_x_count;
+            move_t move_x[ 16 ];
+            int move_y_count;
+            move_t move_y[ 16 ];
+            int move_y_index;
+            int move_y_time;
+            int move_y_start;
             }* sprites;
+
     } sprites;
 
 
@@ -614,14 +708,22 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     // Set up the screen 
     memcpy( pixie->screen.palette, default_palette(), sizeof( pixie->screen.palette ) );
     thread_mutex_init( &pixie->screen.mutex );
-    pixie->screen.width = 384;
-    pixie->screen.height = 288;
-    pixie->screen.pixels = (u8*) malloc( sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
-    memset( pixie->screen.pixels, 0, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
-    pixie->screen.composite = (u8*) malloc( sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
-    memset( pixie->screen.composite, 0, sizeof( u8 ) * pixie->screen.width * pixie->screen.height );
-    pixie->screen.xbgr = (u32*) malloc( sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
-    memset( pixie->screen.xbgr, 0, sizeof( u32 ) * pixie->screen.width * pixie->screen.height );
+    pixie->screen.screen_width = 384;
+    pixie->screen.screen_height = 288;
+    pixie->screen.border_width = 0;
+    pixie->screen.border_height = 0;
+    //pixie->screen.screen_width = 320;
+    //pixie->screen.screen_height = 200;
+    //pixie->screen.border_width = 32;
+    //pixie->screen.border_height = 44;
+    int full_width = pixie->screen.screen_width + pixie->screen.border_width * 2;
+    int full_height = pixie->screen.screen_height + pixie->screen.border_height * 2;
+    pixie->screen.pixels = (u8*) malloc( sizeof( u8 ) * pixie->screen.screen_width * pixie->screen.screen_height );
+    memset( pixie->screen.pixels, 0, sizeof( u8 ) * pixie->screen.screen_width * pixie->screen.screen_height );
+    pixie->screen.composite = (u8*) malloc( sizeof( u8 ) * pixie->screen.screen_width * pixie->screen.screen_height );
+    memset( pixie->screen.composite, 0, sizeof( u8 ) * pixie->screen.screen_width * pixie->screen.screen_height );
+    pixie->screen.xbgr = (u32*) malloc( sizeof( u32 ) * full_width * full_height );
+    memset( pixie->screen.xbgr, 0, sizeof( u32 ) * full_width * full_height );
 
     // Set up sprites
     thread_mutex_init( &pixie->sprites.mutex );
@@ -691,32 +793,72 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
 
     // Make a copy of the screen so we can draw sprites on top of it, and copy the palette and width/height as well
     thread_mutex_lock( &pixie->screen.mutex ); // `screen` and `palette` fields are shared, so must protect access
-    int screen_width = pixie->screen.width;
-    int screen_height = pixie->screen.height;
+    int screen_width = pixie->screen.screen_width;
+    int screen_height = pixie->screen.screen_height;
+    int border_width = pixie->screen.border_width;
+    int border_height = pixie->screen.border_height;
+    int full_width = screen_width + border_width * 2;
+    int full_height = screen_height + border_height * 2;
+    
     memcpy( pixie->screen.composite, pixie->screen.pixels, sizeof( u8 ) * screen_width * screen_height );
     memcpy( palette, pixie->screen.palette, sizeof( palette ) );
     thread_mutex_unlock( &pixie->screen.mutex );
-    
+
+    float (*easefuncs[])( float ) = { 
+        NULL, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, ease_out_back, ease_out_bounce, 
+        ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, ease_out_circle,
+        ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, ease_in_expo, ease_in_cubic,
+        ease_in_quart, ease_in_quint, ease_in_circle, ease_in_out_quad, ease_in_out_back, ease_in_out_bounce, 
+        ease_in_out_sine, ease_in_out_elastic, ease_in_out_expo, ease_in_out_cubic, ease_in_out_quart, 
+        ease_in_out_quint, ease_in_out_circle,
+    };
+
     // Draw sprites
     thread_mutex_lock( &pixie->sprites.mutex ); /* `sprites` data is shared. `screen.composite` is not, it is a temp
         buffer accessed only here. `assets` is immutable after startup, so don't need to be protected. */
     for( int i = 0; i < pixie->sprites.sprite_count; ++i )
         {    
+        if( pixie->sprites.sprites[ i ].move_y_count > 0 ) {
+            ++pixie->sprites.sprites[ i ].move_y_time;
+            move_t* move = &pixie->sprites.sprites[ i ].move_y[ pixie->sprites.sprites[ i ].move_y_index ];
+            if( pixie->sprites.sprites[ i ].move_y_time <= move->duration ) {
+                float range = (float)( move->target - pixie->sprites.sprites[ i ].move_y_start );
+                float current = ( (float) pixie->sprites.sprites[ i ].move_y_time ) / (float) move->duration;
+                if( move->ease != DELAY ) {
+                    float t = easefuncs[ move->ease ]( current );
+                    int pos = pixie->sprites.sprites[ i ].move_y_start + (int)( t * range );
+                    pixie->sprites.sprites[ i ].y = pos;
+                }
+            } else {
+                ++pixie->sprites.sprites[ i ].move_y_index;
+                if( pixie->sprites.sprites[ i ].move_y_index >= pixie->sprites.sprites[ i ].move_y_count ) {
+                    pixie->sprites.sprites[ i ].move_y_count = 0;
+                } else {
+                    pixie->sprites.sprites[ i ].move_y_time = 0;
+                    if( move->ease != DELAY ) {
+                        pixie->sprites.sprites[ i ].y = move->target;
+                    }
+                    pixie->sprites.sprites[ i ].move_y_start = pixie->sprites.sprites[ i ].y;
+                }
+            }
+        }
+
+
         int asset = pixie->sprites.sprites[ i ].asset;
         if( asset < 1 || asset > pixie->assets.count ) continue;
         --asset;
         
         // Find the sprite data in the memory mapped file
         struct {
-            u32 width;
-            u32 height;
+            int width;
+            int height;
             u8 pixels[ 1 ];
-        }* data = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
+        } const* data = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
 
         // Render pixels
-        for( u32 y = 0; y < data->height; ++y )
+        for( int y = 0; y < data->height; ++y )
             {
-            for( u32 x = 0; x < data->width; ++x )
+            for( int x = 0; x < data->width; ++x )
                 {
                 u8 p = data->pixels[ x + y * data->width ];
                 if( ( p & 0x80 ) == 0 ) // TODO: Currently, the top bit is transparency - this should be changed
@@ -738,10 +880,11 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     // Convert palette based screen composite to 24-bit XBGR. Both `xbgr` and `composite` are only used from here
     for( int y = 0; y < screen_height; ++y )
         for( int x = 0; x < screen_width; ++x )
-            pixie->screen.xbgr[ x + y * screen_width ] = palette[ pixie->screen.composite[ x + y * screen_width ] ];
+            pixie->screen.xbgr[ x + border_width + ( y + border_height ) * full_width ] = 
+                palette[ pixie->screen.composite[ x + y * screen_width ] ];
 
-    *width = screen_width;
-    *height = screen_height;
+    *width = full_width;
+    *height = full_height;
     return pixie->screen.xbgr;
     }
 
@@ -771,7 +914,7 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
 
 // Retrieves pointer to and size of the specified asset
 
-static void* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
+static void const* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
     if( id < 0 || id >= pixie->assets.count ) {
         if( size ) *size = 0;
         return NULL;
@@ -859,7 +1002,6 @@ int load_bundle( char const* filename, char const* time, char const* definitions
 
     return EXIT_SUCCESS;
 }
-
 
 /*
 ---------------------
@@ -978,7 +1120,7 @@ void print( char const* str ) {
         for( int iy = 0; iy < 8; ++iy )
             for( int ix = 0; ix < 8; ++ix )
                 if( chr & ( 1ull << ( ix + iy * 8 ) ) )
-                    pixie->screen.pixels[ x + ix + ( y + iy ) * pixie->screen.width ] = 10; 
+                    pixie->screen.pixels[ x + ix + ( y + iy ) * pixie->screen.screen_width ] = 10; 
         x += 8;
         if( x - 32 >= 320 ) {
             x = 32;
@@ -997,7 +1139,7 @@ void load_palette( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
     int size = 0;
-    void* data = pixie_find_asset( pixie, asset, &size );
+    void const* data = pixie_find_asset( pixie, asset, &size );
     if( size == sizeof( pixie->screen.palette ) )
         memcpy( pixie->screen.palette, data, sizeof( pixie->screen.palette ) );
 }
@@ -1005,30 +1147,31 @@ void load_palette( int asset ) {
 
 // Assign a bitmap to a sprite, and give it a position
 
-void sprite( int spr_index, int x, int y, int asset ) {
+int sprite( int spr_index, int x, int y, int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
     if( asset < 0 || asset >= pixie->assets.count ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
-        return;
+        return 0;
     }
 
     int size = 0;
     struct {
-        u32 width;
-        u32 height;
+        int width;
+        int height;
         u8 pixels[ 1 ];
-    }* data = pixie_find_asset( pixie, asset, &size );
+    } const* data = VOID_CAST( pixie_find_asset( pixie, asset, &size ) );
 
     if( size < sizeof( *data ) || size != (int) ( sizeof( *data ) + ( data->width * data->height - 1 ) * sizeof( u8 ) ) ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
-        return;
+        return 0;
     }
 
     if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
     }
     
     --spr_index;
@@ -1037,6 +1180,7 @@ void sprite( int spr_index, int x, int y, int asset ) {
     pixie->sprites.sprites[ spr_index ].y = y;
 
     thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
 }
 
 
@@ -1058,6 +1202,39 @@ void sprite_pos( int spr_index, int x, int y ) {
 }
 
 
+int sprite_x( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    --spr_index;
+    int x = pixie->sprites.sprites[ spr_index ].x;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return x;
+}
+
+
+int sprite_y( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    --spr_index;
+    int y = pixie->sprites.sprites[ spr_index ].y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return y;
+}
+
 
 void play_song( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
@@ -1071,7 +1248,7 @@ void play_song( int asset ) {
     memset( &pixie->audio.current_song, 0, sizeof( pixie->audio.current_song ) );
 
     int mid_size = 0;
-    void* mid_data = pixie_find_asset( pixie, asset, &mid_size );
+    void const* mid_data = pixie_find_asset( pixie, asset, &mid_size );
     if( !mid_data ) {
         thread_mutex_unlock( &pixie->audio.song_mutex );
         return;
@@ -1089,6 +1266,228 @@ void play_song( int asset ) {
 }
 
 
+char const* load_text( int asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    int size = 0;
+    void const* data = pixie_find_asset( pixie, asset, &size );
+
+    return (char const*) data;
+}
+
+
+int asset_size( int asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    int size = 0;
+    pixie_find_asset( pixie, asset, &size );
+
+    return size;
+}
+
+
+void const* asset_data( int asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    int size = 0;
+    return pixie_find_asset( pixie, asset, &size );
+}
+
+
+void move_sprite_x( int spr_index, move_t* moves, int moves_count ) {
+    (void) spr_index, moves, moves_count;
+}
+
+
+void move_sprite_y( int spr_index, move_t* moves, int moves_count ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+    int max_count = ARRAY_COUNT( pixie->sprites.sprites[ spr_index ].move_y );
+    if( moves_count > max_count ) {
+        moves_count = max_count;
+    }
+    memcpy( pixie->sprites.sprites[ spr_index ].move_y, moves, sizeof( *moves ) * moves_count );
+    pixie->sprites.sprites[ spr_index ].move_y_count = moves_count;
+    pixie->sprites.sprites[ spr_index ].move_y_index = 0;
+    pixie->sprites.sprites[ spr_index ].move_y_time = 0;
+    pixie->sprites.sprites[ spr_index ].move_y_start = pixie->sprites.sprites[ spr_index ].y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+void text( int x, int y, char const* str, int color, int font_asset 
+	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */)
+	{
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    pixelfont_align_t pixelfont_align = PIXELFONT_ALIGN_LEFT;
+	//if( align == ALIGNMENT_RIGHT ) pixelfont_align = PIXELFONT_ALIGN_RIGHT;
+	//if( align == ALIGNMENT_CENTER ) pixelfont_align = PIXELFONT_ALIGN_CENTER;
+
+	pixelfont_bounds_t pixelfont_bounds;
+	pixelfont_bounds.width = 0;
+	pixelfont_bounds.height = 0;
+
+    pixelfont_t* pixelfont = (pixelfont_t*) pixie_find_asset( pixie, font_asset, NULL );
+	pixelfont_blit_u8( pixelfont, x, y, str, (u8) color, 
+        pixie->screen.pixels, pixie->screen.screen_width, pixie->screen.screen_height,
+        pixelfont_align, -1, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
+        &pixelfont_bounds );
+
+		//pixelfont_align, wrap_width, hspacing, vspacing, limit, bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF, 
+		//italic ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF, underline ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF, 
+		//bounds ? &pixelfont_bounds : 0 );
+
+/*
+	if( bounds )
+		{
+		bounds->width = pixelfont_bounds.width;
+		bounds->height = pixelfont_bounds.height;
+		}
+*/
+	}
+
+
+
+string str( char const* c_str ) {
+    ASSERT( c_str, "The 'c_str' parameter is NULL" );
+    ASSERTF( strlen( c_str ) < PIXIE_MAX_STRING_LENGTH, 
+        ( "The 'c_str' parameter is a string of length %d, which is longer than the max length of %d.\n\n"
+          "The string contents are:\n %s", (int) strlen( c_str ) + 1, PIXIE_MAX_STRING_LENGTH, c_str ) );
+
+    string str = { "" } ;
+    if( c_str && strlen( c_str ) < PIXIE_MAX_STRING_LENGTH )
+        strcpy( str.c_str, c_str ); 
+    return str;
+}
+
+
+int length( string str ) {
+    return (int) strlen( str.c_str );
+}
+
+
+string concat( string a, string b ) {
+    ASSERTF( strlen( a.c_str ) + strlen( b.c_str ) < PIXIE_MAX_STRING_LENGTH, 
+        ( "The combined length of string a (length %d) and string b (length %d) is longer than the max length of %d.\n\n"
+          "The contents of string a are:\n%s\n\nThe contents of string b are:\n%s", 
+          (int) strlen( a.c_str ) + 1, (int) strlen( b.c_str ) + 1, PIXIE_MAX_STRING_LENGTH, a.c_str, b.c_str ) );
+
+    string str = { "" };
+    if( strlen( a.c_str ) + strlen( b.c_str ) < PIXIE_MAX_STRING_LENGTH ) {
+        strcpy( str.c_str, a.c_str );
+        strcat( str.c_str, b.c_str );
+    }
+    return str;
+}
+
+
+int compare( string a, string b ) {
+    return strcmp( a.c_str, b.c_str );
+}
+
+
+string trim( string str ) {
+	char const* start = str.c_str;
+	while( *start && *start <= ' ' ) 
+		++start;
+	char const* end = str.c_str + strlen( str.c_str ) - 1;
+	while( end > start && *end <= ' ' )
+		--end;
+    string out = { "" };
+	strncpy( out.c_str, start, (size_t)( end - start + 1 ) );
+    out.c_str[ end - start + 1] = '\0';
+    return out;
+}
+/*
+
+string ltrim( string str ) {
+}
+
+
+string rtrim( string str ) {
+}
+
+
+string left( string source, int number ) {
+}
+
+
+string right( string source, int number ) {
+}
+
+
+string mid( string source, int offset, int number ) {
+}
+
+
+int instr( string haystack, string needle, int start ) {
+}
+
+
+int any( string haystack, string needles, int start ) {
+}
+
+
+string upper( string str ) {
+}
+
+
+string lower( string str ) {
+}
+
+
+string string_from_int( int x ) {
+}
+
+
+string string_from_float( float x ) {
+}
+
+
+float float_from_string( string str ) {
+}
+
+
+int int_from_string( string str ) {
+}
+
+
+string space ( int number ) {
+}
+
+
+string flip( string original ) {
+}
+
+
+string repeat( string text, int number ) {
+}
+
+
+string chr( int code ) {
+}
+
+
+int asc( string str ) {
+}
+
+
+int len( string str ) {
+}
+
+
+string format( string format_string, ... ) {
+}
+
+*/
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
@@ -1200,6 +1599,9 @@ void play_song( int asset ) {
 #define CRT_FRAME_IMPLEMENTATION
 #include "crt_frame.h"
 
+#define EASE_IMPLEMENTATION
+#include "ease.h"
+        
 #define FRAMETIMER_IMPLEMENTATION
 #include "frametimer.h"
 
@@ -1213,6 +1615,11 @@ void play_song( int asset ) {
 #define PALETTIZE_IMPLEMENTATION
 #include "palettize.h"
 
+#define PIXELFONT_IMPLEMENTATION
+#define PIXELFONT_FUNC_NAME pixelfont_blit_u8
+#include "pixelfont.h"
+#undef PIXELFONT_FUNC_NAME 
+
 #ifndef PIXIE_NO_BUILD
     #define PIXIE_BUILD_IMPLEMENTATION
     #include "pixie_build.h"
@@ -1221,16 +1628,6 @@ void play_song( int asset ) {
 #define PIXIE_DATA_IMPLEMENTATION
 #include "pixie_data.h"
         
-#define STB_IMAGE_IMPLEMENTATION
-#pragma warning( push )
-#pragma warning( disable: 4296 ) 
-#pragma warning( disable: 4365 )
-#pragma warning( disable: 4255 )
-#pragma warning( disable: 4668 )
-#include "stb_image.h"
-#undef STB_IMAGE_IMPLEMENTATION
-#pragma warning( pop )
-
 #define THREAD_IMPLEMENTATION
 #include "thread.h"
 
@@ -1274,8 +1671,12 @@ void play_song( int asset ) {
 #endif /* PIXIE_NO_MATH */
 
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+namespace pixie {
+#endif
+
 char const* format_assert_message( char const* format, ... ) {
-	static char buffer[ 256 ];
+	static char buffer[ 4096 ];
 	va_list args;
 	va_start( args, format );
 	_vsnprintf( buffer, sizeof( buffer ), format, args );
@@ -1285,9 +1686,10 @@ char const* format_assert_message( char const* format, ... ) {
 
 
 #ifdef _WIN32
-	int display_assert_message( char const* expression, char const* message, char const* file, int line ) {
-	    char buf[ 4096 ];
-	    _snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\n%s(%d)\n", message, expression, file, line );
+	int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function ) {
+	    char buf[ 4096 + 64 ];
+	    _snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\nFunction: %s\n\n%s(%d)\n", 
+            message, expression, function, file, line );
 	    OutputDebugString( "\n******************************************\n" );
 	    OutputDebugString( buf );
 	    OutputDebugString( "******************************************\n\n" );
@@ -1320,6 +1722,9 @@ char const* format_assert_message( char const* format, ... ) {
 #endif /* _WIN32 */
 
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+} /* namespace pixie */
+#endif
 
 #endif /* PIXIE_IMPLEMENTATION */
 

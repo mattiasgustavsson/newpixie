@@ -46,6 +46,15 @@
     <ClInclude Include="source\pixie\mmap.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie\ease.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\pixelfont.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\stb_truetype.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />

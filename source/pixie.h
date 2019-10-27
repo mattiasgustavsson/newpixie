@@ -13,6 +13,7 @@
 //#define PIXIE_NO_MAIN
 //#define PIXIE_NO_BUILD
 //#define PIXIE_ASSERT_IN_RELEASE_BUILD
+//#define PIXIE_MAX_STRING_LENGTH 256
 //#define ASSERT( expression, message ) assert( expression )
 
 #include "pixie/pixie.h"
