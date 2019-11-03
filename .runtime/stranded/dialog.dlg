@@ -1,0 +1,86 @@
+[lets_go_home]
+<player_sitting> Hmmm... maybe three and a half years on this island is enough...
+<player_sitting> I've enjoyed being stranded here, but now I think I'd like to go home.
+<player_sitting> Last time I checked, the radio was working fine. I think I'll call for help now.
+#SetFlag:may_stand#
+
+[radio_first]
+<player_radio> Oh no! There are parts missing!
+<player_radio> Someone have grabbed the ANTENNA, the BATTERY, and the BULB.
+<player_radio> I *have* to find them!
+#SetFlag:looked_at_radio#
+
+[radio_none]
+<player_radio> It is missing the ANTENNA, the BATTERY, and the BULB.
+
+[radio_bulb]
+<player_radio> It is missing the ANTENNA and the BATTERY.
+
+[radio_dish]
+<player_radio> It is missing the BULB and the BATTERY.
+
+[radio_battery]
+<player_radio> It is missing the ANTENNA and the BULB.
+
+[radio_bulb_dish]
+<player_radio> It is missing the BATTERY.
+
+[radio_battery_dish]
+<player_radio> It is missing the BULB.
+
+[radio_bulb_battery]
+<player_radio> It is missing the ANTENNA.
+
+[radio_all]
+<player_radio> The radio is complete! Now I can go home.
+<player_radio> MAYDAY! MAYDAY! I AM STRANDED ON AN ISLAND. SEND HELP!
+#SetFlag:rescued#
+
+
+[hut_tv]
+<player_hut> Hey, that's my antenna!
+<tv_guy> Huh, what? No, it's my antenna now. I found it.
+<tv_guy> I need it for my TV. To watch my shows.
+<player_hut> But *I* need it for my radio. So I can call for help and get home.
+<tv_guy> Uh... I *am* very tired, I need to sleep. But I can't stop watching.
+<player_hut> You can have the antenna back later, I only need it to make the transmission.
+<tv_guy> Ok, go ahead then.
+#ClearFlag:at_hut_tv#
+
+
+[hut_tv_sleep]
+<player_hut> Looks like he's sleeping. I better not disturb him.
+
+
+[hut_book]
+<player_hut> That's my bulb! For my radio.
+<book_guy> Oh, yes yes, quite. I need it so I can read my books.
+<player_hut> But *I* need it for my radio. So I can call for help and get home.
+<book_guy> I see, I see. Well I am really rather sleepy. But I can not put this book down. Quite the page-turner it is.
+<player_hut> You can have the bulb back later, I only need it to make the transmission.
+<book_guy> Ah, very well, very well.
+#ClearFlag:at_hut_bulb#
+
+[hut_book_sleep]
+<player_hut> Looks like he's sleeping. I better not disturb him.
+
+
+[penguin]
+<penguin> Waddya want!?
+<player> Uh, is that my battery you have there?
+<penguin> Don't know! Don't care!
+<player> But you're not even using it! 
+<penguin> Sure I do! I lick it.
+<player> You *lick* it?
+<penguin> Makes my tongue tingle.
+<player> But *I* need it for my radio. So I can call for help and get home.
+<player> What are you even doing here? Aren't you supposed to be on the south pole or something?
+<penguin> Vacation.
+<penguin> It's about time I got back anyway.
+<penguin> Don't touch my battery while I'm gone!
+#SetFlag:penguin_running#
+<player> Yeah, right.
+#SetFlag:penguin_gone#
+
+[grab_battery]
+<player> I'm having this!

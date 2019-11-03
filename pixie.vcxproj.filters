@@ -55,8 +55,30 @@
     <ClInclude Include="source\pixie\stb_truetype.h">
       <Filter>pixie</Filter>
     </ClInclude>
+    <ClInclude Include="source\pixie\stb_image_write.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\dialog.h" />
+    <ClInclude Include="source\img.h" />
+    <ClInclude Include="source\pixie\palrle.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\dir.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\file_util.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\paldither.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pixie\tml.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\dialog_playback.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\stranded.c" />
     <ClCompile Include="source\main.c" />
   </ItemGroup>
 </Project>

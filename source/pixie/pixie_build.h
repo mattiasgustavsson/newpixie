@@ -55,7 +55,7 @@ before you include this file in *one* C/C++ file to create the implementation.
 namespace pixie {
 #endif
 
-typedef void* (*asset_build_function_t)( char const* filename, int* out_size );
+typedef void* (*asset_build_function_t)( char const* filenames[], int count, int* out_size );
 void register_asset_type( char const* name, asset_build_function_t build_function );
 
 void* load_binary_file( char const* filename, int* size );
@@ -63,6 +63,13 @@ void free_binary_file( void* data );
 
 char* load_text_file( char const* filename, int* size );
 void free_text_file( char* text );
+
+void* build_palette( const char* filenames[], int count, int* out_size );
+void* build_sprite( const char* filenames[], int count, int* out_size );
+void* build_song( char const* filenames[], int count, int* out_size );
+void* build_text( char const* filenames[], int count, int* out_size );
+void* build_binary( char const* filenames[], int count, int* out_size );
+void* build_font( char const* filenames[], int count, int* out_size );
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
@@ -88,6 +95,37 @@ void free_text_file( char* text );
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+// C runtime includes
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Libraries includes
+#include "dir.h"
+#include "file_util.h"
+#include "palettize.h"
+#include "paldither.h"
+#include "palrle.h"
+#include "pixie_data.h"
+#include "stb_image.h"
+#include "stb_image_write.h"
+#include "stb_truetype.h"
+
+
+#ifndef PIXIE_BUILD_U8
+    #define PIXIE_BUILD_U8 unsigned char
+#endif
+
+#ifndef PIXIE_BUILD_U32
+    #define PIXIE_BUILD_U32 unsigned int
+#endif
+
+
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+namespace pixie {
+#endif
+
 // In C, a void* can be implicitly cast to any other kind of pointer, while in C++ you need an explicit cast. In most
 // cases, the explicit cast works for both C and C++, but if we consider the case where we have nested structs, then
 // the way you refer to them differs between C and C++ (in C++, `parent_type::nested_type`, in C just `nested_type`).
@@ -104,43 +142,20 @@ void free_text_file( char* text );
 //      parent.nested = VOID_CAST( malloc( sizeof( *parent.nested ) * count ) );
 //
 
-#ifdef __cplusplus
-    struct void_cast {   
-        inline void_cast( void* x_ ) : x( x_ ) { }
-        template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
-        void* x;
-    };
-    #define VOID_CAST( x ) void_cast( x )
-#else
-    #define VOID_CAST( x ) x
+#ifndef VOID_CAST
+    #ifdef __cplusplus
+        struct void_cast {   
+            inline void_cast( void* x_ ) : x( x_ ) { }
+            inline void_cast( void const* x_ ) : x( (void*) x_ ) { }
+            template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
+            void* x;
+        };
+        #define VOID_CAST( x ) void_cast( x )
+    #else
+        #define VOID_CAST( x ) x
+    #endif
 #endif
 
-
-// C runtime includes
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-// Libraries includes
-#include "palettize.h"
-#include "pixie_data.h"
-#include "stb_image.h"
-#include "stb_truetype.h"
-
-
-#ifndef PIXIE_BUILD_U8
-    #define PIXIE_BUILD_U8 unsigned char
-#endif
-
-#ifndef PIXIE_BUILD_U32
-    #define PIXIE_BUILD_U32 unsigned int
-#endif
-
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
 
 
 struct item_t {
@@ -315,35 +330,45 @@ static struct item_t* read_asset_definitions( char const* asset_definitions_file
 }
 
 PIXIE_BUILD_U32 palette_for_build_sprite[ 256 ]; // TODO: handle this properly
+int palette_for_build_sprite_count = 256;
+paldither_palette_t* paldither_palette_for_build_sprite = NULL;
 
-static void* build_palette( const char* filename, int* out_size ) {
+
+void* build_palette( char const* filenames[], int count, int* out_size ) {
+    if( count != 1 ) return 0;
+
     int w, h, c;
-    stbi_uc* img = stbi_load( filename, &w, &h, &c, 4 );
+    stbi_uc* img = stbi_load( filenames[ 0 ], &w, &h, &c, 4 );
     if( !img ) return NULL;
 
     PIXIE_BUILD_U32 palette[ 256 ] = { 0 };
-    int count = 0;      
+    int pal_count = 0;      
     for( int y = 0; y < h; ++y ) {
         for( int x = 0; x < w; ++x ) {
             PIXIE_BUILD_U32 pixel = ((PIXIE_BUILD_U32*)img)[ x + y * w ];
             if( ( pixel & 0xff000000 ) == 0 ) goto skip;
-            if( count < 256 ) {
-                for( int i = 0; i < count; ++i ) {
+            if( pal_count < 256 ) {
+                for( int i = 0; i < pal_count; ++i ) {
                     if( palette[ i ] == pixel )
                         goto skip;
                 }
-                palette[ count ] = pixel;       
+                palette[ pal_count ] = pixel;       
             }
-            ++count;
+            ++pal_count;
         skip:
             ;
         }
     }   
-    if( count > 256 )  {
+    if( pal_count > 256 )  {
         memset( palette, 0, sizeof( palette ) );
-        count = palettize_generate_palette_xbgr32( (PALETTIZE_U32*) img, w, h, palette, 256, 0 );        
+        pal_count = palettize_generate_palette_xbgr32( (PALETTIZE_U32*) img, w, h, palette, 256, 0 );        
     }
     memcpy( palette_for_build_sprite, palette, sizeof( palette_for_build_sprite ) );
+    palette_for_build_sprite_count = pal_count;
+    if( paldither_palette_for_build_sprite ) {
+        paldither_palette_destroy( paldither_palette_for_build_sprite );
+        paldither_palette_for_build_sprite = NULL;
+    }
     stbi_image_free( img );     
     *out_size = sizeof( palette );
     void* out_data = malloc( sizeof( palette ) );
@@ -352,38 +377,65 @@ static void* build_palette( const char* filename, int* out_size ) {
 }
 
 
-static void* build_sprite( const char* filename, int* out_size ) {
-    int w, h, c;
-    stbi_uc* img = stbi_load( filename, &w, &h, &c, 4 );
-    if( !img ) return NULL;
-   
-    struct {
-        int width;
-        int height;
-        PIXIE_BUILD_U8 pixels[ 1 ];
-    }* data = VOID_CAST( malloc( sizeof( *data ) + sizeof( PIXIE_BUILD_U8 ) * ( w * h - 1 ) ) );
-    data->width = w;
-    data->height = h;
-    memset( data->pixels, 0, sizeof( PIXIE_BUILD_U8 ) * w * h ); 
-    palettize_remap_xbgr32( (PALETTIZE_U32*) img, w, h, palette_for_build_sprite, 256, data->pixels );
-    
-    for( int i = 0; i < w * h; ++i )
-        if( ( ( (PALETTIZE_U32*) img )[ i ] & 0xff000000 ) >> 24 < 0x80 )
-            data->pixels[ i ] |=  0x80u;       
-    
-    stbi_image_free( img );     
+void* build_sprite( char const* filenames[], int count, int* out_size ) {
+    int capacity = 16 * 1024;
+    PIXIE_BUILD_U8* data = (PIXIE_BUILD_U8*) malloc( (size_t) capacity );
+    *(int*) data = count;
+    int* offsets = (int*)( data + sizeof( int ) );
+    int pos = (int)( sizeof( int ) + sizeof( int ) * count );
+    for( int j = 0; j < count; ++j ) {
+        int w, h, c;
+        stbi_uc* img = stbi_load( filenames[ j ], &w, &h, &c, 4 );
+        if( !img ) return NULL;
 
-    *out_size = (int)( sizeof( *data ) + sizeof( PIXIE_BUILD_U8 ) * ( w * h - 1 ) );
+        if( !paldither_palette_for_build_sprite ) {
+            paldither_palette_for_build_sprite = paldither_palette_create( palette_for_build_sprite, palette_for_build_sprite_count, NULL, NULL );
+        }
+   
+        PIXIE_BUILD_U8* pixels = (PIXIE_BUILD_U8*) malloc( sizeof( PIXIE_BUILD_U8 ) * w * h );
+        memset( pixels, 0, sizeof( PIXIE_BUILD_U8 ) * w * h ); 
+        paldither_palettize( (PALDITHER_U32*) img, w, h, paldither_palette_for_build_sprite, PALDITHER_TYPE_DEFAULT, pixels );
+    
+        PIXIE_BUILD_U8* mask = (PIXIE_BUILD_U8*) malloc( (size_t) w * h );
+        for( int i = 0; i < w * h; ++i ) mask[ i ] = (PIXIE_BUILD_U8)(( (PALETTIZE_U32*) img )[ i ] >> 24 );
+
+        for( int i = 0; i < w * h; ++i ) {
+            ((PALDITHER_U32*) img)[ i ] = ( ( (PALDITHER_U32)mask[ i ] ) << 24 ) | ( palette_for_build_sprite[ pixels[ i ] ] & 0xffffffff );
+        }
+
+        stbi_image_free( img );     
+
+        palrle_data_t* rle = palrle_encode_mask( pixels, mask, w, h, palette_for_build_sprite, 256, NULL );
+        free( mask );
+        free( pixels );
+    
+        if( pos + (int) rle->size > capacity ) {
+            if( capacity * 2 >= pos + (int) rle->size ) {
+                capacity *= 2;
+            } else {
+                capacity = pos + (int) rle->size;
+            }
+            data = (PIXIE_BUILD_U8*) realloc( data, (size_t) capacity );
+            offsets = (int*)( data + sizeof( int ) );
+        }
+        offsets[ j ] = pos;
+        memcpy( data + pos, rle, (size_t) rle->size );
+        pos += (int) rle->size;
+        palrle_free( rle, NULL );
+    }
+    *out_size = pos;
     return data;
 }
 
 
-static void* build_song( char const* filename, int* out_size ) {
+void* build_song( char const* filenames[], int count, int* out_size ) {
+    if( count != 1 ) return 0;
+
     int in_size = 0;
-    void* in_data = load_binary_file( filename, &in_size );
+    void* in_data = load_binary_file( filenames[ 0 ], &in_size );
     if( !in_data ) return NULL;
 
-    mid_t* mid = mid_create( in_data, (size_t) in_size, NULL, NULL ); 
+    mid_t* mid = mid_create( in_data, (size_t) in_size, NULL ); 
     free_binary_file( in_data );
     size_t size = mid_save_raw( mid, NULL, 0 );
     void* out_data = malloc( size );
@@ -394,9 +446,11 @@ static void* build_song( char const* filename, int* out_size ) {
 }
 
 
-static void* build_text( char const* filename, int* out_size ) {
+void* build_text( char const* filenames[], int count, int* out_size ) {
+    if( count != 1 ) return 0;
+
     int in_size = 0;
-    char* in_data = load_text_file( filename, &in_size );
+    char* in_data = load_text_file( filenames[ 0 ], &in_size );
     if( !in_data ) return NULL;
 
     void* out_data = malloc( (size_t) in_size );
@@ -407,9 +461,11 @@ static void* build_text( char const* filename, int* out_size ) {
 }
 
 
-static void* build_binary( char const* filename, int* out_size ) {
+void* build_binary( char const* filenames[], int count, int* out_size ) {
+    if( count != 1 ) return 0;
+
     int in_size = 0;
-    void* in_data = load_binary_file( filename, &in_size );
+    void* in_data = load_binary_file( filenames[ 0 ], &in_size );
     if( !in_data ) return NULL;
 
     void* out_data = malloc( (size_t) in_size );
@@ -420,9 +476,11 @@ static void* build_binary( char const* filename, int* out_size ) {
 }
 
  
-static void* build_font( char const* filename, int* out_size ) {
+void* build_font( char const* filenames[], int count, int* out_size ) {
+    if( count != 1 ) return 0;
+
     int in_size = 0;
-    void* in_data = load_binary_file( filename, &in_size );
+    void* in_data = load_binary_file( filenames[ 0 ], &in_size );
     if( !in_data ) return NULL;
 
     unsigned char* ttf_data = (unsigned char*) in_data;
@@ -558,6 +616,42 @@ static void* build_font( char const* filename, int* out_size ) {
 }
 
 
+char** list_files( char const* filename, int* out_count ) {
+    int count = 0;
+    int capacity = 256;
+    char** files = (char**) malloc( capacity * sizeof( char* ) );
+    char const* path = c_dirname( filename );
+    dir_t* dir = dir_open( *path == 0 ? "." : path );
+    dir_entry_t* entry = dir_read( dir );
+    while( entry ) {
+        if( dir_is_file( entry ) && strcmp( dir_name( entry ), "." ) != 0 && strcmp( dir_name( entry ), ".." ) != 0 ) {
+            char temp[ 1024 ];
+            strcpy( temp, path );
+            strcat( temp, dir_name( entry ) );
+            if( wildcard_compare( filename, temp ) ) {
+                if( count >= capacity ) {
+                    capacity *= 2;
+                    files = (char**) realloc( files, capacity * sizeof( char* ) );
+                }
+                files[ count++ ] = strdup( temp );
+            }
+        }
+        entry = dir_read( dir );
+    }
+    dir_close( dir );
+    *out_count = count;
+    return files;
+}
+
+
+void free_file_list( char** filenames, int count ) {
+    for( int i = 0; i < count; ++i ) {
+        free( filenames[ i ] );
+    }
+    free( filenames );
+}
+
+
 int load_bundle( char const* filename, char const* time, char const* definitions, int count );
 
 
@@ -622,7 +716,7 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
 
     int running_offset = (int) ftell( bundle );
     for( int i = 0; i < count; ++i ) {
-        printf( "%d %s %s\n", items[ i ].id, items[ i ].type, items[ i ].filename );
+        printf( "%d %s %s ", items[ i ].id, items[ i ].type, items[ i ].filename );
 
         int size = 0;
         void* data = NULL;
@@ -634,20 +728,24 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
             }
         }
         if( build_function ) {
-            data = build_function( items[ i ].filename, &size );
+            int files_count = 0;
+            char const** filenames = (char const**)list_files( items[ i ].filename, &files_count );
+            data = build_function( filenames, files_count, &size );
+            free_file_list( (char**)filenames, files_count );
         } else {
-            printf( "Asset type '%s' is unknown\n", items[ i ].type );
+            printf( "\n\nAsset type '%s' is unknown\n", items[ i ].type );
             free( items );
             free( file_list );
             return EXIT_FAILURE;
         }
+        printf( "   %d bytes\n", size );
 
         if( data == NULL ) {
-            printf( "Asset file '%s' could not be built\n", items[ i ].filename );
+            printf( "\nAsset file '%s' could not be built\n", items[ i ].filename );
             free( items );
             free( file_list );
             return EXIT_FAILURE;
-    }
+        }
 
         file_list[ i ].id = i;
         file_list[ i ].offset = running_offset;
@@ -655,12 +753,17 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
         running_offset += size;
         fwrite( data, 1, (size_t) size, bundle );
         free( data );
-   }
+    }
+    printf( "%d bytes, %d assets\n", (int) ftell( bundle ), count );
     fseek( bundle, file_list_pos, SEEK_SET );
     fwrite( file_list, sizeof( struct file_list_t ), (size_t) count, bundle );
     free( file_list );
     fclose( bundle );
     free( items );
+    if( paldither_palette_for_build_sprite ) {
+        paldither_palette_destroy( paldither_palette_for_build_sprite );
+        paldither_palette_for_build_sprite = NULL;
+    }
 
     return load_bundle( bundle_filename, build_time, definitions_file, assets_count );
 }
@@ -718,28 +821,40 @@ void free_text_file( char* text ) {
 } /* namespace pixie */
 #endif
 
-#undef VOID_CAST
 
+#define DIR_IMPLEMENTATION
+#define DIR_WINDOWS
+#include "dir.h"
+
+#define FILE_UTIL_IMPLEMENTATION
+#include "file_util.h"
+
+#define PALDITHER_IMPLEMENTATION
+#include "paldither.h"
+
+#define PALETTIZE_IMPLEMENTATION
+#include "palettize.h"
 
 #define PIXELFONT_BUILDER_IMPLEMENTATION
 #include "pixelfont.h"
 
 #pragma warning( push )
+#pragma warning( disable: 4255 )
 #pragma warning( disable: 4296 ) 
 #pragma warning( disable: 4365 )
-#pragma warning( disable: 4255 )
 #pragma warning( disable: 4668 )
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #undef STB_IMAGE_IMPLEMENTATION
+#pragma warning( pop )
 
+#pragma warning( push )
+#pragma warning( disable: 4365 )
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_MAX_OVERSAMPLE 1
 #define STBTT_RASTERIZER_VERSION 1
 #include "stb_truetype.h"
 #undef STB_TRUETYPE_IMPLEMENTATION
-
 #pragma warning( pop )
 
 

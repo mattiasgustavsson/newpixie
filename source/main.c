@@ -16,6 +16,9 @@ int pixmain( int argc, char** argv ) {
 
     load_assets();
 
+	//screen_size( 384, 288 );
+	//border_size( 0, 0 );
+
     string test = { "   Hello" };
     print( concat( trim( concat( test, concat( str( " " ), str( "World   " ) ) ) ), str( "!") ).c_str  );
     print( "Hello world!" );

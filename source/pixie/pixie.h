@@ -26,15 +26,46 @@ namespace pixie {
 
 
 // Sized types
-
-typedef signed char i8;
-typedef signed short i16;
-typedef signed int i32;
-typedef signed long long i64;
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
-typedef unsigned long long u64;
+#ifndef PIXIE_I8 
+    typedef signed char i8;
+#else
+    typedef PIXIE_I8 i8;
+#endif
+#ifndef PIXIE_I16 
+    typedef signed short i16;
+#else
+    typedef PIXIE_I16 i16;
+#endif
+#ifndef PIXIE_I32
+    typedef signed int i32;
+#else
+    typedef PIXIE_I32 i32;
+#endif
+#ifndef PIXIE_I64
+    typedef signed long long i64;
+#else
+    typedef PIXIE_I64 i64;
+#endif
+#ifndef PIXIE_U8 
+    typedef unsigned char u8;
+#else
+    typedef PIXIE_U8 u8;
+#endif
+#ifndef PIXIE_U16 
+    typedef unsigned short u16;
+#else
+    typedef PIXIE_U16 u16;
+#endif
+#ifndef PIXIE_U32
+    typedef unsigned int u32;
+#else
+    typedef PIXIE_U32 u32;
+#endif
+#ifndef PIXIE_U64
+    typedef unsigned long long u64;
+#else
+    typedef PIXIE_U64 u64;
+#endif
 
 
 // API Functions
@@ -42,31 +73,66 @@ typedef unsigned long long u64;
 int run( int (*main)( int, char** ) );
 void end( int return_code );
 void wait_vbl( void );
+void wait( int jiffys );
+
+int fullscreen( void );
+void fullscreen_on( void );
+void fullscreen_off( void );
+
+int crt_mode( void);
+void crt_mode_on( void );
+void crt_mode_off( void );
 
 void print( char const* str );
 void load_palette( int asset );
+
+typedef struct rgb_t {
+    int r;
+    int g;
+    int b;
+} rgb_t;
+
+void setcol( int index, rgb_t rgb );
+rgb_t getcol( int index );
+
+void sprites_off( void );
+
 int sprite( int spr_index, int x, int y, int asset );
+void sprite_bitmap( int spr_index, int asset );
+int sprite_visible( int spr_index );
+void sprite_show( int spr_index );
+void sprite_hide( int spr_index );
 void sprite_pos( int spr_index, int x, int y );
 int sprite_x( int spr_index );
 int sprite_y( int spr_index );
-void play_song( int asset );
-char const* load_text( int asset_id );
-int asset_size( int asset_id );
-void const* asset_data( int asset_id );
+void sprite_origin( int spr_index, int x, int y );
+int sprite_origin_x( int spr_index );
+int sprite_origin_y( int spr_index );
+void sprite_cel( int spr_index, int cel );
 
-typedef enum ease_t {
-    DELAY, EASE_LINEAR, EASE_SMOOTHSTEP, EASE_SMOOTHERSTEP, EASE_OUT_QUAD, EASE_OUT_BACK, EASE_OUT_BOUNCE, 
-    EASE_OUT_SINE, EASE_OUT_ELASTIC, EASE_OUT_EXPO, EASE_OUT_CUBIC, EASE_OUT_QUART, EASE_OUT_QUINT, EASE_OUT_CIRCLE,
-    EASE_IN_QUAD, EASE_IN_BACK, EASE_IN_BOUNCE, EASE_IN_SINE, EASE_IN_ELASTIC, EASE_IN_EXPO, EASE_IN_CUBIC, 
-    EASE_IN_QUART, EASE_IN_QUINT, EASE_IN_CIRCLE, EASE_IN_OUT_QUAD, EASE_IN_OUT_BACK, EASE_IN_OUT_BOUNCE, 
-    EASE_IN_OUT_SINE, EASE_IN_OUT_ELASTIC, EASE_IN_OUT_EXPO, EASE_IN_OUT_CUBIC, EASE_IN_OUT_QUART, EASE_IN_OUT_QUINT,
-    EASE_IN_OUT_CIRCLE,
-} ease_t;
+typedef enum text_align_t { TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER, } text_align_t;
+int label( int spr_index, int x, int y, char const* text, int color, int font_asset );
+int label_text( int spr_index, char const* text );
+int label_align( int spr_index, text_align_t align );
+int label_color( int spr_index, int color );
+int label_outline( int spr_index, int color );
+int label_shadow( int spr_index, int color );
+int label_wrap( int spr_index, int wrap );
+
+typedef enum move_type_t {
+    MOVE_DELAY, MOVE_LINEAR, MOVE_SMOOTHSTEP, MOVE_SMOOTHERSTEP, MOVE_EASE_OUT_QUAD, MOVE_EASE_OUT_BACK, 
+    MOVE_EASE_OUT_BOUNCE, MOVE_EASE_OUT_SINE, MOVE_EASE_OUT_ELASTIC, MOVE_EASE_OUT_EXPO, MOVE_EASE_OUT_CUBIC, 
+    MOVE_EASE_OUT_QUART, MOVE_EASE_OUT_QUINT, MOVE_EASE_OUT_CIRCLE, MOVE_EASE_IN_QUAD, MOVE_EASE_IN_BACK, 
+    MOVE_EASE_IN_BOUNCE, MOVE_EASE_IN_SINE, MOVE_EASE_IN_ELASTIC, MOVE_EASE_IN_EXPO, MOVE_EASE_IN_CUBIC, 
+    MOVE_EASE_IN_QUART, MOVE_EASE_IN_QUINT, MOVE_EASE_IN_CIRCLE, MOVE_EASE_IN_OUT_QUAD, MOVE_EASE_IN_OUT_BACK, 
+    MOVE_EASE_IN_OUT_BOUNCE, MOVE_EASE_IN_OUT_SINE, MOVE_EASE_IN_OUT_ELASTIC, MOVE_EASE_IN_OUT_EXPO, 
+    MOVE_EASE_IN_OUT_CUBIC, MOVE_EASE_IN_OUT_QUART, MOVE_EASE_IN_OUT_QUINT,MOVE_EASE_IN_OUT_CIRCLE,
+} move_type_t;
 
 typedef struct move_t {
     int target;
     int duration;
-    ease_t ease;
+    move_type_t type;
 } move_t;
 
 void move_sprite_x( int spr_index, move_t* moves, int moves_count );
@@ -74,8 +140,43 @@ void move_sprite_y( int spr_index, move_t* moves, int moves_count );
 
 #define ARRAY_COUNT( x ) ( (int)( sizeof( x ) / sizeof( *x ) ) )
 
+void set_soundfont( int asset );
+void play_song( int asset );
+char const* load_text( int asset_id );
+
+int asset_size( int asset_id );
+void const* asset_data( int asset_id );
+
 void text( int x, int y, char const* str, int color, int font_asset 
 	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */);
+
+typedef enum key_t { 
+	KEY_INVALID, KEY_LBUTTON, KEY_RBUTTON, KEY_CANCEL, KEY_MBUTTON,  KEY_XBUTTON1, KEY_XBUTTON2, KEY_BACK, KEY_TAB, 
+	KEY_CLEAR, KEY_RETURN, KEY_SHIFT,  KEY_CONTROL, KEY_MENU, KEY_PAUSE, KEY_CAPITAL, KEY_KANA, KEY_HANGUL = KEY_KANA, 
+	KEY_JUNJA, KEY_FINAL, KEY_HANJA, KEY_KANJI = KEY_HANJA, KEY_ESCAPE, KEY_CONVERT, KEY_NONCONVERT, KEY_ACCEPT, 
+	KEY_MODECHANGE, KEY_SPACE, KEY_PRIOR, KEY_NEXT, KEY_END,  KEY_HOME, KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN, 
+	KEY_SELECT, KEY_PRINT, KEY_EXEC, KEY_SNAPSHOT, KEY_INSERT, KEY_DELETE, KEY_HELP, KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, 
+	KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J, KEY_K, 
+	KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T, KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z, KEY_LWIN, 
+	KEY_RWIN, KEY_APPS, KEY_SLEEP, KEY_NUMPAD0, KEY_NUMPAD1, KEY_NUMPAD2, KEY_NUMPAD3, KEY_NUMPAD4, KEY_NUMPAD5, 
+	KEY_NUMPAD6, KEY_NUMPAD7, KEY_NUMPAD8, KEY_NUMPAD9, KEY_MULTIPLY, KEY_ADD, KEY_SEPARATOR, KEY_SUBTRACT, KEY_DECIMAL, 
+	KEY_DIVIDE, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12, 
+	KEY_F13, KEY_F14, KEY_F15, KEY_F16, KEY_F17, KEY_F18, KEY_F19, KEY_F20, KEY_F21, KEY_F22, KEY_F23, KEY_F24, 
+	KEY_NUMLOCK, KEY_SCROLL, KEY_LSHIFT, KEY_RSHIFT, KEY_LCONTROL, KEY_RCONTROL, KEY_LMENU, KEY_RMENU, KEY_BROWSER_BACK, 
+	KEY_BROWSER_FORWARD, KEY_BROWSER_REFRESH, KEY_BROWSER_STOP, KEY_BROWSER_SEARCH, KEY_BROWSER_FAVORITES, 
+	KEY_BROWSER_HOME, KEY_VOLUME_MUTE, KEY_VOLUME_DOWN, KEY_VOLUME_UP, KEY_MEDIA_NEXT_TRACK, KEY_MEDIA_PREV_TRACK, 
+	KEY_MEDIA_STOP, KEY_MEDIA_PLAY_PAUSE, KEY_LAUNCH_MAIL, KEY_LAUNCH_MEDIA_SELECT, KEY_LAUNCH_APP1, KEY_LAUNCH_APP2, 
+	KEY_OEM_1, KEY_OEM_PLUS, KEY_OEM_COMMA, KEY_OEM_MINUS, KEY_OEM_PERIOD, KEY_OEM_2, KEY_OEM_3, KEY_OEM_4, KEY_OEM_5, 
+	KEY_OEM_6, KEY_OEM_7, KEY_OEM_8, KEY_OEM_102, KEY_PROCESSKEY, KEY_ATTN, KEY_CRSEL, KEY_EXSEL, KEY_EREOF, KEY_PLAY, 
+	KEY_ZOOM, KEY_NONAME, KEY_PA1, KEY_OEM_CLEAR, KEY_PEN_TOUCH, KEY_PEN_LOWER_BUTTON, KEY_PEN_UPPER_BUTTON, KEYCOUNT 
+} key_t;
+
+int key_is_down( key_t key );
+int key_was_pressed( key_t key );
+int key_was_released( key_t key );
+
+
+int min( int a, int b );
 
 // String functions
 
@@ -111,6 +212,7 @@ string repeat( string text, int number ); // repeat a string
 string chr( int code ); // return the character with a given ASCII code
 int asc( string str ); // give the ASCII code of a character
 int len( string str ); // give the length of a string
+int starts_with( string str, string start );
 string format( string format_string, ... ); // printf style formatting
 
 
@@ -126,42 +228,42 @@ string format( string format_string, ... ); // printf style formatting
         char const* format_assert_message( char const* format, ... );
     } /* namespace pixie */
 
-    #ifndef ASSERT
-	    #if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
-		    #define ASSERT( expression, message )
-	    #else
-		    #define ASSERT( expression, message ) \
-		        __pragma( warning( push ) ) \
-		        __pragma( warning( disable: 4127 ) ) \
-			    do { \
-				    if( !( expression ) ) \
-					    if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-						    __debugbreak(); \
-			    } while( 0 ) \
-			    __pragma( warning( pop ) )
-	    #endif
-    #endif
+	#if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
+		#define ASSERT( expression, message )
+	#elif defined PIXIE_ASSERT
+		#define ASSERT( expression, message ) PIXIE_ASSERT( expression, message )
+    #else
+		#define ASSERT( expression, message ) \
+		    __pragma( warning( push ) ) \
+		    __pragma( warning( disable: 4127 ) ) \
+			do { \
+				if( !( expression ) ) \
+					if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+						__debugbreak(); \
+			} while( 0 ) \
+			__pragma( warning( pop ) )
+	#endif
 
     #define ASSERTF( expression, message ) ASSERT( expression, pixie::format_assert_message message )
 #else
     int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function );
     char const* format_assert_message( char const* format, ... );
 
-    #ifndef ASSERT
-	    #if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
-		    #define ASSERT( expression, message )
-	    #else
-		    #define ASSERT( expression, message ) \
-		        __pragma( warning( push ) ) \
-		        __pragma( warning( disable: 4127 ) ) \
-			    do { \
-				    if( !( expression ) ) \
-					    if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-						    __debugbreak(); \
-			    } while( 0 ) \
-			    __pragma( warning( pop ) )
-	    #endif
-    #endif
+	#if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
+		#define ASSERT( expression, message )
+	#elif defined PIXIE_ASSERT
+		#define ASSERT( expression, message ) PIXIE_ASSERT( expression, message )
+    #else
+		#define ASSERT( expression, message ) \
+		    __pragma( warning( push ) ) \
+		    __pragma( warning( disable: 4127 ) ) \
+			do { \
+				if( !( expression ) ) \
+					if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+						__debugbreak(); \
+			} while( 0 ) \
+			__pragma( warning( pop ) )
+	#endif
 
     #define ASSERTF( expression, message ) ASSERT( expression, format_assert_message message )
 #endif
@@ -291,6 +393,120 @@ string format( string format_string, ... ); // printf style formatting
 #endif /* PIXIE_NO_MATH */
 
 
+
+/*
+------------------
+    ARRAY TYPE
+------------------
+*/
+
+#define ARRAY_TYPE( name, type, capacity ) \
+    typedef struct name##_t { \
+        int count; \
+        type items[ capacity ]; \
+    } name##_t; \
+    \
+    inline int name##_count( name##_t* arr ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when querying size of array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        if( arr->count >= 0 && arr->count < capacity ) { \
+            return arr->count; \
+        } else {\
+            return 0; \
+        } \
+    } \
+    \
+    inline void name##_add( name##_t* arr, type value ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when adding an item to array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        ASSERTF( arr->count < capacity, \
+            ( "Capacity exceed when adding an item to array of type '%s'.\n\n" \
+            "Max capacity is: %d", #name, capacity ) ); \
+        if( arr->count >= 0 && arr->count < capacity ) { \
+            arr->items[ arr->count++ ] = value; \
+        } \
+    } \
+    \
+    inline int name##_try_add( name##_t* arr, type value ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when trying to add an item to array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        if( arr->count >= 0 && arr->count < capacity ) { \
+            arr->items[ arr->count++ ] = value; \
+            return 1; \
+        } else { \
+            return 0; \
+        } \
+    } \
+    \
+    inline void name##_remove( name##_t* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when removing an item from array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        ASSERTF( index >= 0 && index < arr->count, \
+            ( "Invalid index when removing an item from array of type '%s'.\n\n" \
+            "The invalid index is: %d\nThe current count is: %d", #name, index, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            if( arr->count == 1 ) { \
+                --arr->count; \
+            } else { \
+                arr->items[ index ] = arr->items[ --arr->count ]; \
+            } \
+        } \
+    } \
+    \
+    inline int name##_try_remove( name##_t* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when trying to remove an item from array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            if( arr->count == 1 ) { \
+                --arr->count; \
+            } else { \
+                arr->items[ index ] = arr->items[ --arr->count ]; \
+            } \
+            return 1; \
+        } else { \
+            return 0; \
+        } \
+    } \
+    \
+    inline type name##_get( name##_t const* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when getting an item from array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        ASSERTF( index >= 0 && index < arr->count, \
+            ( "Invalid index when getting an item from array of type '%s'.\n\n" \
+            "The invalid index is: %d\nThe current count is: %d", #name, index, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            return arr->items[ index ]; \
+        } else { \
+		    __pragma( warning( push ) ) \
+		    __pragma( warning( disable: 4701 ) ) \
+            type value; \
+            for( int i = 0; i < sizeof( value ); ++i ) ( (unsigned char*) &value )[ i ] = 0; \
+            return value; \
+		    __pragma( warning( pop ) ) \
+        } \
+    } \
+    \
+    inline type const* name##_try_get( name##_t const* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
+            ( "Invalid array count detected when getting an item from array of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            return &arr->items[ index ]; \
+        } else { \
+            return 0; \
+        } \
+    } \
+
+
+
+
+
 #endif /* pixie_h */
 
 
@@ -409,7 +625,7 @@ string format( string format_string, ... ); // printf style formatting
 #define MID_ENABLE_RAW
 #include "mid.h"
 #include "mmap.h"
-#include "palettize.h"
+#include "palrle.h"
 #define PIXELFONT_FUNC_NAME pixelfont_blit_u8
 #include "pixelfont.h"
 #undef PIXELFONT_FUNC_NAME 
@@ -439,17 +655,21 @@ namespace pixie {
 //      } parent;
 //      parent.nested = VOID_CAST( malloc( sizeof( *parent.nested ) * count ) );
 //
-#ifdef __cplusplus
-    struct void_cast {   
-        inline void_cast( void* x_ ) : x( x_ ) { }
-        inline void_cast( void const* x_ ) : x( (void*) x_ ) { }
-        template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
-        void* x;
-    };
-    #define VOID_CAST( x ) void_cast( x )
-#else
-    #define VOID_CAST( x ) x
+
+#ifndef VOID_CAST
+    #ifdef __cplusplus
+        struct void_cast {   
+            inline void_cast( void* x_ ) : x( x_ ) { }
+            inline void_cast( void const* x_ ) : x( (void*) x_ ) { }
+            template< typename T > inline operator T() { return (T)x; } // cast to whatever requested
+            void* x;
+        };
+        #define VOID_CAST( x ) void_cast( x )
+    #else
+        #define VOID_CAST( x ) x
+    #endif
 #endif
+
 
 
 
@@ -458,7 +678,8 @@ namespace pixie {
 
 typedef struct pixie_t pixie_t;
 static void pixie_force_exit( pixie_t* pixie );
-static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height );
+static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int count );
+static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* fullscreen, int* crt_mode );
 static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
 static void const* pixie_find_asset( pixie_t* pixie, int id, int* size );
 
@@ -504,8 +725,11 @@ static int app_proc( app_t* app, void* user_data ) {
     app_context_t* context = (app_context_t*) user_data;
     pixie_t* pixie = context->pixie;
 
+    int fullscreen = 1;
+    int crt_mode = 1;
+    
     // Set up initial app parameters
-    app_screenmode( app, APP_SCREENMODE_WINDOW );
+    app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
     app_interpolation( app, APP_INTERPOLATION_NONE );
 
     // Create and set up the CRT emulation instance
@@ -533,6 +757,9 @@ static int app_proc( app_t* app, void* user_data ) {
         // Run app update (reading inputs etc)
         app_state_t app_state = app_yield( app );
         
+        app_input_t input = app_input( app );
+        pixie_update_input( pixie, input.events, input.count );
+
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
             // Signal that we need to force the user thread to exit
@@ -541,17 +768,33 @@ static int app_proc( app_t* app, void* user_data ) {
         }
 
         // Render screen buffer
+        int pixie_fullscreen = fullscreen;
+        int pixie_crt_mode = crt_mode;
         int screen_width = 0;
         int screen_height = 0;
-        APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height );
+        APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height, &pixie_fullscreen, &pixie_crt_mode );
     
+        if( pixie_fullscreen != fullscreen ) {
+            fullscreen = pixie_fullscreen;
+            app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
+        }
+
+        if( pixie_crt_mode != crt_mode ) {
+            crt_mode = pixie_crt_mode;
+        }
+
+
         // Present the screen buffer to the window
         APP_U64 time = app_time_count( app );
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
         crt_time_us += delta_time_us;
-        crtemu_present( crtemu, crt_time_us, xbgr, screen_width, screen_height, 0xffffff, 0x1c1c1c );
-        app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
+        if( crt_mode ) {
+            crtemu_present( crtemu, crt_time_us, xbgr, screen_width, screen_height, 0xffffff, 0x101010 );
+            app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
+        } else {
+            app_present( app, xbgr, screen_width, screen_height, 0xffffff, 0x000000 );
+        }
 
         // Ensure we don't run faster than 60 frames per second
         frametimer_update( frametimer );
@@ -586,6 +829,8 @@ static int app_thread( void* user_data ) {
 // access it to perform its function. The app thread gets a pointer to it through the user_data parameter to the 
 // app_proc.
 
+typedef enum sprite_type_t { TYPE_NONE, TYPE_SPRITE, TYPE_LABEL, } sprite_type_t;
+
 typedef struct pixie_t {
     // Controls the exit of the program, both via the `end` call and the window being closed
     struct {
@@ -599,6 +844,11 @@ typedef struct pixie_t {
         thread_signal_t signal; // Raised by app thread when a frame is finished and the next frame is starting
         thread_atomic_int_t count; // Incremented for every new frame
     } vbl;
+
+    struct {
+        int fullscreen;
+        int crt_mode;
+    } window;
 
     #ifndef PIXIE_NO_BUILD
         struct {
@@ -637,20 +887,47 @@ typedef struct pixie_t {
     } screen;
 
     struct {
+        int state[ KEYCOUNT ];
+        int prev[ KEYCOUNT ];
+    } keyboard;
+
+    struct {
         thread_mutex_t mutex;
         int sprite_count;
         struct
             {
             int x;
             int y;
-            int asset;
-            int move_x_count;
-            move_t move_x[ 16 ];
-            int move_y_count;
-            move_t move_y[ 16 ];
-            int move_y_index;
-            int move_y_time;
-            int move_y_start;
+            int origin_x;
+            int origin_y;
+            int visible;
+
+            sprite_type_t type;
+            
+            union {
+                struct {
+                    int asset;
+                    int cel;
+                } sprite;
+
+                struct {
+                    int font;
+                    char* text;
+		            text_align_t align;
+		            int color;
+		            int outline;
+		            int shadow;
+                    int wrap;
+                } label;
+            } data;
+
+            struct {
+                int count;
+                move_t moves[ 16 ];
+                int index;
+                int time;
+                int start;
+                } move_x, move_y;
             }* sprites;
 
     } sprites;
@@ -705,17 +982,18 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     thread_signal_init( &pixie->vbl.signal );
     thread_atomic_int_store( &pixie->vbl.count, 0 );
 
+
+    pixie->window.fullscreen = 1;
+    pixie->window.crt_mode = 1;
+
+
     // Set up the screen 
     memcpy( pixie->screen.palette, default_palette(), sizeof( pixie->screen.palette ) );
     thread_mutex_init( &pixie->screen.mutex );
-    pixie->screen.screen_width = 384;
-    pixie->screen.screen_height = 288;
-    pixie->screen.border_width = 0;
-    pixie->screen.border_height = 0;
-    //pixie->screen.screen_width = 320;
-    //pixie->screen.screen_height = 200;
-    //pixie->screen.border_width = 32;
-    //pixie->screen.border_height = 44;
+    pixie->screen.screen_width = 320;
+    pixie->screen.screen_height = 200;
+    pixie->screen.border_width = 32;
+    pixie->screen.border_height = 44;
     int full_width = pixie->screen.screen_width + pixie->screen.border_width * 2;
     int full_height = pixie->screen.screen_height + pixie->screen.border_height * 2;
     pixie->screen.pixels = (u8*) malloc( sizeof( u8 ) * pixie->screen.screen_width * pixie->screen.screen_height );
@@ -739,6 +1017,7 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
     int soundfont_size = 0;
     u8 const* soundfont = default_soundfont( &soundfont_size );
     pixie->audio.sound_font = tsf_load_memory( soundfont, soundfont_size );
+    tsf_channel_set_bank_preset( pixie->audio.sound_font, 9, 128, 0);
     tsf_set_output( pixie->audio.sound_font, TSF_STEREO_INTERLEAVED, 44100, 0.0f );
 
     return pixie;
@@ -758,6 +1037,13 @@ static void pixie_destroy( pixie_t* pixie ) {
     thread_mutex_term( &pixie->screen.mutex );
 
     // Cleanup sprites
+    for( int i = 0; i < pixie->sprites.sprite_count; ++i ) {
+        if( pixie->sprites.sprites[ i ].type == TYPE_LABEL ) {
+            if( pixie->sprites.sprites[ i ].data.label.text ) {
+                free( pixie->sprites.sprites[ i ].data.label.text );
+            }
+        }
+    }
     free( pixie->sprites.sprites );
     thread_mutex_term( &pixie->sprites.mutex );
 
@@ -785,9 +1071,98 @@ static void pixie_force_exit( pixie_t* pixie ) {
 }
 
 
+static key_t pixie_key_from_app_key( app_key_t key ) {
+	int index = (int) key;
+	if( key < 0 || key >= APP_KEYCOUNT ) return KEY_INVALID;
+	
+	int map[ APP_KEYCOUNT * 2 ] = { 
+		APP_KEY_INVALID, KEY_INVALID, APP_KEY_LBUTTON, KEY_LBUTTON, APP_KEY_RBUTTON, KEY_RBUTTON, APP_KEY_CANCEL, KEY_CANCEL, 
+		APP_KEY_MBUTTON, KEY_MBUTTON, APP_KEY_XBUTTON1, KEY_XBUTTON1, APP_KEY_XBUTTON2, KEY_XBUTTON2, APP_KEY_BACK, KEY_BACK, 
+		APP_KEY_TAB, KEY_TAB, APP_KEY_CLEAR, KEY_CLEAR, APP_KEY_RETURN, KEY_RETURN, APP_KEY_SHIFT, KEY_SHIFT, APP_KEY_CONTROL, 
+		KEY_CONTROL, APP_KEY_MENU, KEY_MENU, APP_KEY_PAUSE, KEY_PAUSE, APP_KEY_CAPITAL, KEY_CAPITAL, APP_KEY_KANA, KEY_KANA, 
+		APP_KEY_JUNJA, KEY_JUNJA, APP_KEY_FINAL, KEY_FINAL, APP_KEY_HANJA, KEY_HANJA, APP_KEY_ESCAPE, KEY_ESCAPE, APP_KEY_CONVERT, 
+		KEY_CONVERT, APP_KEY_NONCONVERT, KEY_NONCONVERT, APP_KEY_ACCEPT, KEY_ACCEPT, APP_KEY_MODECHANGE, KEY_MODECHANGE, APP_KEY_SPACE, 
+		KEY_SPACE, APP_KEY_PRIOR, KEY_PRIOR, APP_KEY_NEXT, KEY_NEXT, APP_KEY_END, KEY_END, APP_KEY_HOME, KEY_HOME, APP_KEY_LEFT, 
+		KEY_LEFT, APP_KEY_UP, KEY_UP, APP_KEY_RIGHT, KEY_RIGHT, APP_KEY_DOWN, KEY_DOWN, APP_KEY_SELECT, KEY_SELECT, APP_KEY_PRINT, 
+		KEY_PRINT, APP_KEY_EXEC, KEY_EXEC, APP_KEY_SNAPSHOT, KEY_SNAPSHOT, APP_KEY_INSERT, KEY_INSERT,
+		APP_KEY_DELETE, KEY_DELETE, APP_KEY_HELP, KEY_HELP, APP_KEY_0, KEY_0, APP_KEY_1, KEY_1, APP_KEY_2, KEY_2, APP_KEY_3, KEY_3, 
+		APP_KEY_4, KEY_4, APP_KEY_5, KEY_5, APP_KEY_6, KEY_6, APP_KEY_7, KEY_7, APP_KEY_8, KEY_8, APP_KEY_9, KEY_9, APP_KEY_A, KEY_A, 
+		APP_KEY_B, KEY_B, APP_KEY_C, KEY_C, APP_KEY_D, KEY_D, APP_KEY_E, KEY_E, APP_KEY_F, KEY_F, APP_KEY_G, KEY_G, APP_KEY_H, KEY_H,
+		APP_KEY_I, KEY_I, APP_KEY_J, KEY_J, APP_KEY_K, KEY_K, APP_KEY_L, KEY_L, APP_KEY_M, KEY_M, APP_KEY_N, KEY_N, APP_KEY_O, KEY_O,
+		APP_KEY_P, KEY_P, APP_KEY_Q, KEY_Q, APP_KEY_R, KEY_R, APP_KEY_S, KEY_S, APP_KEY_T, KEY_T, APP_KEY_U, KEY_U, APP_KEY_V, KEY_V,
+		APP_KEY_W, KEY_W, APP_KEY_X, KEY_X, APP_KEY_Y, KEY_Y, APP_KEY_Z, KEY_Z, APP_KEY_LWIN, KEY_LWIN, APP_KEY_RWIN, KEY_RWIN, 
+		APP_KEY_APPS, KEY_APPS, APP_KEY_SLEEP, KEY_SLEEP, APP_KEY_NUMPAD0, KEY_NUMPAD0, APP_KEY_NUMPAD1, KEY_NUMPAD1, APP_KEY_NUMPAD2, 
+		KEY_NUMPAD2, APP_KEY_NUMPAD3, KEY_NUMPAD3, APP_KEY_NUMPAD4, KEY_NUMPAD4, APP_KEY_NUMPAD5, KEY_NUMPAD5, APP_KEY_NUMPAD6, 
+		KEY_NUMPAD6, APP_KEY_NUMPAD7, KEY_NUMPAD7, APP_KEY_NUMPAD8, KEY_NUMPAD8, APP_KEY_NUMPAD9, KEY_NUMPAD9, APP_KEY_MULTIPLY, 
+		KEY_MULTIPLY, APP_KEY_ADD, KEY_ADD, APP_KEY_SEPARATOR, KEY_SEPARATOR, APP_KEY_SUBTRACT, KEY_SUBTRACT, APP_KEY_DECIMAL, 
+		KEY_DECIMAL, APP_KEY_DIVIDE, KEY_DIVIDE, APP_KEY_F1, KEY_F1, APP_KEY_F2, KEY_F2, APP_KEY_F3, KEY_F3, APP_KEY_F4, KEY_F4, 
+		APP_KEY_F5, KEY_F5, APP_KEY_F6, KEY_F6, APP_KEY_F7, KEY_F7, APP_KEY_F8, KEY_F8, APP_KEY_F9, KEY_F9, APP_KEY_F10, KEY_F10, 
+		APP_KEY_F11, KEY_F11, APP_KEY_F12, KEY_F12, APP_KEY_F13, KEY_F13, APP_KEY_F14, KEY_F14, APP_KEY_F15, KEY_F15, APP_KEY_F16, 
+		KEY_F16, APP_KEY_F17, KEY_F17, APP_KEY_F18, KEY_F18, APP_KEY_F19, KEY_F19, APP_KEY_F20, KEY_F20, APP_KEY_F21, KEY_F21, 
+		APP_KEY_F22, KEY_F22, APP_KEY_F23, KEY_F23, APP_KEY_F24, KEY_F24, APP_KEY_NUMLOCK, KEY_NUMLOCK, APP_KEY_SCROLL, KEY_SCROLL,
+		APP_KEY_LSHIFT, KEY_LSHIFT, APP_KEY_RSHIFT, KEY_RSHIFT, APP_KEY_LCONTROL, KEY_LCONTROL, APP_KEY_RCONTROL, KEY_RCONTROL,
+		APP_KEY_LMENU, KEY_LMENU, APP_KEY_RMENU, KEY_RMENU, APP_KEY_BROWSER_BACK, KEY_BROWSER_BACK, APP_KEY_BROWSER_FORWARD, 
+		KEY_BROWSER_FORWARD, APP_KEY_BROWSER_REFRESH, KEY_BROWSER_REFRESH, APP_KEY_BROWSER_STOP, KEY_BROWSER_STOP, 
+		APP_KEY_BROWSER_SEARCH, KEY_BROWSER_SEARCH, APP_KEY_BROWSER_FAVORITES, KEY_BROWSER_FAVORITES, APP_KEY_BROWSER_HOME, 
+		KEY_BROWSER_HOME, APP_KEY_VOLUME_MUTE, KEY_VOLUME_MUTE, APP_KEY_VOLUME_DOWN, KEY_VOLUME_DOWN, APP_KEY_VOLUME_UP, KEY_VOLUME_UP, 
+		APP_KEY_MEDIA_NEXT_TRACK, KEY_MEDIA_NEXT_TRACK, APP_KEY_MEDIA_PREV_TRACK, KEY_MEDIA_PREV_TRACK, APP_KEY_MEDIA_STOP, 
+		KEY_MEDIA_STOP, APP_KEY_MEDIA_PLAY_PAUSE, KEY_MEDIA_PLAY_PAUSE, APP_KEY_LAUNCH_MAIL, KEY_LAUNCH_MAIL, 
+		APP_KEY_LAUNCH_MEDIA_SELECT, KEY_LAUNCH_MEDIA_SELECT, APP_KEY_LAUNCH_APP1, KEY_LAUNCH_APP1, APP_KEY_LAUNCH_APP2, 
+		KEY_LAUNCH_APP2, APP_KEY_OEM_1, KEY_OEM_1, APP_KEY_OEM_PLUS, KEY_OEM_PLUS, APP_KEY_OEM_COMMA, KEY_OEM_COMMA, APP_KEY_OEM_MINUS, 
+		KEY_OEM_MINUS, APP_KEY_OEM_PERIOD, KEY_OEM_PERIOD, APP_KEY_OEM_2, KEY_OEM_2, APP_KEY_OEM_3, KEY_OEM_3, APP_KEY_OEM_4, KEY_OEM_4,
+		APP_KEY_OEM_5, KEY_OEM_5, APP_KEY_OEM_6, KEY_OEM_6, APP_KEY_OEM_7, KEY_OEM_7, APP_KEY_OEM_8, KEY_OEM_8, APP_KEY_OEM_102, 
+		KEY_OEM_102, APP_KEY_PROCESSKEY, KEY_PROCESSKEY, APP_KEY_ATTN, KEY_ATTN, APP_KEY_CRSEL, KEY_CRSEL, APP_KEY_EXSEL, KEY_EXSEL,
+		APP_KEY_EREOF, KEY_EREOF, APP_KEY_PLAY, KEY_PLAY, APP_KEY_ZOOM, KEY_ZOOM, APP_KEY_NONAME, KEY_NONAME, APP_KEY_PA1, KEY_PA1, 
+		APP_KEY_OEM_CLEAR, KEY_OEM_CLEAR, 
+    };
+
+	ASSERT( map[ index * 2 ] == key, "Invalid mapping from app_key to pixie key" );
+	if( map[ index * 2 ] != key ) return KEY_INVALID;
+
+	return (key_t) map[ index * 2 + 1 ];
+}
+
+
+static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int count ) {
+	ASSERT( sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) == sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ), "Key states size mismatch" );
+	for( int i = 0; i < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ); ++i )
+		pixie->keyboard.prev[ i ] = pixie->keyboard.state[ i ];
+
+	for( int i = 0; i < count; ++i ) {
+		app_input_event_t* event = &events[ i ];
+		switch( event->type ) {
+			case APP_INPUT_KEY_DOWN: {
+				key_t key = pixie_key_from_app_key( event->data.key );
+				if( key >= 0 && key < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) )
+					pixie->keyboard.state[ key ] = 1;                          
+			} break;
+			case APP_INPUT_KEY_UP: {
+				key_t key = pixie_key_from_app_key( event->data.key );
+				if( key >= 0 && key < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) )
+					pixie->keyboard.state[ key ] = 0;                          
+			} break;
+			case APP_INPUT_CHAR: {
+            } break;
+			case APP_INPUT_MOUSE_MOVE: {
+            } break;
+			case APP_INPUT_MOUSE_DELTA: {
+            } break;
+			case APP_INPUT_SCROLL_WHEEL: {
+			} break;
+			case APP_INPUT_TABLET: {
+            } break;
+
+			case APP_INPUT_DOUBLE_CLICK: {
+				break;
+            }
+		}
+	}
+}
+
+
 // Render all sprites and convert the screen from palettized to 24-bit XBGR
 
-static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
+static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* fullscreen, int* crt_mode )
     {
     u32 palette[ 256 ]; // Temporary local copy of palette to reduce scope of mutex
 
@@ -804,6 +1179,9 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
     memcpy( palette, pixie->screen.palette, sizeof( palette ) );
     thread_mutex_unlock( &pixie->screen.mutex );
 
+    if( fullscreen ) *fullscreen = pixie->window.fullscreen;
+    if( crt_mode ) *crt_mode = pixie->window.crt_mode;
+
     float (*easefuncs[])( float ) = { 
         NULL, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, ease_out_back, ease_out_bounce, 
         ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, ease_out_circle,
@@ -813,64 +1191,150 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height )
         ease_in_out_quint, ease_in_out_circle,
     };
 
-    // Draw sprites
+    // Process sprites
     thread_mutex_lock( &pixie->sprites.mutex ); /* `sprites` data is shared. `screen.composite` is not, it is a temp
         buffer accessed only here. `assets` is immutable after startup, so don't need to be protected. */
-    for( int i = 0; i < pixie->sprites.sprite_count; ++i )
-        {    
-        if( pixie->sprites.sprites[ i ].move_y_count > 0 ) {
-            ++pixie->sprites.sprites[ i ].move_y_time;
-            move_t* move = &pixie->sprites.sprites[ i ].move_y[ pixie->sprites.sprites[ i ].move_y_index ];
-            if( pixie->sprites.sprites[ i ].move_y_time <= move->duration ) {
-                float range = (float)( move->target - pixie->sprites.sprites[ i ].move_y_start );
-                float current = ( (float) pixie->sprites.sprites[ i ].move_y_time ) / (float) move->duration;
-                if( move->ease != DELAY ) {
-                    float t = easefuncs[ move->ease ]( current );
-                    int pos = pixie->sprites.sprites[ i ].move_y_start + (int)( t * range );
+
+    for( int i = 0; i < pixie->sprites.sprite_count; ++i ) {    
+        // Update sprite movement
+        if( pixie->sprites.sprites[ i ].move_y.count > 0 ) {
+            ++pixie->sprites.sprites[ i ].move_y.time;
+            move_t* move = &pixie->sprites.sprites[ i ].move_y.moves[ pixie->sprites.sprites[ i ].move_y.index ];
+            if( pixie->sprites.sprites[ i ].move_y.time <= move->duration ) {
+                float range = (float)( move->target - pixie->sprites.sprites[ i ].move_y.start );
+                float current = ( (float) pixie->sprites.sprites[ i ].move_y.time ) / (float) move->duration;
+                if( move->type != MOVE_DELAY ) {
+                    float t = easefuncs[ move->type ]( current );
+                    int pos = pixie->sprites.sprites[ i ].move_y.start + (int)( t * range );
                     pixie->sprites.sprites[ i ].y = pos;
                 }
             } else {
-                ++pixie->sprites.sprites[ i ].move_y_index;
-                if( pixie->sprites.sprites[ i ].move_y_index >= pixie->sprites.sprites[ i ].move_y_count ) {
-                    pixie->sprites.sprites[ i ].move_y_count = 0;
+                ++pixie->sprites.sprites[ i ].move_y.index;
+                if( pixie->sprites.sprites[ i ].move_y.index >= pixie->sprites.sprites[ i ].move_y.count ) {
+                    pixie->sprites.sprites[ i ].move_y.count = 0;
                 } else {
-                    pixie->sprites.sprites[ i ].move_y_time = 0;
-                    if( move->ease != DELAY ) {
+                    pixie->sprites.sprites[ i ].move_y.time = 0;
+                    if( move->type != MOVE_DELAY ) {
                         pixie->sprites.sprites[ i ].y = move->target;
                     }
-                    pixie->sprites.sprites[ i ].move_y_start = pixie->sprites.sprites[ i ].y;
+                    pixie->sprites.sprites[ i ].move_y.start = pixie->sprites.sprites[ i ].y;
                 }
             }
         }
-
-
-        int asset = pixie->sprites.sprites[ i ].asset;
-        if( asset < 1 || asset > pixie->assets.count ) continue;
-        --asset;
-        
-        // Find the sprite data in the memory mapped file
-        struct {
-            int width;
-            int height;
-            u8 pixels[ 1 ];
-        } const* data = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
-
-        // Render pixels
-        for( int y = 0; y < data->height; ++y )
-            {
-            for( int x = 0; x < data->width; ++x )
-                {
-                u8 p = data->pixels[ x + y * data->width ];
-                if( ( p & 0x80 ) == 0 ) // TODO: Currently, the top bit is transparency - this should be changed
-                    {
-                    int xp = pixie->sprites.sprites[ i ].x + x;
-                    int yp = pixie->sprites.sprites[ i ].y + y;
-                    if( xp >= 0 && yp >= 0 && xp < screen_width && yp < screen_height ) // TODO: clipping outside loops
-                        pixie->screen.composite[ xp + yp * screen_width ] = p;                    
+        if( pixie->sprites.sprites[ i ].move_x.count > 0 ) {
+            ++pixie->sprites.sprites[ i ].move_x.time;
+            move_t* move = &pixie->sprites.sprites[ i ].move_x.moves[ pixie->sprites.sprites[ i ].move_x.index ];
+            if( pixie->sprites.sprites[ i ].move_x.time <= move->duration ) {
+                float range = (float)( move->target - pixie->sprites.sprites[ i ].move_x.start );
+                float current = ( (float) pixie->sprites.sprites[ i ].move_x.time ) / (float) move->duration;
+                if( move->type != MOVE_DELAY ) {
+                    float t = easefuncs[ move->type ]( current );
+                    int pos = pixie->sprites.sprites[ i ].move_x.start + (int)( t * range );
+                    pixie->sprites.sprites[ i ].x = pos;
+                }
+            } else {
+                ++pixie->sprites.sprites[ i ].move_x.index;
+                if( pixie->sprites.sprites[ i ].move_x.index >= pixie->sprites.sprites[ i ].move_x.count ) {
+                    pixie->sprites.sprites[ i ].move_x.count = 0;
+                } else {
+                    pixie->sprites.sprites[ i ].move_x.time = 0;
+                    if( move->type != MOVE_DELAY ) {
+                        pixie->sprites.sprites[ i ].x = move->target;
                     }
+                    pixie->sprites.sprites[ i ].move_x.start = pixie->sprites.sprites[ i ].x;
                 }
             }
         }
+
+        // Render sprites
+        
+        if( !pixie->sprites.sprites[ i ].visible ) continue;
+
+        if( pixie->sprites.sprites[ i ].type == TYPE_SPRITE ) {
+            int asset = pixie->sprites.sprites[ i ].data.sprite.asset;
+            if( asset < 1 || asset > pixie->assets.count ) continue;
+            --asset;
+    
+            int cel = pixie->sprites.sprites[ i ].data.sprite.cel;
+            // Find the sprite data in the memory mapped file
+            u8* frames = (u8*) pixie_find_asset( pixie, asset, NULL );
+            int frame_count = *(int*)frames;
+            if( frame_count > 0 && cel >= 0 ) {
+                int* offsets = (int*)(frames + sizeof( int ) );
+                palrle_data_t* data = (palrle_data_t*)( frames + offsets[ cel % frame_count ] );
+
+                // Render pixels
+                palrle_blit( data, pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y  - pixie->sprites.sprites[ i ].origin_y, 
+                    pixie->screen.composite, screen_width, screen_height );
+            }
+        // Render labels
+        } else if( pixie->sprites.sprites[ i ].type == TYPE_LABEL ) {
+            int asset = pixie->sprites.sprites[ i ].data.label.font;
+            if( asset < 1 || asset > pixie->assets.count ) continue;
+            --asset;
+
+            // Find the font data in the memory mapped file
+            pixelfont_t const* font = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
+            pixelfont_align_t pixelfont_align = PIXELFONT_ALIGN_LEFT;
+            if( pixie->sprites.sprites[ i ].data.label.align == TEXT_ALIGN_CENTER ) {
+                pixelfont_align = PIXELFONT_ALIGN_CENTER;
+            } else if( pixie->sprites.sprites[ i ].data.label.align == TEXT_ALIGN_RIGHT ) {
+                pixelfont_align = PIXELFONT_ALIGN_RIGHT;
+            }
+
+            int wrap = pixie->sprites.sprites[ i ].data.label.wrap;
+
+            int outline = pixie->sprites.sprites[ i ].data.label.outline;
+
+            int shadow = pixie->sprites.sprites[ i ].data.label.shadow;
+            int shadow_offset_x = 1;
+            int shadow_offset_y = 1;
+            if( shadow >= 0 && shadow < 256 ) {
+                if( outline >= 0 && outline < 256 ) {
+			        for( int y = -1; y <= 1; ++y ) for( int x = -1; x <= 1; ++x ) {
+				        if( x == 0 && y == 0 ) continue;
+
+	                    pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + shadow_offset_x + x - pixie->sprites.sprites[ i ].origin_x, 
+                            pixie->sprites.sprites[ i ].y + shadow_offset_y + y - pixie->sprites.sprites[ i ].origin_y, 
+                            pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, 
+                            pixie->screen.composite, screen_width, screen_height,
+                            pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
+                            NULL );
+                    }
+                } else {
+	                pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + shadow_offset_x - pixie->sprites.sprites[ i ].origin_x, 
+                        pixie->sprites.sprites[ i ].y + shadow_offset_y - pixie->sprites.sprites[ i ].origin_y, 
+                        pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, 
+                        pixie->screen.composite, screen_width, screen_height,
+                        pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
+                        NULL );
+                }
+            }
+
+            if( outline >= 0 && outline < 256 ) {
+			    for( int y = -1; y <= 1; ++y ) for( int x = -1; x <= 1; ++x ) {
+				    if( x == 0 && y == 0 ) continue;
+
+	                pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y + y - pixie->sprites.sprites[ i ].origin_y, 
+                        pixie->sprites.sprites[ i ].data.label.text, (u8) outline, 
+                        pixie->screen.composite, screen_width, screen_height,
+                        pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
+                        NULL );
+                }
+            }
+
+
+            int color = pixie->sprites.sprites[ i ].data.label.color;
+            if( color >= 0 && color < 256 ) {
+	            pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y - pixie->sprites.sprites[ i ].origin_y, 
+                    pixie->sprites.sprites[ i ].data.label.text, (u8) color, 
+                    pixie->screen.composite, screen_width, screen_height,
+                    pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
+                    NULL );
+            }
+
+        }
+    }
     thread_mutex_unlock( &pixie->sprites.mutex );
 
     // Signal to the game that the frame is completed, and that we are just starting the next one
@@ -899,7 +1363,7 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
     if( !pixie->audio.current_song.song.event_count || !pixie->audio.current_song.song.events ) 
         memset( song, 0, sizeof( i16 ) * sample_pairs_count * 2 );
     else    
-        mid_render_short( &pixie->audio.current_song, song, sample_pairs_count );
+        mid_render_short( &pixie->audio.current_song, song, sample_pairs_count, pixie->audio.sound_font );
     thread_mutex_unlock( &pixie->audio.song_mutex );
 
     // Mix all local buffers
@@ -1106,6 +1570,62 @@ void wait_vbl( void ) {
 }
 
 
+void wait( int jiffys ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    (void) pixie;
+    for( int i = 0; i < jiffys; ++i ) {
+        wait_vbl();
+    }
+}
+
+
+int fullscreen( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    return pixie->window.fullscreen;
+}
+
+
+void fullscreen_on( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    pixie->window.fullscreen = 1;
+}
+
+
+
+void fullscreen_off( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    pixie->window.fullscreen = 0;
+}
+
+
+
+int crt_mode( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    return pixie->window.crt_mode;
+}
+
+
+
+void crt_mode_on( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    pixie->window.crt_mode = 1;
+}
+
+
+
+void crt_mode_off( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    pixie->window.crt_mode = 0;
+}
+
+
+
 // Prints the specified string to the screen using the default font.
 
 void print( char const* str ) {
@@ -1145,6 +1665,51 @@ void load_palette( int asset ) {
 }
 
 
+void setcol( int index, rgb_t rgb ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    if( index < 0 || index >= 256 ) return;
+    u32 r = (u32)( rgb.r < 0 ? 0 : rgb.r > 255 ? 255 : rgb.r );
+    u32 g = (u32)( rgb.g < 0 ? 0 : rgb.g > 255 ? 255 : rgb.g );
+    u32 b = (u32)( rgb.b < 0 ? 0 : rgb.b > 255 ? 255 : rgb.b );
+    pixie->screen.palette[ index ] = ( b << 16 ) | ( g << 8 ) | r;
+}
+
+
+rgb_t getcol( int index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    if( index < 0 || index >= 256 ) {
+        rgb_t rgb = { 0, 0, 0 };
+        return rgb;
+    }
+
+    u32 color = pixie->screen.palette[ index ];
+    rgb_t rgb = { (int)( color & 0xff ), (int)( ( color >> 8 ) & 0xff ), (int)( ( color >> 16 ) & 0xff ) };
+    return rgb;
+}
+
+
+void sprites_off( void ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    for( int i = 0; i < pixie->sprites.sprite_count; ++i ) {
+        pixie->sprites.sprites[ i ].move_x.count = 0;
+        pixie->sprites.sprites[ i ].move_y.count = 0;
+        if( pixie->sprites.sprites[ i ].type == TYPE_LABEL ) {
+            if( pixie->sprites.sprites[ i ].data.label.text ) {
+                free( pixie->sprites.sprites[ i ].data.label.text );
+            }
+        }
+        pixie->sprites.sprites[ i ].type = TYPE_NONE;
+    }
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
 // Assign a bitmap to a sprite, and give it a position
 
 int sprite( int spr_index, int x, int y, int asset ) {
@@ -1157,17 +1722,7 @@ int sprite( int spr_index, int x, int y, int asset ) {
         return 0;
     }
 
-    int size = 0;
-    struct {
-        int width;
-        int height;
-        u8 pixels[ 1 ];
-    } const* data = VOID_CAST( pixie_find_asset( pixie, asset, &size ) );
-
-    if( size < sizeof( *data ) || size != (int) ( sizeof( *data ) + ( data->width * data->height - 1 ) * sizeof( u8 ) ) ) {
-        thread_mutex_unlock( &pixie->sprites.mutex );
-        return 0;
-    }
+    // TODO: check that asset is sprite
 
     if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
         thread_mutex_unlock( &pixie->sprites.mutex );
@@ -1175,12 +1730,100 @@ int sprite( int spr_index, int x, int y, int asset ) {
     }
     
     --spr_index;
-    pixie->sprites.sprites[ spr_index ].asset = asset + 1;
+    if( pixie->sprites.sprites[ spr_index ].type == TYPE_LABEL ) {
+        if( !pixie->sprites.sprites[ spr_index ].data.label.text ) {
+            free( pixie->sprites.sprites[ spr_index ].data.label.text );
+        }
+    }
+    pixie->sprites.sprites[ spr_index ].type = TYPE_SPRITE;
+    pixie->sprites.sprites[ spr_index ].data.sprite.asset = asset + 1;
     pixie->sprites.sprites[ spr_index ].x = x;
     pixie->sprites.sprites[ spr_index ].y = y;
+    pixie->sprites.sprites[ spr_index ].origin_x = 0;
+    pixie->sprites.sprites[ spr_index ].origin_y = 0;
+    pixie->sprites.sprites[ spr_index ].visible = 1;
 
     thread_mutex_unlock( &pixie->sprites.mutex );
     return spr_index + 1;
+}
+
+
+void sprite_bitmap( int spr_index, int asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( asset < 0 || asset >= pixie->assets.count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
+    // TODO: check that asset is sprite
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_SPRITE ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.sprite.asset = asset + 1;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+int sprite_visible( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    --spr_index;
+    int visible = pixie->sprites.sprites[ spr_index ].visible;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return visible;
+}
+
+
+void sprite_show( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
+    --spr_index;
+
+    pixie->sprites.sprites[ spr_index ].visible = 1;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+void sprite_hide( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
+    --spr_index;
+
+    pixie->sprites.sprites[ spr_index ].visible = 0;
+    thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
 
@@ -1236,6 +1879,281 @@ int sprite_y( int spr_index ) {
 }
 
 
+void sprite_origin( int spr_index, int x, int y ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+    pixie->sprites.sprites[ spr_index ].origin_x = x;
+    pixie->sprites.sprites[ spr_index ].origin_y = y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+int sprite_origin_x( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    --spr_index;
+    int x = pixie->sprites.sprites[ spr_index ].origin_x;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return x;
+}
+
+
+int sprite_origin_y( int spr_index ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    --spr_index;
+    int y = pixie->sprites.sprites[ spr_index ].origin_y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return y;
+}
+
+
+void sprite_cel( int spr_index, int cel ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_SPRITE ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.sprite.cel = cel;
+    thread_mutex_unlock( &pixie->sprites.mutex );
+}
+
+
+int label( int spr_index, int x, int y, char const* text, int color, int font_asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( font_asset < 0 || font_asset >= pixie->assets.count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+    if( pixie->sprites.sprites[ spr_index ].type == TYPE_LABEL ) {
+        if( !pixie->sprites.sprites[ spr_index ].data.label.text ) {
+            free( pixie->sprites.sprites[ spr_index ].data.label.text );
+        }
+    }
+    pixie->sprites.sprites[ spr_index ].type = TYPE_LABEL;
+    pixie->sprites.sprites[ spr_index ].data.label.text = strdup( text ? text : "" );
+    pixie->sprites.sprites[ spr_index ].data.label.font = font_asset + 1;
+    pixie->sprites.sprites[ spr_index ].data.label.color = color;
+    pixie->sprites.sprites[ spr_index ].data.label.outline = -1;
+    pixie->sprites.sprites[ spr_index ].data.label.shadow = -1;
+    pixie->sprites.sprites[ spr_index ].data.label.wrap = -1;
+    pixie->sprites.sprites[ spr_index ].data.label.align = TEXT_ALIGN_LEFT;
+    pixie->sprites.sprites[ spr_index ].x = x;
+    pixie->sprites.sprites[ spr_index ].y = y;
+    pixie->sprites.sprites[ spr_index ].origin_x = 0;
+    pixie->sprites.sprites[ spr_index ].origin_y = 0;
+    pixie->sprites.sprites[ spr_index ].visible = 1;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_text( int spr_index, char const* text ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    if( pixie->sprites.sprites[ spr_index ].data.label.text ) free( pixie->sprites.sprites[ spr_index ].data.label.text );
+    pixie->sprites.sprites[ spr_index ].data.label.text = strdup( text ? text : "" );
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_align( int spr_index, text_align_t align ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.label.align = align;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_color( int spr_index, int color ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.label.color = color;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_outline( int spr_index, int color ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.label.outline = color;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_shadow( int spr_index, int color ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.label.shadow = color;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+int label_wrap( int spr_index, int wrap ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+    
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+    
+    --spr_index;
+
+    if( pixie->sprites.sprites[ spr_index ].type != TYPE_LABEL ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+        return 0;
+    }
+
+    pixie->sprites.sprites[ spr_index ].data.label.wrap = wrap;
+
+    thread_mutex_unlock( &pixie->sprites.mutex );
+    return spr_index + 1;
+}
+
+
+void set_soundfont( int asset ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    if( asset < 0 || asset >= pixie->assets.count ) {
+        return;
+    }
+
+    thread_mutex_lock( &pixie->audio.song_mutex );
+
+    int soundfont_size = 0;
+    void const* soundfont = pixie_find_asset( pixie, asset, &soundfont_size );
+
+    tsf_close( pixie->audio.sound_font );
+    pixie->audio.sound_font = tsf_load_memory( soundfont, soundfont_size );
+    tsf_channel_set_bank_preset( pixie->audio.sound_font, 9, 128, 0 );
+    tsf_set_output( pixie->audio.sound_font, TSF_STEREO_INTERLEAVED, 44100, 0.0f );
+    thread_mutex_unlock( &pixie->audio.song_mutex );
+}
+
+
 void play_song( int asset ) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
@@ -1254,13 +2172,15 @@ void play_song( int asset ) {
         return;
     }
 
-    if( !mid_init_raw( &pixie->audio.current_song, mid_data, (size_t) mid_size,  pixie->audio.sound_font ) ) {
+    if( !mid_init_raw( &pixie->audio.current_song, mid_data, (size_t) mid_size ) ) {
         thread_mutex_unlock( &pixie->audio.song_mutex );
         return;
     }
 
     tsf_reset( pixie->audio.sound_font );
-    mid_skip_leading_silence( &pixie->audio.current_song );
+    tsf_channel_set_bank_preset( pixie->audio.sound_font, 9, 128, 0 );
+    tsf_set_output( pixie->audio.sound_font, TSF_STEREO_INTERLEAVED, 44100, 0.0f );
+    mid_skip_leading_silence( &pixie->audio.current_song, pixie->audio.sound_font );
 
     thread_mutex_unlock( &pixie->audio.song_mutex );
 }
@@ -1295,7 +2215,25 @@ void const* asset_data( int asset ) {
 
 
 void move_sprite_x( int spr_index, move_t* moves, int moves_count ) {
-    (void) spr_index, moves, moves_count;
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+    thread_mutex_lock( &pixie->sprites.mutex );
+
+    if( spr_index < 1 || spr_index > pixie->sprites.sprite_count ) {
+        thread_mutex_unlock( &pixie->sprites.mutex );
+    }
+
+    --spr_index;
+    int max_count = ARRAY_COUNT( pixie->sprites.sprites[ spr_index ].move_x.moves );
+    if( moves_count > max_count ) {
+        moves_count = max_count;
+    }
+    memcpy( pixie->sprites.sprites[ spr_index ].move_x.moves, moves, sizeof( *moves ) * moves_count );
+    pixie->sprites.sprites[ spr_index ].move_x.count = moves_count;
+    pixie->sprites.sprites[ spr_index ].move_x.index = 0;
+    pixie->sprites.sprites[ spr_index ].move_x.time = 0;
+    pixie->sprites.sprites[ spr_index ].move_x.start = pixie->sprites.sprites[ spr_index ].y;
+    thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
 
@@ -1309,22 +2247,21 @@ void move_sprite_y( int spr_index, move_t* moves, int moves_count ) {
     }
 
     --spr_index;
-    int max_count = ARRAY_COUNT( pixie->sprites.sprites[ spr_index ].move_y );
+    int max_count = ARRAY_COUNT( pixie->sprites.sprites[ spr_index ].move_y.moves );
     if( moves_count > max_count ) {
         moves_count = max_count;
     }
-    memcpy( pixie->sprites.sprites[ spr_index ].move_y, moves, sizeof( *moves ) * moves_count );
-    pixie->sprites.sprites[ spr_index ].move_y_count = moves_count;
-    pixie->sprites.sprites[ spr_index ].move_y_index = 0;
-    pixie->sprites.sprites[ spr_index ].move_y_time = 0;
-    pixie->sprites.sprites[ spr_index ].move_y_start = pixie->sprites.sprites[ spr_index ].y;
+    memcpy( pixie->sprites.sprites[ spr_index ].move_y.moves, moves, sizeof( *moves ) * moves_count );
+    pixie->sprites.sprites[ spr_index ].move_y.count = moves_count;
+    pixie->sprites.sprites[ spr_index ].move_y.index = 0;
+    pixie->sprites.sprites[ spr_index ].move_y.time = 0;
+    pixie->sprites.sprites[ spr_index ].move_y.start = pixie->sprites.sprites[ spr_index ].y;
     thread_mutex_unlock( &pixie->sprites.mutex );
 }
 
 
 void text( int x, int y, char const* str, int color, int font_asset 
-	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */)
-	{
+	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */) {
     pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
 
     pixelfont_align_t pixelfont_align = PIXELFONT_ALIGN_LEFT;
@@ -1352,8 +2289,42 @@ void text( int x, int y, char const* str, int color, int font_asset
 		bounds->height = pixelfont_bounds.height;
 		}
 */
-	}
+}
 
+
+int key_is_down( key_t key ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
+	return pixie->keyboard.state[ key ]; 
+}
+
+
+int key_was_pressed( key_t key ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
+	if( key < 0 || key >= sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ) ) return 0;
+    int a = pixie->keyboard.state[ key ] ;
+    int b = pixie->keyboard.prev[ key ] ;
+    (void) a,b;
+	return pixie->keyboard.state[ key ] && !pixie->keyboard.prev[ key ]; 
+}
+
+
+int key_was_released( key_t key ) {
+    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+
+	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
+	if( key < 0 || key >= sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ) ) return 0;
+	return !pixie->keyboard.state[ key ] && pixie->keyboard.prev[ key ]; 
+}
+
+
+#undef min
+int min( int a, int b ) {
+    return a < b ? a : b;
+}
 
 
 string str( char const* c_str ) {
@@ -1423,11 +2394,21 @@ string left( string source, int number ) {
 string right( string source, int number ) {
 }
 
+*/
 
 string mid( string source, int offset, int number ) {
+	int const len = (int) strlen( source.c_str );
+	if( offset < 0 ) offset = 0;
+	if( offset > len ) offset = len;
+	if( number < 0 ) number = len - offset;
+	if( offset + number > len ) number = len - offset;
+    string out = { "" };
+	strncpy( out.c_str, source.c_str + offset, (size_t) number );
+    out.c_str[ number ] = '\0';
+    return out;
 }
 
-
+/*
 int instr( string haystack, string needle, int start ) {
 }
 
@@ -1482,7 +2463,12 @@ int asc( string str ) {
 
 int len( string str ) {
 }
+*/
 
+int starts_with( string str, string start ) {
+    return strnicmp( str.c_str, start.c_str, strlen( start.c_str ) ) == 0;
+}
+/*
 
 string format( string format_string, ... ) {
 }
@@ -1577,9 +2563,6 @@ string format( string format_string, ... ) {
 #endif /* PIXIE_NO_MATH */
 
 
-#undef VOID_CAST
-
-
 /*
 ---------------------------------
     LIBRARIES IMPLEMENTATIONS
@@ -1612,8 +2595,8 @@ string format( string format_string, ... ) {
 #define MMAP_IMPLEMENTATION
 #include "mmap.h"
 
-#define PALETTIZE_IMPLEMENTATION
-#include "palettize.h"
+#define PALRLE_IMPLEMENTATION
+#include "palrle.h"
 
 #define PIXELFONT_IMPLEMENTATION
 #define PIXELFONT_FUNC_NAME pixelfont_blit_u8
@@ -1690,12 +2673,12 @@ char const* format_assert_message( char const* format, ... ) {
 	    char buf[ 4096 + 64 ];
 	    _snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\nFunction: %s\n\n%s(%d)\n", 
             message, expression, function, file, line );
-	    OutputDebugString( "\n******************************************\n" );
+	    OutputDebugString( "\n**********************************************************************\n" );
 	    OutputDebugString( buf );
-	    OutputDebugString( "******************************************\n\n" );
-	    printf( "\n******************************************\n" );
+	    OutputDebugString( "**********************************************************************\n\n" );
+	    printf( "\n**********************************************************************\n" );
 	    printf( "%s", buf );
-	    printf( "******************************************\n\n" );
+	    printf( "**********************************************************************\n\n" );
 		strcat( buf, "\nBreak into debugger?\n" );
 	    int result = MessageBox( 0, buf, "Pixie Assert", MB_ICONERROR | MB_YESNOCANCEL | MB_SYSTEMMODAL | MB_SETFOREGROUND );
 	    switch( result ) {
