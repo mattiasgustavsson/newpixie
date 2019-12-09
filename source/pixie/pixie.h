@@ -393,6 +393,132 @@ string format( string format_string, ... ); // printf style formatting
 #endif /* PIXIE_NO_MATH */
 
 
+/*
+---------------------
+    HASH FUNCTIONS
+---------------------
+*/
+
+inline u32 hash_str( string str ) {
+    u32 hash = 5381u; 
+    char const* s = str.c_str;
+    while( *s ) hash = ( ( hash << 5u ) + hash) ^ *s++;
+    return hash;
+}
+
+      
+/*
+----------------------
+    DICTIONARY TYPE
+----------------------
+*/
+
+#define DICTIONARY_TYPE( name, hash_func, key_type, key_compare, item_type, capacity ) \
+    typedef struct name##_t { \
+        int count; \
+        struct { \
+            u32 key_hash; \
+            int item_index; \
+            int base_count; \
+        } slots[ capacity + capacity / 2 ]; \
+        key_type items_key[ capacity ]; \
+        item_type items_data[ capacity ]; \
+        int items_slot[ capacity ]; \
+        int item_capacity; \
+    } name##_t; \
+    \
+    inline void name##_clear( name##_t* dict ) { \
+        dict->count = 0; \
+        int const slot_capacity = ( capacity + capacity / 2 ); \
+        for( int i = 0; i < slot_capacity; ++i ) { \
+            dict->slots[ i ].key_hash = 0; \
+            dict->slots[ i ].item_index = 0; \
+            dict->slots[ i ].base_count = 0; \
+        } \
+    } \
+    \
+    inline int name##_count( name##_t* dict ) { \
+        ASSERTF( dict->count >= 0 && dict->count <= capacity, \
+            ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, dict->count ) ); \
+        if( dict->count >= 0 && dict->count < capacity ) { \
+            return dict->count; \
+        } else {\
+            return 0; \
+        } \
+    } \
+    \
+    inline void name##_insert( name##_t* dict, key_type key, item_type value ) { \
+        ASSERTF( dict->count >= 0 && dict->count <= capacity, \
+            ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
+            "The invalid count is: %d", #name, dict->count ) ); \
+        ASSERTF( dict->count < capacity, \
+            ( "Capacity exceed when inserting an item into dictionary of type '%s'.\n\n" \
+            "Max capacity is: %d", #name, capacity ) ); \
+        if( dict->count >= 0 && dict->count < capacity ) { \
+            u32 const hash = hash_func( key ); \
+            u32 const slot_capacity = (u32)( capacity + capacity / 2 ); \
+            int const base_slot = (int)( hash % slot_capacity ); \
+            int base_count = dict->slots[ base_slot ].base_count; \
+            int slot = base_slot; \
+            int first_free = slot; \
+            while( base_count ) { \
+                if( dict->slots[ slot ].item_index < 0 && dict->slots[ first_free ].item_index >= 0 ) { \
+                    first_free = slot; \
+                } \
+                u32 const slot_hash = dict->slots[ slot ].key_hash; \
+                int slot_base = (int)( slot_hash % slot_capacity ); \
+                if( slot_base == base_slot ) { \
+                    --base_count; \
+                } \
+                slot = (int)( ( slot + 1 ) % slot_capacity ); \
+            } \
+            \
+            slot = first_free; \
+            while( dict->slots[ slot ].item_index > 0  ) { \
+                slot = (int)( ( slot + 1 ) % slot_capacity ); \
+            } \
+            \
+            ASSERTF( dict->slots[ slot ].item_index <= 0 && (int)( hash % slot_capacity ) == (u32) base_slot, \
+                ( "Internal error" ) ); \
+            dict->slots[ slot ].key_hash = hash; \
+            dict->slots[ slot ].item_index = dict->count + 1; \
+            ++dict->slots[ base_slot ].base_count; \
+            \
+            dict->items_key[ dict->count ] = key; \
+            dict->items_data[ dict->count ] = value; \
+            dict->items_slot[ dict->count ] = slot; \
+            ++dict->count; \
+        } \
+    } \
+    \
+    key_type* name##_find( name##_t* dict, key_type key ) { \
+        u32 const hash = hash_func( key ); \
+        u32 const slot_capacity = (u32)( capacity + capacity / 2 ); \
+        int const base_slot = (int)( hash % slot_capacity ); \
+        \
+        int base_count = dict->slots[ base_slot ].base_count; \
+        int slot = base_slot; \
+        while( base_count > 0 ) { \
+            if( dict->slots[ slot ].item_index > 0 ) { \
+                u32 slot_hash = dict->slots[ slot ].key_hash; \
+                int slot_base = (int)( slot_hash % slot_capacity ); \
+                if( slot_base == base_slot ) { \
+                    ASSERTF( base_count > 0, ( "Internal error" ) ); \
+                    if( slot_hash == hash ) { \
+                        if( key_compare( dict->items_key[ dict->slots[ slot ].item_index - 1 ], key ) == 0 ) { \
+                            int const index = dict->slots[ slot ].item_index - 1; \
+                            return &dict->items_data[ index ]; \
+                        } \
+                    } \
+                    --base_count; \
+                } \
+            } \
+            slot = (int)( ( slot + 1 ) % slot_capacity ); \
+        } \
+        return NULL; \
+    } \
+    
 
 /*
 ------------------
@@ -486,7 +612,7 @@ string format( string format_string, ... ); // printf style formatting
 		    __pragma( warning( push ) ) \
 		    __pragma( warning( disable: 4701 ) ) \
             type value; \
-            for( int i = 0; i < sizeof( value ); ++i ) ( (unsigned char*) &value )[ i ] = 0; \
+            for( int i = 0; i < sizeof( value ); ++i ) ( (u8*) &value )[ i ] = 0; \
             return value; \
 		    __pragma( warning( pop ) ) \
         } \
