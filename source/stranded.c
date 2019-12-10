@@ -150,7 +150,7 @@ int pixmain( int argc, char** argv ) {
 
 	title_screen();
   
-    objects_t objects = { 0 };
+    objects_type objects = { 0 };
 
     int spr_index = 1;
 

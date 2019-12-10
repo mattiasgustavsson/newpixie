@@ -406,6 +406,8 @@ inline u32 hash_str( string str ) {
     return hash;
 }
 
+// TODO: hash funcs for more types
+
       
 /*
 ----------------------
@@ -413,23 +415,23 @@ inline u32 hash_str( string str ) {
 ----------------------
 */
 
-#define DICTIONARY_TYPE( name, hash_func, key_type, key_compare, item_type, capacity ) \
-    typedef struct name##_t { \
+#define DICTIONARY_TYPE( NAME, HASH_FUNC, KEY_TYPE, KEY_COMPARE, ITEM_TYPE, CAPACITY ) \
+    typedef struct NAME##_type { \
         int count; \
         struct { \
             u32 key_hash; \
             int item_index; \
             int base_count; \
-        } slots[ capacity + capacity / 2 ]; \
-        key_type items_key[ capacity ]; \
-        item_type items_data[ capacity ]; \
-        int items_slot[ capacity ]; \
+        } slots[ CAPACITY + CAPACITY / 2 ]; \
+        KEY_TYPE items_key[ CAPACITY ]; \
+        ITEM_TYPE items_data[ CAPACITY ]; \
+        int items_slot[ CAPACITY ]; \
         int item_capacity; \
-    } name##_t; \
+    } NAME##_type; \
     \
-    inline void name##_clear( name##_t* dict ) { \
+    inline void NAME##_clear( NAME##_type* dict ) { \
         dict->count = 0; \
-        int const slot_capacity = ( capacity + capacity / 2 ); \
+        int const slot_capacity = ( CAPACITY + CAPACITY / 2 ); \
         for( int i = 0; i < slot_capacity; ++i ) { \
             dict->slots[ i ].key_hash = 0; \
             dict->slots[ i ].item_index = 0; \
@@ -437,27 +439,27 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline int name##_count( name##_t* dict ) { \
-        ASSERTF( dict->count >= 0 && dict->count <= capacity, \
+    inline int NAME##_count( NAME##_type* dict ) { \
+        ASSERTF( dict->count >= 0 && dict->count <= CAPACITY, \
             ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, dict->count ) ); \
-        if( dict->count >= 0 && dict->count < capacity ) { \
+            "The invalid count is: %d", #NAME, dict->count ) ); \
+        if( dict->count >= 0 && dict->count < CAPACITY ) { \
             return dict->count; \
         } else {\
             return 0; \
         } \
     } \
     \
-    inline void name##_insert( name##_t* dict, key_type key, item_type value ) { \
-        ASSERTF( dict->count >= 0 && dict->count <= capacity, \
+    inline void NAME##_insert( NAME##_type* dict, KEY_TYPE key, ITEM_TYPE value ) { \
+        ASSERTF( dict->count >= 0 && dict->count <= CAPACITY, \
             ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, dict->count ) ); \
-        ASSERTF( dict->count < capacity, \
+            "The invalid count is: %d", #NAME, dict->count ) ); \
+        ASSERTF( dict->count < CAPACITY, \
             ( "Capacity exceed when inserting an item into dictionary of type '%s'.\n\n" \
-            "Max capacity is: %d", #name, capacity ) ); \
-        if( dict->count >= 0 && dict->count < capacity ) { \
-            u32 const hash = hash_func( key ); \
-            u32 const slot_capacity = (u32)( capacity + capacity / 2 ); \
+            "Max CAPACITY is: %d", #NAME, CAPACITY ) ); \
+        if( dict->count >= 0 && dict->count < CAPACITY ) { \
+            u32 const hash = HASH_FUNC( key ); \
+            u32 const slot_capacity = (u32)( CAPACITY + CAPACITY / 2 ); \
             int const base_slot = (int)( hash % slot_capacity ); \
             int base_count = dict->slots[ base_slot ].base_count; \
             int slot = base_slot; \
@@ -492,9 +494,9 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    key_type* name##_find( name##_t* dict, key_type key ) { \
-        u32 const hash = hash_func( key ); \
-        u32 const slot_capacity = (u32)( capacity + capacity / 2 ); \
+    KEY_TYPE* NAME##_find( NAME##_type* dict, KEY_TYPE key ) { \
+        u32 const hash = HASH_FUNC( key ); \
+        u32 const slot_capacity = (u32)( CAPACITY + CAPACITY / 2 ); \
         int const base_slot = (int)( hash % slot_capacity ); \
         \
         int base_count = dict->slots[ base_slot ].base_count; \
@@ -506,7 +508,7 @@ inline u32 hash_str( string str ) {
                 if( slot_base == base_slot ) { \
                     ASSERTF( base_count > 0, ( "Internal error" ) ); \
                     if( slot_hash == hash ) { \
-                        if( key_compare( dict->items_key[ dict->slots[ slot ].item_index - 1 ], key ) == 0 ) { \
+                        if( KEY_COMPARE( dict->items_key[ dict->slots[ slot ].item_index - 1 ], key ) == 0 ) { \
                             int const index = dict->slots[ slot ].item_index - 1; \
                             return &dict->items_data[ index ]; \
                         } \
@@ -517,8 +519,9 @@ inline u32 hash_str( string str ) {
             slot = (int)( ( slot + 1 ) % slot_capacity ); \
         } \
         return NULL; \
-    } \
-    
+    }
+  
+// TODO: remove, try_insert, array access, swap
 
 /*
 ------------------
@@ -526,40 +529,40 @@ inline u32 hash_str( string str ) {
 ------------------
 */
 
-#define ARRAY_TYPE( name, type, capacity ) \
-    typedef struct name##_t { \
+#define ARRAY_TYPE( NAME, TYPE, CAPACITY ) \
+    typedef struct NAME##_type { \
         int count; \
-        type items[ capacity ]; \
-    } name##_t; \
+        TYPE items[ CAPACITY ]; \
+    } NAME##_type; \
     \
-    inline int name##_count( name##_t* arr ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when querying size of array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
-        if( arr->count >= 0 && arr->count < capacity ) { \
+    inline int NAME##_count( NAME##_type* arr ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when querying size of array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
+        if( arr->count >= 0 && arr->count < CAPACITY ) { \
             return arr->count; \
         } else {\
             return 0; \
         } \
     } \
     \
-    inline void name##_add( name##_t* arr, type value ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when adding an item to array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
-        ASSERTF( arr->count < capacity, \
-            ( "Capacity exceed when adding an item to array of type '%s'.\n\n" \
-            "Max capacity is: %d", #name, capacity ) ); \
-        if( arr->count >= 0 && arr->count < capacity ) { \
+    inline void NAME##_add( NAME##_type* arr, TYPE value ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when adding an item to array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
+        ASSERTF( arr->count < CAPACITY, \
+            ( "Capacity exceed when adding an item to array of TYPE '%s'.\n\n" \
+            "Max CAPACITY is: %d", #NAME, CAPACITY ) ); \
+        if( arr->count >= 0 && arr->count < CAPACITY ) { \
             arr->items[ arr->count++ ] = value; \
         } \
     } \
     \
-    inline int name##_try_add( name##_t* arr, type value ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when trying to add an item to array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
-        if( arr->count >= 0 && arr->count < capacity ) { \
+    inline int NAME##_try_add( NAME##_type* arr, TYPE value ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when trying to add an item to array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
+        if( arr->count >= 0 && arr->count < CAPACITY ) { \
             arr->items[ arr->count++ ] = value; \
             return 1; \
         } else { \
@@ -567,14 +570,14 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline void name##_remove( name##_t* arr, int index ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when removing an item from array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
+    inline void NAME##_remove( NAME##_type* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when removing an item from array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
         ASSERTF( index >= 0 && index < arr->count, \
-            ( "Invalid index when removing an item from array of type '%s'.\n\n" \
-            "The invalid index is: %d\nThe current count is: %d", #name, index, arr->count ) ); \
-        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            ( "Invalid index when removing an item from array of TYPE '%s'.\n\n" \
+            "The invalid index is: %d\nThe current count is: %d", #NAME, index, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= CAPACITY && index >= 0 && index < arr->count ) { \
             if( arr->count == 1 ) { \
                 --arr->count; \
             } else { \
@@ -583,11 +586,11 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline int name##_try_remove( name##_t* arr, int index ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when trying to remove an item from array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
-        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+    inline int NAME##_try_remove( NAME##_type* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when trying to remove an item from array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= CAPACITY && index >= 0 && index < arr->count ) { \
             if( arr->count == 1 ) { \
                 --arr->count; \
             } else { \
@@ -599,38 +602,162 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline type name##_get( name##_t const* arr, int index ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when getting an item from array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
+    inline TYPE NAME##_get( NAME##_type const* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
         ASSERTF( index >= 0 && index < arr->count, \
-            ( "Invalid index when getting an item from array of type '%s'.\n\n" \
-            "The invalid index is: %d\nThe current count is: %d", #name, index, arr->count ) ); \
-        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+            ( "Invalid index when getting an item from array of TYPE '%s'.\n\n" \
+            "The invalid index is: %d\nThe current count is: %d", #NAME, index, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= CAPACITY && index >= 0 && index < arr->count ) { \
             return arr->items[ index ]; \
         } else { \
 		    __pragma( warning( push ) ) \
 		    __pragma( warning( disable: 4701 ) ) \
-            type value; \
+            TYPE value; \
             for( int i = 0; i < sizeof( value ); ++i ) ( (u8*) &value )[ i ] = 0; \
             return value; \
 		    __pragma( warning( pop ) ) \
         } \
     } \
     \
-    inline type const* name##_try_get( name##_t const* arr, int index ) { \
-        ASSERTF( arr->count >= 0 && arr->count <= capacity, \
-            ( "Invalid array count detected when getting an item from array of type '%s'.\n\n" \
-            "The invalid count is: %d", #name, arr->count ) ); \
-        if( arr->count >= 0 && arr->count <= capacity && index >= 0 && index < arr->count ) { \
+    inline TYPE const* NAME##_try_get( NAME##_type const* arr, int index ) { \
+        ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
+            ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
+            "The invalid count is: %d", #NAME, arr->count ) ); \
+        if( arr->count >= 0 && arr->count <= CAPACITY && index >= 0 && index < arr->count ) { \
             return &arr->items[ index ]; \
         } else { \
             return 0; \
         } \
+    }
+
+
+/*
+--------------
+    SORTING
+--------------
+*/
+
+
+inline int internal_sort_min( int a, int b ) {
+	return ( ( a < b ) ? a : b );
+}
+
+
+struct internal_sort_stack_t { 
+    int start; 
+    int count; 
+};
+
+
+#define SORT_FUNCTION( NAME, TYPE, COMPARE ) \
+	inline TYPE* internal_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
+		return ( COMPARE( *a, *b ) < 0 \
+			? ( COMPARE( *b, *c ) < 0 ? b : COMPARE( *a, *c ) < 0 ? c : a ) \
+			: ( COMPARE( *b, *c ) > 0 ? b : COMPARE( *a, *c ) > 0 ? c : a) ); \
     } \
-
-
-
+    \
+	inline void internal_sort_##NAME##_swap( TYPE* a, TYPE* b ) { \
+		TYPE t = *a; \
+        *a = *b; \
+        *b = t; \
+    } \
+	\
+	inline void internal_sort_##NAME##_swap_range( TYPE* a, TYPE* b, int n ) { \
+		int sn = (n); \
+        TYPE* sa = (a); \
+        TYPE* sb = (b); \
+        while( sn > 0 ) { \
+            internal_sort_##NAME##_swap( sa, sb ); \
+            ++sa; \
+            ++sb; \
+            --sn; \
+        } \
+    }\
+    \
+    inline void NAME( TYPE* array, int count ) { \
+	    struct internal_sort_stack_t stack[ 32 ]; \
+	    \
+	    int top = 0; \
+	    stack[ top ].start = 0; \
+	    stack[ top ].count = count; \
+        \
+	    while ( top >= 0 ) { \
+		    TYPE* a = array + stack[ top ].start; \
+		    count = stack[ top-- ].count; \
+		    \
+		    if( count < 24 ) { /* Insertion sort on smallest arrays */ \
+			    for( TYPE* pm = a + 1; pm < a + count; ++pm ) {\
+				    for( TYPE* pl = pm; pl > a && COMPARE( *( pl - 1 ), *pl ) > 0; --pl ) { \
+					    internal_sort_##NAME##_swap( pl, pl - 1 ); \
+                    } \
+                } \
+			    continue; \
+			} \
+		    TYPE* pm = a + count / 2; /* Small arrays, middle element */ \
+		    if( count > 40 ) { /* Big arrays, pseudomedian of 9 */ \
+			    TYPE* pl = a; \
+			    TYPE* pn = a + count - 1; \
+			    int s = count / 8; \
+			    pl = internal_sort_##NAME##_med3( pl, pl + s, pl + 2 * s ); \
+			    pm = internal_sort_##NAME##_med3( pm - s, pm, pm + s ); \
+			    pn = internal_sort_##NAME##_med3( pn - 2 * s, pn - s, pn ); \
+			    pm = internal_sort_##NAME##_med3( pl, pm, pn ); /* Mid-size, med of 3 */ \
+			} \
+		    TYPE* pv = a;  \
+            internal_sort_##NAME##_swap( pv, pm ); /* pv points to partition value */ \
+		    TYPE* pa = a; \
+		    TYPE* pb = a; \
+		    TYPE* pc = a + count - 1; \
+		    TYPE* pd = pc; \
+		    for( ;; ) { \
+			    int r; \
+			    while( pb <= pc && ( r = COMPARE( *pb, *pv ) ) <= 0 ) { \
+				    if( r == 0 ) { \
+                        internal_sort_##NAME##_swap( pa, pb ); \
+                        ++pa; \
+                    } \
+				    ++pb; \
+				} \
+			    while( pc >= pb && ( r = COMPARE( *pc, *pv ) ) >= 0 ) { \
+				    if( r == 0 ) { \
+                        internal_sort_##NAME##_swap( pc, pd ); \
+                        --pd; \
+                    } \
+				    --pc; \
+				} \
+			    if( pb > pc ) break; \
+			    internal_sort_##NAME##_swap( pb, pc ); \
+			    ++pb; \
+                --pc; \
+            } \
+		    TYPE* pn = a + count; \
+		    int s = internal_sort_min( (int)( pa - a ), (int)( pb - pa ) ); \
+            internal_sort_##NAME##_swap_range( a, pb - s, s ); \
+		    s = internal_sort_min( (int)( pd - pc ), (int)( pn - pd - 1 ) ); \
+            internal_sort_##NAME##_swap_range( pb, pn - s, s ); \
+		    if( ( s = (int)( pb - pa ) ) > 1 ) { \
+			    if( ++top >= sizeof( stack) / sizeof( *stack ) ) { \
+                    --top; \
+                    NAME( a, s ); \
+                } \
+			    else { \
+                    stack[ top ].start = (int)( a - array ); \
+                    stack[ top ].count = s; \
+                } \
+			} \
+		    if( ( s = (int)( pd - pc ) ) > 1 ) { \
+			    if( ++top >= sizeof( stack) / sizeof( *stack ) ) { \
+                    --top; \
+                    NAME( pn - s, s ); \
+                } else { \
+                    stack[ top ].start = (int)( ( pn - s ) - array ); \
+                    stack[ top ].count = s; \
+                } \
+			} \
+		} \
+	}
 
 
 #endif /* pixie_h */
