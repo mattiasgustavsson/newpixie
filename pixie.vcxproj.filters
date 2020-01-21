@@ -78,7 +78,7 @@
     <ClInclude Include="source\dialog_playback.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\stranded.c" />
     <ClCompile Include="source\main.c" />
+    <ClCompile Include="source\stranded.c" />
   </ItemGroup>
 </Project>

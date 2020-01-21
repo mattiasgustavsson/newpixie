@@ -3,7 +3,7 @@
           Licensing information can be found at the end of the file.
 ------------------------------------------------------------------------------
 
-app.h - v0.4 - Small cross-platform base framework for graphical apps.
+app.h - v0.4 - Small base framework for graphical apps.
 
 Do this:
     #define APP_IMPLEMENTATION
@@ -1134,14 +1134,13 @@ void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x
 #pragma warning( disable: 4917 ) // 'declarator' : a GUID can only be associated with a class, interface or namespace
 #define _NTDDSCM_H_
 #include <windows.h>
-#include <shlobj.h>
 #pragma warning( pop )
-#pragma comment( lib, "user32.lib" )
-#pragma comment( lib, "gdi32.lib" )
-#pragma comment( lib, "winmm.lib" )
-#pragma comment( lib, "shell32.lib" )
-#define DIRECTSOUND_VERSION 0x0800
-#include <dsound.h>
+#ifndef __TINYC__
+    #pragma comment( lib, "user32.lib" )
+    #pragma comment( lib, "gdi32.lib" )
+    #pragma comment( lib, "winmm.lib" )
+#endif
+
 #include <time.h>
 #include <stdio.h>
 
@@ -1203,6 +1202,157 @@ DECLARE_HANDLE( APP_HCTX );
 #define APP_PACKETMODE 0
 #define APP_WT_PACKET 0x7FF0
 
+
+
+////// DSOUND DEFINITIONS ////////
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+
+typedef struct _DSOUND_WAVEFORMATEX
+    {
+    WORD        wFormatTag;
+    WORD        nChannels;
+    DWORD       nSamplesPerSec;
+    DWORD       nAvgBytesPerSec;
+    WORD        nBlockAlign;
+    WORD        wBitsPerSample;
+    WORD        cbSize;
+    } DSOUND_WAVEFORMATEX;
+
+typedef struct _DSBUFFERDESC
+    {
+    DWORD           dwSize;
+    DWORD           dwFlags;
+    DWORD           dwBufferBytes;
+    DWORD           dwReserved;
+    DSOUND_WAVEFORMATEX*  lpwfxFormat;
+    } DSBUFFERDESC;
+
+typedef struct _DSBPOSITIONNOTIFY
+    {
+    DWORD           dwOffset;
+    HANDLE          hEventNotify;
+    } DSBPOSITIONNOTIFY;
+
+
+typedef struct _DSCAPS DSCAPS;
+typedef struct _DSBCAPS DSBCAPS;
+typedef struct _DSEFFECTDESC DSEFFECTDESC;
+struct IDirectSound8;
+
+typedef struct IDirectSoundBuffer8 { struct IDirectSoundBuffer8Vtbl* lpVtbl; } IDirectSoundBuffer8; 
+typedef struct IDirectSoundBuffer8Vtbl IDirectSoundBuffer8Vtbl;
+
+const struct IDirectSoundBuffer8Vtbl
+{
+    // IUnknown methods
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)       (IDirectSoundBuffer8*, REFIID, LPVOID*);
+    ULONG (STDMETHODCALLTYPE *AddRef)        (IDirectSoundBuffer8*);
+    ULONG (STDMETHODCALLTYPE *Release)       (IDirectSoundBuffer8*);
+
+    // IDirectSoundBuffer methods
+    HRESULT (STDMETHODCALLTYPE *GetCaps)              (IDirectSoundBuffer8*, DSBCAPS* pDSBufferCaps);
+    HRESULT (STDMETHODCALLTYPE *GetCurrentPosition)   (IDirectSoundBuffer8*, LPDWORD pdwCurrentPlayCursor, LPDWORD pdwCurrentWriteCursor);
+    HRESULT (STDMETHODCALLTYPE *GetFormat)            (IDirectSoundBuffer8*, DSOUND_WAVEFORMATEX* pwfxFormat, DWORD dwSizeAllocated, LPDWORD pdwSizeWritten);
+    HRESULT (STDMETHODCALLTYPE *GetVolume)            (IDirectSoundBuffer8*, LPLONG plVolume);
+    HRESULT (STDMETHODCALLTYPE *GetPan)               (IDirectSoundBuffer8*, LPLONG plPan);
+    HRESULT (STDMETHODCALLTYPE *GetFrequency)         (IDirectSoundBuffer8*, LPDWORD pdwFrequency);
+    HRESULT (STDMETHODCALLTYPE *GetStatus)            (IDirectSoundBuffer8*, LPDWORD pdwStatus);
+    HRESULT (STDMETHODCALLTYPE *Initialize)           (IDirectSoundBuffer8*, struct IDirectSound8* pDirectSound, DSBUFFERDESC* pcDSBufferDesc);
+    HRESULT (STDMETHODCALLTYPE *Lock)                 (IDirectSoundBuffer8*, DWORD dwOffset, DWORD dwBytes, LPVOID *ppvAudioPtr1, LPDWORD pdwAudioBytes1, LPVOID *ppvAudioPtr2, LPDWORD pdwAudioBytes2, DWORD dwFlags);
+    HRESULT (STDMETHODCALLTYPE *Play)                 (IDirectSoundBuffer8*, DWORD dwReserved1, DWORD dwPriority, DWORD dwFlags);
+    HRESULT (STDMETHODCALLTYPE *SetCurrentPosition)   (IDirectSoundBuffer8*, DWORD dwNewPosition);
+    HRESULT (STDMETHODCALLTYPE *SetFormat)            (IDirectSoundBuffer8*, DSOUND_WAVEFORMATEX* pcfxFormat);
+    HRESULT (STDMETHODCALLTYPE *SetVolume)            (IDirectSoundBuffer8*, LONG lVolume);
+    HRESULT (STDMETHODCALLTYPE *SetPan)               (IDirectSoundBuffer8*, LONG lPan);
+    HRESULT (STDMETHODCALLTYPE *SetFrequency)         (IDirectSoundBuffer8*, DWORD dwFrequency);
+    HRESULT (STDMETHODCALLTYPE *Stop)                 (IDirectSoundBuffer8*);
+    HRESULT (STDMETHODCALLTYPE *Unlock)               (IDirectSoundBuffer8*, LPVOID pvAudioPtr1, DWORD dwAudioBytes1, LPVOID pvAudioPtr2, DWORD dwAudioBytes2);
+    HRESULT (STDMETHODCALLTYPE *Restore)              (IDirectSoundBuffer8*);
+
+    // IDirectSoundBuffer8 methods
+    HRESULT (STDMETHODCALLTYPE *SetFX)                (IDirectSoundBuffer8*, DWORD dwEffectsCount, DSEFFECTDESC* pDSFXDesc, LPDWORD pdwResultCodes);
+    HRESULT (STDMETHODCALLTYPE *AcquireResources)     (IDirectSoundBuffer8*, DWORD dwFlags, DWORD dwEffectsCount, LPDWORD pdwResultCodes);
+    HRESULT (STDMETHODCALLTYPE *GetObjectInPath)      (IDirectSoundBuffer8*, REFGUID rguidObject, DWORD dwIndex, REFGUID rguidInterface, LPVOID *ppObject);
+};
+
+#define IDirectSoundBuffer8_QueryInterface(p,a,b)        (p)->lpVtbl->QueryInterface(p,a,b)
+#define IDirectSoundBuffer8_Lock(p,a,b,c,d,e,f,g)        (p)->lpVtbl->Lock(p,a,b,c,d,e,f,g)
+#define IDirectSoundBuffer8_Unlock(p,a,b,c,d)            (p)->lpVtbl->Unlock(p,a,b,c,d)
+#define IDirectSoundBuffer8_Restore(p)                   (p)->lpVtbl->Restore(p)
+#define IDirectSoundBuffer8_GetCurrentPosition(p,a,b)    (p)->lpVtbl->GetCurrentPosition(p,a,b)
+#define IDirectSoundBuffer8_Play(p,a,b,c)                (p)->lpVtbl->Play(p,a,b,c)
+#define IDirectSoundBuffer8_SetVolume(p,a)               (p)->lpVtbl->SetVolume(p,a)
+#define IDirectSoundBuffer8_Release(p)                  (p)->lpVtbl->Release(p)
+
+
+typedef struct IDirectSound8 { struct IDirectSound8Vtbl* lpVtbl; } IDirectSound8; 
+typedef struct IDirectSound8Vtbl IDirectSound8Vtbl;
+
+struct IDirectSound8Vtbl
+{
+    // IUnknown methods
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(IDirectSound8*, REFIID, LPVOID*);
+    ULONG (STDMETHODCALLTYPE *AddRef)        (IDirectSound8*);
+    ULONG (STDMETHODCALLTYPE *Release)       (IDirectSound8*);
+
+    // IDirectSound methods
+    HRESULT (STDMETHODCALLTYPE *CreateSoundBuffer)    (IDirectSound8*, DSBUFFERDESC* pcDSBufferDesc, struct IDirectSoundBuffer8** ppDSBuffer, void* pUnkOuter);
+    HRESULT (STDMETHODCALLTYPE *GetCaps)              (IDirectSound8*, DSCAPS* pDSCaps);
+    HRESULT (STDMETHODCALLTYPE *DuplicateSoundBuffer) (IDirectSound8*, struct IDirectSoundBuffer8* pDSBufferOriginal, struct IDirectSoundBuffer8* *ppDSBufferDuplicate);
+    HRESULT (STDMETHODCALLTYPE *SetCooperativeLevel)  (IDirectSound8*, HWND hwnd, DWORD dwLevel);
+    HRESULT (STDMETHODCALLTYPE *Compact)              (IDirectSound8*);
+    HRESULT (STDMETHODCALLTYPE *GetSpeakerConfig)     (IDirectSound8*, LPDWORD pdwSpeakerConfig);
+    HRESULT (STDMETHODCALLTYPE *SetSpeakerConfig)     (IDirectSound8*, DWORD dwSpeakerConfig);
+    HRESULT (STDMETHODCALLTYPE *Initialize)           (IDirectSound8*, LPCGUID pcGuidDevice);
+
+    // IDirectSound8 methods
+    HRESULT (STDMETHODCALLTYPE *VerifyCertification)  (IDirectSound8*, LPDWORD pdwCertified);
+};
+
+#define IDirectSound8_Release(p)                  (p)->lpVtbl->Release(p)
+#define IDirectSound8_CreateSoundBuffer(p,a,b,c)  (p)->lpVtbl->CreateSoundBuffer(p,a,b,c)
+#define IDirectSound8_SetCooperativeLevel(p,a,b)  (p)->lpVtbl->SetCooperativeLevel(p,a,b)
+
+
+typedef struct IDirectSoundNotify { struct IDirectSoundNotifyVtbl* lpVtbl; } IDirectSoundNotify; 
+typedef struct IDirectSoundNotifyVtbl IDirectSoundNotifyVtbl;
+
+struct IDirectSoundNotifyVtbl
+{
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(IDirectSoundNotify*, REFIID, LPVOID*);
+    ULONG (STDMETHODCALLTYPE *AddRef)        (IDirectSoundNotify*);
+    ULONG (STDMETHODCALLTYPE *Release)       (IDirectSoundNotify*);
+    HRESULT (STDMETHODCALLTYPE *SetNotificationPositions) (IDirectSoundNotify*, DWORD dwPositionNotifies, DSBPOSITIONNOTIFY* pcPositionNotifies);
+};
+
+#define IDirectSoundNotify_Release(p)                       (p)->lpVtbl->Release(p)
+#define IDirectSoundNotify_SetNotificationPositions(p,a,b)  (p)->lpVtbl->SetNotificationPositions(p,a,b)
+
+
+#define DS_OK                           S_OK
+#define DSERR_BUFFERLOST                MAKE_HRESULT(1, 0x878, 150)
+
+#define DSSCL_NORMAL                0x00000001
+#define DSBCAPS_CTRLVOLUME          0x00000080
+#define DSBCAPS_CTRLPOSITIONNOTIFY  0x00000100
+#define DSBCAPS_GLOBALFOCUS         0x00008000
+#define DSBCAPS_GETCURRENTPOSITION2 0x00010000
+#define DSBPLAY_LOOPING             0x00000001
+#define DSBVOLUME_MIN               -10000
+
+
+#ifdef __cplusplus
+};
+#endif // __cplusplus
+
+
+///// END DSOUND DEFINITIONS //////
+
+
 struct app_t
     {
     void* memctx;
@@ -1237,10 +1387,12 @@ struct app_t
     BOOL (APP_GLCALLTYPE* wglMakeCurrent) (HDC, HGLRC);
     BOOL (APP_GLCALLTYPE* wglSwapIntervalEXT) (int);
 
+    UINT (WINAPI *GetRawInputDataPtr)( HRAWINPUT, UINT, LPVOID, PUINT, UINT );
+
     HANDLE sound_notifications[ 2 ];
     HMODULE dsound_dll;
-    IDirectSound8* dsound;
-    IDirectSoundBuffer8* dsoundbuf; 
+    struct IDirectSound8* dsound;
+    struct IDirectSoundBuffer8* dsoundbuf; 
     HANDLE sound_thread_handle;
     volatile LONG exit_sound_thread;
     int sample_pairs_count;
@@ -1581,32 +1733,35 @@ static LRESULT CALLBACK app_internal_wndproc( HWND hwnd, UINT message, WPARAM wp
 
         case WM_INPUT: 
             {
-            RAWINPUT raw;
-            UINT size = sizeof( raw );
-            GetRawInputData( (HRAWINPUT) lparam, RID_INPUT, &raw, &size, sizeof( RAWINPUTHEADER ) );    
-            if( raw.header.dwType == RIM_TYPEMOUSE ) 
+            if( app->GetRawInputDataPtr ) 
                 {
-                float dx = (float) raw.data.mouse.lLastX;
-                float dy = (float) raw.data.mouse.lLastY;
-
-                float const microsoft_mouse_dpi_constant = 400.0f; // Apparently, most mice are meant to run at 400 DPI. This might be wrong.
-                dx /= microsoft_mouse_dpi_constant;
-                dy /= microsoft_mouse_dpi_constant;
-
-                if( app->input_count > 0 && app->input_events[ app->input_count - 1 ].type == APP_INPUT_MOUSE_DELTA )
+                RAWINPUT raw;
+                UINT size = sizeof( raw );
+                app->GetRawInputDataPtr( (HRAWINPUT) lparam, RID_INPUT, &raw, &size, sizeof( RAWINPUTHEADER ) );    
+                if( raw.header.dwType == RIM_TYPEMOUSE ) 
                     {
-                    app_input_event_t* event = &app->input_events[ app->input_count - 1 ];
-                    event->data.mouse_delta.x += dx;                    
-                    event->data.mouse_delta.y += dy;                    
-                    }
-                else
-                    {
-                    input_event.type = APP_INPUT_MOUSE_DELTA;
-                    input_event.data.mouse_delta.x = dx;                    
-                    input_event.data.mouse_delta.y = dy;                    
-                    app_internal_add_input_event( app, &input_event ); 
-                    }
-                } 
+                    float dx = (float) raw.data.mouse.lLastX;
+                    float dy = (float) raw.data.mouse.lLastY;
+
+                    float const microsoft_mouse_dpi_constant = 400.0f; // Apparently, most mice are meant to run at 400 DPI. This might be wrong.
+                    dx /= microsoft_mouse_dpi_constant;
+                    dy /= microsoft_mouse_dpi_constant;
+
+                    if( app->input_count > 0 && app->input_events[ app->input_count - 1 ].type == APP_INPUT_MOUSE_DELTA )
+                        {
+                        app_input_event_t* event = &app->input_events[ app->input_count - 1 ];
+                        event->data.mouse_delta.x += dx;                    
+                        event->data.mouse_delta.y += dy;                    
+                        }
+                    else
+                        {
+                        input_event.type = APP_INPUT_MOUSE_DELTA;
+                        input_event.data.mouse_delta.x = dx;                    
+                        input_event.data.mouse_delta.y = dy;                    
+                        app_internal_add_input_event( app, &input_event ); 
+                        }
+                    } 
+                }
             break;
             }
 
@@ -1740,14 +1895,13 @@ static BOOL CALLBACK app_internal_monitorenumproc( HMONITOR hmonitor, HDC dc, LP
     display->height = rect->bottom - rect->top;
 
     #ifdef __cplusplus
-        MONITORINFOEXA mi;
-        mi.cbSize = sizeof( mi );
+        MONITORINFOEXA mi = {};
+        mi.cbSize = sizeof( MONITORINFOEXA );
         BOOL res = GetMonitorInfoA( hmonitor, &mi );
         if( res && strlen( mi.szDevice ) >= sizeof( display->id ) ) res = FALSE;
         strcpy( display->id, res ? mi.szDevice : "" ) ;
     #else
-        MONITORINFOEXA mi;
-        mi.cbSize = sizeof( mi );
+        MONITORINFOEXA mi = { sizeof( MONITORINFOEXA ) };
         BOOL res = GetMonitorInfoA( hmonitor, (LPMONITORINFO)&mi );
         if( res && strlen( mi.szDevice ) >= sizeof( display->id ) ) res = FALSE;
         strcpy( display->id, res ? mi.szDevice : "" ) ;
@@ -1791,9 +1945,11 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     app_log( app, APP_LOG_LEVEL_INFO, msg );
 
     // Increase timing precision
-    TIMECAPS tc;
-    if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-        timeBeginPeriod( tc.wPeriodMin );
+    #ifndef __TINYC__
+        TIMECAPS tc;
+        if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+            timeBeginPeriod( tc.wPeriodMin );
+    #endif
 
     // Get instance handle
     app->hinstance = GetModuleHandle( NULL );
@@ -1801,11 +1957,28 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     // Retrieve the path of our executable
     GetModuleFileNameA( 0, app->exe_path, sizeof( app->exe_path ) );
 
-    // Retrieve user data path
-    SHGetFolderPathA( NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, app->userdata_path ); 
+    HMODULE shell32 = LoadLibraryA( "shell32.dll" );
+    if( shell32 ) 
+        {
+        HRESULT (__stdcall *SHGetFolderPathAPtr)(HWND, int, HANDLE, DWORD, LPSTR ) = 
+            (HRESULT (__stdcall*)(HWND, int, HANDLE, DWORD, LPSTR ) ) (uintptr_t) 
+                GetProcAddress( shell32, "SHGetFolderPathA" );
 
-    // Retrieve app data path
-    SHGetFolderPathA( NULL, CSIDL_COMMON_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, app->appdata_path ); 
+        if( SHGetFolderPathAPtr ) 
+            {
+            int const CSIDL_PERSONAL = 0x0005; // My Documents
+            int const CSIDL_COMMON_APPDATA = 0x0023; // All Users\Application Data
+            int const CSIDL_FLAG_CREATE = 0x8000 ;
+
+            // Retrieve user data path
+            SHGetFolderPathAPtr( NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, app->userdata_path ); 
+
+            // Retrieve app data path
+            SHGetFolderPathAPtr( NULL, CSIDL_COMMON_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, app->appdata_path ); 
+            }
+
+        FreeLibrary( shell32 );
+        }
 
     // Get command line string
     app->cmdline = GetCommandLineA();
@@ -2025,21 +2198,21 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
 
     if( app->dsound_dll )
         {
-        HRESULT (WINAPI *DirectSoundCreate8)(LPCGUID,LPDIRECTSOUND8*,LPUNKNOWN) = ( HRESULT (WINAPI*)(LPCGUID,LPDIRECTSOUND8*,LPUNKNOWN) ) 
+        HRESULT (WINAPI *DirectSoundCreate8Ptr)(LPCGUID,struct IDirectSound8**,void*) = ( HRESULT (WINAPI*)(LPCGUID,struct IDirectSound8**,void*) ) 
             (uintptr_t) GetProcAddress( (HMODULE) app->dsound_dll, "DirectSoundCreate8" ); 
-        if( !DirectSoundCreate8 ) 
+        if( !DirectSoundCreate8Ptr ) 
             { 
             app_log( app, APP_LOG_LEVEL_WARNING, "Couldn't find DirectSoundCreate. Sound disabled." ); 
             FreeLibrary( app->dsound_dll );
             app->dsound_dll = 0;
             }
-        if( DirectSoundCreate8 )
+        if( DirectSoundCreate8Ptr )
             {
-            HRESULT hr = DirectSoundCreate8( NULL, &app->dsound, NULL );
+            HRESULT hr = DirectSoundCreate8Ptr( NULL, &app->dsound, NULL );
             if( FAILED( hr ) || !app->dsound ) 
                 { 
                 app_log( app, APP_LOG_LEVEL_WARNING, "Couldn't create DirectSound object. Sound disabled." ); 
-                DirectSoundCreate8 = 0; 
+                DirectSoundCreate8Ptr = 0; 
                 FreeLibrary( app->dsound_dll );
                 app->dsound_dll = 0;
                 }   
@@ -2051,7 +2224,7 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
                     app_log( app, APP_LOG_LEVEL_WARNING, "Couldn't set cooperative level for DirectSound object. Sound disabled." ); 
                     IDirectSound8_Release( app->dsound );
                     app->dsound = 0;
-                    DirectSoundCreate8 = 0; 
+                    DirectSoundCreate8Ptr = 0; 
                     FreeLibrary( app->dsound_dll );
                     app->dsound_dll = 0;
                     }
@@ -2060,15 +2233,27 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
         }
     app->sound_thread_handle = INVALID_HANDLE_VALUE;
 
-    USHORT const USAGE_PAGE_GENERIC = ((USHORT) 0x01);
-    USHORT const USAGE_GENERIC_MOUSE = ((USHORT) 0x02);
+    HMODULE user32 = LoadLibraryA( "user32.dll" );
+    if( user32 ) 
+        {
+        BOOL (WINAPI *RegisterRawInputDevicesPtr)( PCRAWINPUTDEVICE, UINT, UINT ) = 
+            (BOOL (WINAPI*)( PCRAWINPUTDEVICE, UINT, UINT ) )(uintptr_t) GetProcAddress( user32, "RegisterRawInputDevices" );
 
-    RAWINPUTDEVICE rid[ 1 ];
-    rid[ 0 ].usUsagePage = USAGE_PAGE_GENERIC; 
-    rid[ 0 ].usUsage = USAGE_GENERIC_MOUSE; 
-    rid[ 0 ].dwFlags = RIDEV_INPUTSINK;   
-    rid[ 0 ].hwndTarget = app->hwnd;
-    RegisterRawInputDevices( rid, 1, sizeof( *rid ) );
+        app->GetRawInputDataPtr = (UINT (WINAPI*)( HRAWINPUT, UINT, LPVOID, PUINT, UINT))
+            (uintptr_t) GetProcAddress( user32, "GetRawInputData" );
+
+        USHORT const USAGE_PAGE_GENERIC = ((USHORT) 0x01);
+        USHORT const USAGE_GENERIC_MOUSE = ((USHORT) 0x02);
+
+        RAWINPUTDEVICE rid[ 1 ];
+        rid[ 0 ].usUsagePage = USAGE_PAGE_GENERIC; 
+        rid[ 0 ].usUsage = USAGE_GENERIC_MOUSE; 
+        rid[ 0 ].dwFlags = RIDEV_INPUTSINK;   
+        rid[ 0 ].hwndTarget = app->hwnd;
+        RegisterRawInputDevicesPtr( rid, 1, sizeof( *rid ) );
+
+        FreeLibrary( user32 );
+        }
 
     if( !app_internal_tablet_init( app ) ) app_log( app, APP_LOG_LEVEL_WARNING, "WinTab initialization failed - tablet not available" );
 
@@ -2097,8 +2282,10 @@ init_failed:
     if( app->hwnd ) DestroyWindow( app->hwnd );
     UnregisterClass( TEXT( "app_wc" ), app->hinstance );
 
-    if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-        timeEndPeriod( tc.wPeriodMin );
+    #ifndef __TINYC__
+        if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+            timeEndPeriod( tc.wPeriodMin );
+    #endif
 
     t = time( NULL );
     struct tm* end = localtime( &t );
@@ -2803,9 +2990,10 @@ void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_
             int const frequency = 44100;
             int const bits_per_sample = 16;
 
-            WAVEFORMATEX format; 
-            memset( &format, 0, sizeof( WAVEFORMATEX ) ); 
-            format.wFormatTag = WAVE_FORMAT_PCM; 
+            WORD const DSOUND_WAVE_FORMAT_PCM = 1;
+            DSOUND_WAVEFORMATEX format; 
+            memset( &format, 0, sizeof( DSOUND_WAVEFORMATEX ) ); 
+            format.wFormatTag = DSOUND_WAVE_FORMAT_PCM; 
             format.nChannels = (WORD) channels; 
             format.nSamplesPerSec = (DWORD) frequency; 
             format.nBlockAlign = (WORD) ( ( channels * bits_per_sample ) / 8 ); 
@@ -2823,7 +3011,7 @@ void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_
             dsbdesc.dwBufferBytes = (DWORD) size; 
             dsbdesc.lpwfxFormat = &format; 
         
-            IDirectSoundBuffer* soundbuf = NULL;    
+            struct IDirectSoundBuffer8* soundbuf = NULL;    
             HRESULT hr = IDirectSound8_CreateSoundBuffer( app->dsound, &dsbdesc, &soundbuf, NULL ); 
             if( FAILED( hr ) || !soundbuf ) 
                 {
@@ -2843,7 +3031,7 @@ void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_
                 GUID const* ref_GUID_IDirectSoundBuffer8 = &GUID_IDirectSoundBuffer8;
             #endif
             hr = IDirectSoundBuffer8_QueryInterface( soundbuf, ref_GUID_IDirectSoundBuffer8, (void**) &app->dsoundbuf );
-            IDirectSoundBuffer_Release( soundbuf );
+            IDirectSoundBuffer8_Release( soundbuf );
 
             if( FAILED( hr ) || !app->dsoundbuf )
                 { 
@@ -2856,7 +3044,7 @@ void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_
                 return;
                 }                    
 
-            IDirectSoundNotify8* notify = NULL; 
+            struct IDirectSoundNotify* notify = NULL; 
             GUID const GUID_IDirectSoundNotify8 = { 0xb0210783, 0x89cd, 0x11d0, { 0xaf, 0x8, 0x0, 0xa0, 0xc9, 0x25, 0xcd, 0x16 } };
             #ifdef __cplusplus
                 GUID const& ref_GUID_IDirectSoundNotify8 = GUID_IDirectSoundNotify8;
@@ -2867,7 +3055,7 @@ void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_
             if( FAILED( hr ) || !notify )
                 { 
                 app_log( app, APP_LOG_LEVEL_WARNING, "Failed to create sound buffer" ); 
-                IDirectSoundBuffer_Release( app->dsoundbuf );
+                IDirectSoundBuffer8_Release( app->dsoundbuf );
                 IDirectSound8_Release( app->dsound );
                 app->dsound = 0;
                 app->dsoundbuf = 0;
@@ -2903,7 +3091,7 @@ void app_sound_volume( app_t* app, float volume )
     if( !app->dsound ) return;
     if( !app->dsoundbuf ) return;
 
-    int level = volume < 0.000015f ? DSBVOLUME_MIN : (int) ( 2000.0f * log10f( volume ) );
+    int level = volume < 0.000015f ? DSBVOLUME_MIN : (int) ( 2000.0f * (float) log10( (double ) volume ) );
     if( app->sound_level == level ) return; 
     app->sound_level = level;
 

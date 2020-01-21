@@ -1,6 +1,6 @@
 #include "pixie.h"
 
-#ifdef __cplusplus
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 using namespace pixie;
 #endif
 

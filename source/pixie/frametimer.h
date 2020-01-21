@@ -57,7 +57,9 @@ int frametimer_frame_counter( frametimer_t* frametimer );
 	#pragma warning( disable: 4255 ) // 'function' : no function prototype given: converting '()' to '(void)'
 	#include <windows.h>
 	#pragma warning( pop )
-	#pragma comment(lib, "winmm.lib")
+    #ifndef __TINYC__
+        #pragma comment(lib, "winmm.lib")
+    #endif
 #endif
 
 #ifndef FRAMETIMER_MALLOC
@@ -95,9 +97,11 @@ frametimer_t* frametimer_create( void* memctx )
 	{
 	frametimer_t* frametimer = (frametimer_t*) FRAMETIMER_MALLOC( memctx, sizeof( frametimer_t ) );
 	#ifdef _WIN32
-		TIMECAPS tc;
-		if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-			timeBeginPeriod( tc.wPeriodMin );
+	    #ifndef __TINYC__
+    	    TIMECAPS tc;
+		    if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+			    timeBeginPeriod( tc.wPeriodMin );
+        #endif
 	    frametimer->waitable_timer = CreateWaitableTimer(NULL, TRUE, NULL);
 	#endif
 	   
@@ -124,9 +128,11 @@ void frametimer_destroy( frametimer_t* frametimer )
 	{
 	#ifdef _WIN32
 		CloseHandle( frametimer->waitable_timer );
-		TIMECAPS tc;
-		if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-			timeEndPeriod( tc.wPeriodMin );
+        #ifndef __TINYC__
+		    TIMECAPS tc;
+		    if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+			    timeEndPeriod( tc.wPeriodMin );
+        #endif
 	#endif
 	FRAMETIMER_FREE( frametimer->memctx, frametimer );
 	}

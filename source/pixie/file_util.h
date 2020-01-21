@@ -32,8 +32,8 @@ char* pathcat( char* destination, char const* source );
 char const* absolute_path( char const* filename );
 void replace_extension( char* output, char const* path, char const* new_extension );
 
-void mkdir( char const* path );
-void rmdir( char const* path );
+void file_util_mkdir( char const* path );
+void file_util_rmdir( char const* path );
 void change_dir( char const* path );
 int create_path( char const* path ); 
 void copy_file( char const* source, char const* destination );
@@ -88,11 +88,7 @@ int wildcard_compare( char const* wild, char const* string );
 	#include <windows.h>
 	#pragma warning( pop )
 
-	#define mkdir hide_windows_mkdir
-	#define rmdir hide_windows_rmdir
 	#include <direct.h>
-	#undef mkdir
-	#undef rmdir
 #else /* _WIN32 */
 	#include <limits.h>
 	#include <stdlib.h>
@@ -342,7 +338,7 @@ void replace_extension( char* output, char const* filename, char const* new_exte
 	}
 
 
-void mkdir( char const* path )
+void file_util_mkdir( char const* path )
 	{
 	#ifdef _WIN32
 		CreateDirectoryA( path, NULL );
@@ -352,7 +348,7 @@ void mkdir( char const* path )
 	}
 
 
-void rmdir( char const* path )
+void file_util_rmdir( char const* path )
 	{
 	#ifdef _WIN32
 		RemoveDirectoryA( path );

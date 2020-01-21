@@ -2,6 +2,9 @@
 #include "dialog.h"
 #include "dialog_playback.h"
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+using namespace pixie;
+#endif
 
 #ifndef PIXIE_NO_BUILD
     void* adjust_sprite( const char* filenames[], int count, int* out_size );

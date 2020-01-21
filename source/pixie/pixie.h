@@ -233,15 +233,24 @@ string format( string format_string, ... ); // printf style formatting
 	#elif defined PIXIE_ASSERT
 		#define ASSERT( expression, message ) PIXIE_ASSERT( expression, message )
     #else
-		#define ASSERT( expression, message ) \
-		    __pragma( warning( push ) ) \
-		    __pragma( warning( disable: 4127 ) ) \
-			do { \
-				if( !( expression ) ) \
-					if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-						__debugbreak(); \
-			} while( 0 ) \
-			__pragma( warning( pop ) )
+		#ifdef __TINYC__ 
+			#define ASSERT( expression, message ) \
+				do { \
+					if( !( expression ) ) \
+						if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+							__asm__ volatile("int $0x03"); \
+				} while( 0 )
+		#else
+			#define ASSERT( expression, message ) \
+				__pragma( warning( push ) ) \
+				__pragma( warning( disable: 4127 ) ) \
+				do { \
+					if( !( expression ) ) \
+						if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+							__debugbreak(); \
+				} while( 0 ) \
+				__pragma( warning( pop ) )
+		#endif
 	#endif
 
     #define ASSERTF( expression, message ) ASSERT( expression, pixie::format_assert_message message )
@@ -254,15 +263,24 @@ string format( string format_string, ... ); // printf style formatting
 	#elif defined PIXIE_ASSERT
 		#define ASSERT( expression, message ) PIXIE_ASSERT( expression, message )
     #else
-		#define ASSERT( expression, message ) \
-		    __pragma( warning( push ) ) \
-		    __pragma( warning( disable: 4127 ) ) \
-			do { \
-				if( !( expression ) ) \
-					if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-						__debugbreak(); \
-			} while( 0 ) \
-			__pragma( warning( pop ) )
+		#ifdef __TINYC__ 
+			#define ASSERT( expression, message ) \
+				do { \
+					if( !( expression ) ) \
+						if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+							__asm__ volatile("int $0x03"); \
+				} while( 0 )
+		#else
+			#define ASSERT( expression, message ) \
+				__pragma( warning( push ) ) \
+				__pragma( warning( disable: 4127 ) ) \
+				do { \
+					if( !( expression ) ) \
+						if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
+							__debugbreak(); \
+				} while( 0 ) \
+				__pragma( warning( pop ) )
+		#endif		
 	#endif
 
     #define ASSERTF( expression, message ) ASSERT( expression, format_assert_message message )
@@ -399,6 +417,10 @@ string format( string format_string, ... ); // printf style formatting
 ---------------------
 */
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+namespace pixie {
+#endif
+
 inline u32 hash_str( string str ) {
     u32 hash = 5381u; 
     char const* s = str.c_str;
@@ -407,6 +429,10 @@ inline u32 hash_str( string str ) {
 }
 
 // TODO: hash funcs for more types
+
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+} /* namespace pixie */
+#endif
 
       
 /*
@@ -612,12 +638,9 @@ inline u32 hash_str( string str ) {
         if( arr->count >= 0 && arr->count <= CAPACITY && index >= 0 && index < arr->count ) { \
             return arr->items[ index ]; \
         } else { \
-		    __pragma( warning( push ) ) \
-		    __pragma( warning( disable: 4701 ) ) \
-            TYPE value; \
-            for( int i = 0; i < sizeof( value ); ++i ) ( (u8*) &value )[ i ] = 0; \
-            return value; \
-		    __pragma( warning( pop ) ) \
+            u8 value[ sizeof( TYPE ) ]; \
+            for( int i = 0; i < sizeof( value ); ++i ) value[ i ] = 0; \
+            return *(TYPE*)value; \
         } \
     } \
     \
@@ -782,7 +805,7 @@ struct internal_sort_stack_t {
 ---------------------
 */
 
-#ifndef PIXIE_NO_MATH
+#if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
         #pragma warning( push )
         #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
@@ -838,26 +861,49 @@ struct internal_sort_stack_t {
         #include <math.h>
         #pragma warning( pop )
 
-        float internal_pixie_acos( float x ) { return acosf( x ); }
-        float internal_pixie_asin( float x ) { return asinf( x ); }
-        float internal_pixie_atan( float x ) { return atanf( x ); }
-        float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
-        float internal_pixie_ceil( float x ) { return ceilf( x ); }
-        float internal_pixie_cos( float x ) { return cosf( x ); }
-        float internal_pixie_cosh( float x ) { return coshf( x ); }
-        float internal_pixie_exp( float x ) { return expf( x ); }
-        float internal_pixie_fabs( float x ) { return fabsf( x ); }
-        float internal_pixie_floor( float x ) { return floorf( x ); }
-        float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
-        float internal_pixie_log( float x ) { return logf( x ); }
-        float internal_pixie_log10( float x ) { return log10f( x ); }
-        float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
-        float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
-        float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
-        float internal_pixie_sin( float x ) { return sinf( x ); }
-        float internal_pixie_sinh( float x ) { return sinhf( x ); }
-        float internal_pixie_tan( float x ) { return tanf( x ); }
-        float internal_pixie_tanh( float x ) { return tanhf( x ); }
+        #ifdef __TINYC__
+            float internal_pixie_acos( float x ) { return (float)acos( (double) x ); }
+            float internal_pixie_asin( float x ) { return (float)asin( (double) x ); }
+            float internal_pixie_atan( float x ) { return (float)atan( (double) x ); }
+            float internal_pixie_atan2( float x, float y ) { return (float)atan2( (double) x, (double)y ); }
+            float internal_pixie_ceil( float x ) { return (float)ceil( (double) x ); }
+            float internal_pixie_cos( float x ) { return (float)cos( (double) x ); }
+            float internal_pixie_cosh( float x ) { return (float)cosh( (double) x ); }
+            float internal_pixie_exp( float x ) { return (float)exp( (double) x ); }
+            float internal_pixie_fabs( float x ) { return (float)fabs( (double) x ); }
+            float internal_pixie_floor( float x ) { return (float)floor( (double) x ); }
+            float internal_pixie_fmod( float x, float y ) { return (float)fmod( (double) x, (double)y ); }
+            float internal_pixie_log( float x ) { return (float)log( (double) x ); }
+            float internal_pixie_log10( float x ) { return (float)log10( (double) x ); }
+            float internal_pixie_mod( float x, float* y ) { return (float)modf( (double) x, (double*)y ); }
+            float internal_pixie_pow( float x, float y ) { return (float)pow( (double) x, (double)y ); }
+            float internal_pixie_sqrt( float x ) { return (float)sqrt( (double) x ); }
+            float internal_pixie_sin( float x ) { return (float)sin( (double) x ); }
+            float internal_pixie_sinh( float x ) { return (float)sinh( (double) x ); }
+            float internal_pixie_tan( float x ) { return (float)tan( (double) x ); }
+            float internal_pixie_tanh( float x ) { return (float)tanh( (double) x ); }
+        #else
+            float internal_pixie_acos( float x ) { return acosf( x ); }
+            float internal_pixie_asin( float x ) { return asinf( x ); }
+            float internal_pixie_atan( float x ) { return atanf( x ); }
+            float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
+            float internal_pixie_ceil( float x ) { return ceilf( x ); }
+            float internal_pixie_cos( float x ) { return cosf( x ); }
+            float internal_pixie_cosh( float x ) { return coshf( x ); }
+            float internal_pixie_exp( float x ) { return expf( x ); }
+            float internal_pixie_fabs( float x ) { return fabsf( x ); }
+            float internal_pixie_floor( float x ) { return floorf( x ); }
+            float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
+            float internal_pixie_log( float x ) { return logf( x ); }
+            float internal_pixie_log10( float x ) { return log10f( x ); }
+            float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
+            float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
+            float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
+            float internal_pixie_sin( float x ) { return sinf( x ); }
+            float internal_pixie_sinh( float x ) { return sinhf( x ); }
+            float internal_pixie_tan( float x ) { return tanf( x ); }
+            float internal_pixie_tanh( float x ) { return tanhf( x ); }
+        #endif
     #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
 
@@ -1319,7 +1365,7 @@ static void pixie_force_exit( pixie_t* pixie ) {
     thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX ); // INT_MAX is used to signal forced exit
             
     // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
-    thread_atomic_int_add( &pixie->vbl.count, 1 );
+    thread_atomic_int_inc( &pixie->vbl.count );
     thread_signal_raise( &pixie->vbl.signal );    
 }
 
@@ -1591,7 +1637,7 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
     thread_mutex_unlock( &pixie->sprites.mutex );
 
     // Signal to the game that the frame is completed, and that we are just starting the next one
-    thread_atomic_int_add( &pixie->vbl.count, 1 );
+    thread_atomic_int_inc( &pixie->vbl.count );
     thread_signal_raise( &pixie->vbl.signal );    
 
     // Convert palette based screen composite to 24-bit XBGR. Both `xbgr` and `composite` are only used from here
@@ -2741,7 +2787,7 @@ string format( string format_string, ... ) {
 
 #ifndef PIXIE_NO_MAIN
 
-    #ifdef _WIN32
+    #if defined( _WIN32 ) && !defined( __TINYC__ )
         #ifndef NDEBUG
             #pragma warning( push ) 
             #pragma warning( disable: 4619 ) // pragma warning : there is no warning number 'number'
@@ -2749,13 +2795,13 @@ string format( string format_string, ... ) {
             #include <crtdbg.h>
             #pragma warning( pop ) 
         #endif
-    #endif /* _WIN32 */
+    #endif /* _WIN32 && !__TINYC__ */
 
     int pixmain( int argc, char** argv );
 
     int main( int argc, char** argv ) {
         (void) argc, argv;
-        #ifdef _WIN32
+		#if defined( _WIN32 ) && !defined( __TINYC__ )
             #ifndef NDEBUG
                 int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
                 flag ^= _CRTDBG_LEAK_CHECK_DF; // Turn on leak-checking bit
@@ -2836,6 +2882,21 @@ string format( string format_string, ... ) {
 #include "crt_frame.h"
 
 #define EASE_IMPLEMENTATION
+#if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        #define EASE_ACOS( x ) pixie::acos( x )
+        #define EASE_COS( x ) pixie::cos( x )
+        #define EASE_POW( x, y ) pixie::pow( x, y )
+        #define EASE_SIN( x ) pixie::sin( x )
+        #define EASE_SQRT( x ) pixie::sqrt( x )
+    #else
+        #define EASE_ACOS( x ) internal_pixie_acos( x )
+        #define EASE_COS( x ) internal_pixie_cos( x )
+        #define EASE_POW( x, y ) internal_pixie_pow( x, y )
+        #define EASE_SIN( x ) internal_pixie_sin( x )
+        #define EASE_SQRT( x ) internal_pixie_sqrt( x )
+    #endif
+#endif
 #include "ease.h"
         
 #define FRAMETIMER_IMPLEMENTATION
@@ -2876,6 +2937,27 @@ string format( string format_string, ... ) {
 #pragma warning( disable: 4703 )
 #define TSF_NO_STDIO
 #define TSF_IMPLEMENTATION
+#if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        #define TSF_POW pixie::pow
+        #define TSF_POWF pixie::pow
+        #define TSF_EXPF pixie::exp
+        #define TSF_LOG pixie::log
+        #define TSF_TAN pixie::tan
+        #define TSF_LOG10 pixie::log10
+        #define TSF_SQRT pixie::sqrt
+        #define TSF_SQRTF pixie::sqrt
+    #else
+        #define TSF_POW internal_pixie_pow
+        #define TSF_POWF internal_pixie_pow
+        #define TSF_EXPF internal_pixie_exp
+        #define TSF_LOG internal_pixie_log
+        #define TSF_TAN internal_pixie_tan
+        #define TSF_LOG10 internal_pixie_log10
+        #define TSF_SQRT internal_pixie_sqrt
+        #define TSF_SQRTF internal_pixie_sqrt
+    #endif
+#endif
 #include "tsf.h"
 #pragma warning( pop )
 
@@ -2937,11 +3019,13 @@ char const* format_assert_message( char const* format, ... ) {
 	    switch( result ) {
 		    case IDCANCEL: {
 			    // Turn off memory leak reports for faster exit
-			    #ifndef NDEBUG
-				    int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
-				    flag ^= _CRTDBG_LEAK_CHECK_DF; // Turn off leak-checking bit
-				    _CrtSetDbgFlag( flag ); // Set flag to the new value
-			    #endif
+                #ifndef __TINYC__
+			        #ifndef NDEBUG
+				        int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
+				        flag ^= _CRTDBG_LEAK_CHECK_DF; // Turn off leak-checking bit
+				        _CrtSetDbgFlag( flag ); // Set flag to the new value
+			        #endif
+                #endif
 			    _exit( 3 ); // Exit application immediately, without calling crt's _atexit
 			} break;
 		    case IDYES: {

@@ -575,7 +575,9 @@ struct thread_queue_t
 
 #if defined( _WIN32 )
 
-    #pragma comment( lib, "winmm.lib" )
+    #ifndef __TINYC__
+        #pragma comment( lib, "winmm.lib" )
+    #endif
 
     #define _CRT_NONSTDC_NO_DEPRECATE 
     #define _CRT_SECURE_NO_WARNINGS
@@ -677,22 +679,24 @@ thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char c
         if( !handle ) return NULL;
 
         // Yes, this crazy construct with __try and RaiseException is how you name a thread in Visual Studio :S
-        if( name && IsDebuggerPresent() )
-            {
-            THREADNAME_INFO info;
-            info.dwType = 0x1000;
-            info.szName = name;
-            info.dwThreadID = thread_id;
-            info.dwFlags = 0;
+        #ifndef __TINYC__
+            if( name && IsDebuggerPresent() )
+                {
+                THREADNAME_INFO info;
+                info.dwType = 0x1000;
+                info.szName = name;
+                info.dwThreadID = thread_id;
+                info.dwFlags = 0;
 
-            __try
-                {
-                RaiseException( MS_VC_EXCEPTION, 0, sizeof( info ) / sizeof( ULONG_PTR ), (ULONG_PTR*) &info );
+                __try
+                    {
+                    RaiseException( MS_VC_EXCEPTION, 0, sizeof( info ) / sizeof( ULONG_PTR ), (ULONG_PTR*) &info );
+                    }
+                __except( EXCEPTION_EXECUTE_HANDLER )
+                    {
+                    }
                 }
-            __except( EXCEPTION_EXECUTE_HANDLER )
-                {
-                }
-            }
+        #endif
 
         return (thread_ptr_t) handle;
     
@@ -1068,6 +1072,7 @@ int thread_atomic_int_dec( thread_atomic_int_t* atomic )
     #endif
     }
 
+#ifndef __TINYC__
 
 int thread_atomic_int_add( thread_atomic_int_t* atomic, int value )
     {
@@ -1100,6 +1105,7 @@ int thread_atomic_int_sub( thread_atomic_int_t* atomic, int value )
     #endif
     }
 
+#endif
 
 int thread_atomic_int_swap( thread_atomic_int_t* atomic, int desired )
     {
@@ -1223,9 +1229,11 @@ void thread_timer_init( thread_timer_t* timer )
         struct x { char thread_timer_type_too_small : ( sizeof( thread_mutex_t ) < sizeof( HANDLE ) ? 0 : 1 ); }; 
         #pragma warning( pop )
 
-        TIMECAPS tc;
-        if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-            timeBeginPeriod( tc.wPeriodMin );
+        #ifndef __TINYC__
+            TIMECAPS tc;
+            if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+                timeBeginPeriod( tc.wPeriodMin );
+        #endif
 
         *(HANDLE*)timer = CreateWaitableTimer( NULL, TRUE, NULL );
 
@@ -1245,9 +1253,11 @@ void thread_timer_term( thread_timer_t* timer )
 
         CloseHandle( *(HANDLE*)timer );
     
-        TIMECAPS tc;
-        if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
-            timeEndPeriod( tc.wPeriodMin );
+        #ifndef __TINYC__
+            TIMECAPS tc;
+            if( timeGetDevCaps( &tc, sizeof( TIMECAPS ) ) == TIMERR_NOERROR ) 
+                timeEndPeriod( tc.wPeriodMin );
+        #endif
 
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 

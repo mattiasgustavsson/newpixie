@@ -1087,8 +1087,12 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
     float yc = ( yp - 0.5f ) * 2.0f;
     xc *= 1.1f; 
     yc *= 1.1f; 
-    xc *= 1.0f + powf( ( fabsf( yc ) / 5.0f ), 2.0f);
-    yc *= 1.0f + powf( ( fabsf( xc ) / 4.0f ), 2.0f);
+    //xc *= 1.0f + powf( ( fabsf( yc ) / 5.0f ), 2.0f);
+    //yc *= 1.0f + powf( ( fabsf( xc ) / 4.0f ), 2.0f);
+    float yt = ( yc >= 0.0f ? yc : -yc ) / 5.0f;
+    float xt = ( xc >= 0.0f ? xc : -xc ) / 4.0f;
+    xc *= 1.0f + ( yt * yt );
+    yc *= 1.0f + ( xt * xt );
     xc = ( xc / 2.0f ) + 0.5f;
     yc = ( yc / 2.0f ) + 0.5f;
     xc = xc * 0.92f + 0.04f;

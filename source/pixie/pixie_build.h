@@ -844,7 +844,7 @@ void free_text_file( char* text ) {
 #pragma warning( disable: 4365 )
 #pragma warning( disable: 4668 )
 #define STB_IMAGE_IMPLEMENTATION
-#if defined( _WIN32 ) && defined( __clang__ )
+#if defined( _WIN32 ) && ( defined( __clang__ ) || defined( __TINYC__ ) )
 	#define STBI_NO_SIMD
 #endif
 #include "stb_image.h"

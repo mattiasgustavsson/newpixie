@@ -80,23 +80,43 @@ float ease_in_out_circle( float t );
 #endif
 
 #ifndef EASE_ACOS
-	#define EASE_ACOS( x ) acosf( x )
+    #ifdef __TINYC__
+	    #define EASE_ACOS( x ) ( (float) acos( (double) x ) )
+    #else
+	    #define EASE_ACOS( x ) acosf( x )
+    #endif
 #endif
 
 #ifndef EASE_COS
-	#define EASE_COS( x ) cosf( x )
+    #ifdef __TINYC__
+	    #define EASE_COS( x ) ( (float) cos( (double) x ) )
+    #else
+	    #define EASE_COS( x ) cosf( x )
+    #endif
 #endif
 
 #ifndef EASE_POW
-	#define EASE_POW( x, y ) powf( x, y )
+    #ifdef __TINYC__
+	    #define EASE_POW( x, y ) ( (float) pow( (double) x, (double) y ) )
+    #else
+	    #define EASE_POW( x, y ) powf( x, y )
+    #endif
 #endif
 
 #ifndef EASE_SIN
-	#define EASE_SIN( x ) sinf( x )
+    #ifdef __TINYC__
+	    #define EASE_SIN( x ) ( (float) sin( (double) x ) )
+    #else
+	    #define EASE_SIN( x ) sinf( x )
+    #endif
 #endif
 
 #ifndef EASE_SQRT
-	#define EASE_SQRT( x ) sqrtf( x )
+    #ifdef __TINYC__
+	    #define EASE_SQRT( x ) ( (float) sqrt( (double) x ) )
+    #else
+	    #define EASE_SQRT( x ) sqrtf( x )
+    #endif
 #endif
 
 

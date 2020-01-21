@@ -68,7 +68,33 @@ void img_sharpen( img_t* img, float radius, float blend );
 #define _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
-#include <math.h>
+
+
+#if !defined( IMG_POW ) || !defined( IMG_FLOOR )
+	#define _CRT_NONSTDC_NO_DEPRECATE 
+	#define _CRT_SECURE_NO_WARNINGS
+	#pragma warning( push )
+	#pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
+	#include <math.h>
+	#pragma warning( pop )
+#endif
+
+
+#ifndef IMG_POW
+    #ifdef __TINYC__
+	    #define IMG_POW( x, y ) ( (float) pow( (double) x, (double) y ) )
+    #else
+	    #define IMG_POW( x, y ) powf( x, y )
+    #endif
+#endif
+
+#ifndef IMG_FLOOR
+    #ifdef __TINYC__
+	    #define IMG_FLOOR( x ) ( (float) floor( (double) x ) )
+    #else
+    	#define IMG_FLOOR( x ) floorf( x )
+    #endif
+#endif
 
 
 img_t img_from_abgr32( IMG_U32* abgr, int width, int height ) {
@@ -88,9 +114,9 @@ img_t img_from_abgr32( IMG_U32* abgr, int width, int height ) {
         f->b = ( (float) b ) / 255.0f;
         f->a = ( (float) a ) / 255.0f;
 		float const GAMMA_TO_LINEAR = 2.2f;
-		f->r = powf( f->r, GAMMA_TO_LINEAR );
-		f->g = powf( f->g, GAMMA_TO_LINEAR );
-		f->b = powf( f->b, GAMMA_TO_LINEAR );
+		f->r = IMG_POW( f->r, GAMMA_TO_LINEAR );
+		f->g = IMG_POW( f->g, GAMMA_TO_LINEAR );
+		f->b = IMG_POW( f->b, GAMMA_TO_LINEAR );
     }
     return img;
 }
@@ -111,9 +137,9 @@ void img_to_argb32( img_t* img, IMG_U32* abgr ) {
     for( int i = 0; i < img->width * img->height; ++i ) {
         img_rgba_t p = img->pixels[ i ];
 		float const LINEAR_TO_GAMMA = 1.0f / 2.2f;
-		p.r = powf( img_clamp( p.r, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
-		p.g = powf( img_clamp( p.g, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
-		p.b = powf( img_clamp( p.b, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
+		p.r = IMG_POW( img_clamp( p.r, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
+		p.g = IMG_POW( img_clamp( p.g, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
+		p.b = IMG_POW( img_clamp( p.b, 0.0f, 1.0f ), LINEAR_TO_GAMMA );
         p.a = img_clamp( p.a, 0.0f, 1.0f );
         IMG_U32 r = (IMG_U32)( p.r * 256.0f ); 
         IMG_U32 g = (IMG_U32)( p.g * 256.0f ); 
@@ -143,9 +169,9 @@ img_rgba_t img_sample_clamp( img_t* img, float u, float v ) {
 	float maxw = (float) ( img->width - 1 );
 	float maxh = (float) ( img->height - 1 );
 
-	float fu = floorf( u );
+	float fu = IMG_FLOOR( u );
 	float du = u - fu;
-	float fv = floorf( v );
+	float fv = IMG_FLOOR( v );
 	float dv = v - fv;
 
 	int x1 = (int) img_clamp( fu, 0.0f, maxw );
@@ -237,7 +263,7 @@ img_rgba_t img_hsva_to_rgba( img_hsva_t hsv ) {
 		if( h == 6.0f ) {
 			h = 0.0f;	//H must be < 1
 		}
-		float i = floorf( h );
+		float i = IMG_FLOOR( h );
 		float v1 = hsv.v * ( 1.0f - hsv.s );
 		float v2 = hsv.v * ( 1.0f - hsv.s * ( h - i ) );
 		float v3 = hsv.v * ( 1.0f - hsv.s * ( 1.0f - ( h - i ) ) );
@@ -289,7 +315,7 @@ void img_sharpen( img_t* img, float radius, float blend ) {
                         float u = ( (float) x ) + ( (float) fx ) * radius;
                         float v = ( (float) y ) + ( (float) fy ) * radius;
                         img_rgba_t s = img_sample_clamp( img, u, v ); 
-						if( s.a < FLT_EPSILON ) {
+						if( s.a < 0.0001f ) {
                             s = *src;
 						}
                         acc.r += s.r * ( filter[ ( 1 + fx ) + ( 1 + fy ) * 3 ] );
