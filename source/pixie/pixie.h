@@ -191,7 +191,7 @@ typedef struct string {
 string str( char const* c_str ); // create a pixie string from a c string
 int length( string str ); // number of characters in a string
 string concat( string a, string b ); // concatenate string a and string b
-int compare( string a, string b ); // returns 0 of strings are equal, <0 if a comes before b, >0 if b comes before a
+int compare( string a, string b ); // returns 0 if strings are equal, <0 if a comes before b, >0 if b comes before a
 string trim( string str ); // remove leading and trailing whitespace
 string ltrim( string str ); // remove leading whitespace 
 string rtrim( string str );  // remove trailing whitespace
@@ -306,7 +306,7 @@ string format( string format_string, ... ); // printf style formatting
         #define ASSETS_BEGIN( bundle_filename ) \
             namespace pixie { \
                 int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-                inline int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+                static int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
                 enum assets_t {
         #define ASSETS_END() \
                 } /* enum assets_t */; \
@@ -314,7 +314,7 @@ string format( string format_string, ... ); // printf style formatting
     #else
         #define ASSETS_BEGIN( bundle_filename ) \
             int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-            inline int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
+            static int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
             enum assets_t {
         #define ASSETS_END() \
             } /* enum assets_t */;
@@ -421,7 +421,7 @@ string format( string format_string, ... ); // printf style formatting
 namespace pixie {
 #endif
 
-inline u32 hash_str( string str ) {
+static u32 hash_str( string str ) {
     u32 hash = 5381u; 
     char const* s = str.c_str;
     while( *s ) hash = ( ( hash << 5u ) + hash) ^ *s++;
@@ -441,11 +441,17 @@ inline u32 hash_str( string str ) {
 ----------------------
 */
 
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+    #define INTERNAL_DICTIONARY_U32 pixie::u32
+#else
+    #define INTERNAL_DICTIONARY_U32 u32
+#endif
+
 #define DICTIONARY_TYPE( NAME, HASH_FUNC, KEY_TYPE, KEY_COMPARE, ITEM_TYPE, CAPACITY ) \
     typedef struct NAME##_type { \
         int count; \
         struct { \
-            u32 key_hash; \
+            INTERNAL_DICTIONARY_U32 key_hash; \
             int item_index; \
             int base_count; \
         } slots[ CAPACITY + CAPACITY / 2 ]; \
@@ -455,7 +461,7 @@ inline u32 hash_str( string str ) {
         int item_capacity; \
     } NAME##_type; \
     \
-    inline void NAME##_clear( NAME##_type* dict ) { \
+    static void NAME##_clear( NAME##_type* dict ) { \
         dict->count = 0; \
         int const slot_capacity = ( CAPACITY + CAPACITY / 2 ); \
         for( int i = 0; i < slot_capacity; ++i ) { \
@@ -465,7 +471,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline int NAME##_count( NAME##_type* dict ) { \
+    static int NAME##_count( NAME##_type* dict ) { \
         ASSERTF( dict->count >= 0 && dict->count <= CAPACITY, \
             ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
             "The invalid count is: %d", #NAME, dict->count ) ); \
@@ -476,7 +482,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline void NAME##_insert( NAME##_type* dict, KEY_TYPE key, ITEM_TYPE value ) { \
+    static void NAME##_insert( NAME##_type* dict, KEY_TYPE key, ITEM_TYPE value ) { \
         ASSERTF( dict->count >= 0 && dict->count <= CAPACITY, \
             ( "Invalid dictionary count detected when querying size of dictionary of type '%s'.\n\n" \
             "The invalid count is: %d", #NAME, dict->count ) ); \
@@ -484,8 +490,8 @@ inline u32 hash_str( string str ) {
             ( "Capacity exceed when inserting an item into dictionary of type '%s'.\n\n" \
             "Max CAPACITY is: %d", #NAME, CAPACITY ) ); \
         if( dict->count >= 0 && dict->count < CAPACITY ) { \
-            u32 const hash = HASH_FUNC( key ); \
-            u32 const slot_capacity = (u32)( CAPACITY + CAPACITY / 2 ); \
+            INTERNAL_DICTIONARY_U32 const hash = HASH_FUNC( key ); \
+            INTERNAL_DICTIONARY_U32 const slot_capacity = (INTERNAL_DICTIONARY_U32)( CAPACITY + CAPACITY / 2 ); \
             int const base_slot = (int)( hash % slot_capacity ); \
             int base_count = dict->slots[ base_slot ].base_count; \
             int slot = base_slot; \
@@ -494,7 +500,7 @@ inline u32 hash_str( string str ) {
                 if( dict->slots[ slot ].item_index < 0 && dict->slots[ first_free ].item_index >= 0 ) { \
                     first_free = slot; \
                 } \
-                u32 const slot_hash = dict->slots[ slot ].key_hash; \
+                INTERNAL_DICTIONARY_U32 const slot_hash = dict->slots[ slot ].key_hash; \
                 int slot_base = (int)( slot_hash % slot_capacity ); \
                 if( slot_base == base_slot ) { \
                     --base_count; \
@@ -507,7 +513,7 @@ inline u32 hash_str( string str ) {
                 slot = (int)( ( slot + 1 ) % slot_capacity ); \
             } \
             \
-            ASSERTF( dict->slots[ slot ].item_index <= 0 && (int)( hash % slot_capacity ) == (u32) base_slot, \
+            ASSERTF( dict->slots[ slot ].item_index <= 0 && (int)( hash % slot_capacity ) == (INTERNAL_DICTIONARY_U32) base_slot, \
                 ( "Internal error" ) ); \
             dict->slots[ slot ].key_hash = hash; \
             dict->slots[ slot ].item_index = dict->count + 1; \
@@ -521,15 +527,15 @@ inline u32 hash_str( string str ) {
     } \
     \
     KEY_TYPE* NAME##_find( NAME##_type* dict, KEY_TYPE key ) { \
-        u32 const hash = HASH_FUNC( key ); \
-        u32 const slot_capacity = (u32)( CAPACITY + CAPACITY / 2 ); \
+        INTERNAL_DICTIONARY_U32 const hash = HASH_FUNC( key ); \
+        INTERNAL_DICTIONARY_U32 const slot_capacity = (INTERNAL_DICTIONARY_U32)( CAPACITY + CAPACITY / 2 ); \
         int const base_slot = (int)( hash % slot_capacity ); \
         \
         int base_count = dict->slots[ base_slot ].base_count; \
         int slot = base_slot; \
         while( base_count > 0 ) { \
             if( dict->slots[ slot ].item_index > 0 ) { \
-                u32 slot_hash = dict->slots[ slot ].key_hash; \
+                INTERNAL_DICTIONARY_U32 slot_hash = dict->slots[ slot ].key_hash; \
                 int slot_base = (int)( slot_hash % slot_capacity ); \
                 if( slot_base == base_slot ) { \
                     ASSERTF( base_count > 0, ( "Internal error" ) ); \
@@ -561,7 +567,7 @@ inline u32 hash_str( string str ) {
         TYPE items[ CAPACITY ]; \
     } NAME##_type; \
     \
-    inline int NAME##_count( NAME##_type* arr ) { \
+    static int NAME##_count( NAME##_type* arr ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when querying size of array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -572,7 +578,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline void NAME##_add( NAME##_type* arr, TYPE value ) { \
+    static void NAME##_add( NAME##_type* arr, TYPE value ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when adding an item to array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -584,7 +590,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline int NAME##_try_add( NAME##_type* arr, TYPE value ) { \
+    static int NAME##_try_add( NAME##_type* arr, TYPE value ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when trying to add an item to array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -596,7 +602,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline void NAME##_remove( NAME##_type* arr, int index ) { \
+    static void NAME##_remove( NAME##_type* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when removing an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -612,7 +618,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline int NAME##_try_remove( NAME##_type* arr, int index ) { \
+    static int NAME##_try_remove( NAME##_type* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when trying to remove an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -628,7 +634,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline TYPE NAME##_get( NAME##_type const* arr, int index ) { \
+    static TYPE NAME##_get( NAME##_type const* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -644,7 +650,7 @@ inline u32 hash_str( string str ) {
         } \
     } \
     \
-    inline TYPE const* NAME##_try_get( NAME##_type const* arr, int index ) { \
+    static TYPE const* NAME##_try_get( NAME##_type const* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -663,7 +669,7 @@ inline u32 hash_str( string str ) {
 */
 
 
-inline int internal_sort_min( int a, int b ) {
+static int internal_sort_min( int a, int b ) {
 	return ( ( a < b ) ? a : b );
 }
 
@@ -675,19 +681,19 @@ struct internal_sort_stack_t {
 
 
 #define SORT_FUNCTION( NAME, TYPE, COMPARE ) \
-	inline TYPE* internal_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
+	static TYPE* internal_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
 		return ( COMPARE( *a, *b ) < 0 \
 			? ( COMPARE( *b, *c ) < 0 ? b : COMPARE( *a, *c ) < 0 ? c : a ) \
 			: ( COMPARE( *b, *c ) > 0 ? b : COMPARE( *a, *c ) > 0 ? c : a) ); \
     } \
     \
-	inline void internal_sort_##NAME##_swap( TYPE* a, TYPE* b ) { \
+	static void internal_sort_##NAME##_swap( TYPE* a, TYPE* b ) { \
 		TYPE t = *a; \
         *a = *b; \
         *b = t; \
     } \
 	\
-	inline void internal_sort_##NAME##_swap_range( TYPE* a, TYPE* b, int n ) { \
+	static void internal_sort_##NAME##_swap_range( TYPE* a, TYPE* b, int n ) { \
 		int sn = (n); \
         TYPE* sa = (a); \
         TYPE* sb = (b); \
@@ -699,7 +705,7 @@ struct internal_sort_stack_t {
         } \
     }\
     \
-    inline void NAME( TYPE* array, int count ) { \
+    static void NAME( TYPE* array, int count ) { \
 	    struct internal_sort_stack_t stack[ 32 ]; \
 	    \
 	    int top = 0; \
@@ -2633,8 +2639,12 @@ string str( char const* c_str ) {
           "The string contents are:\n %s", (int) strlen( c_str ) + 1, PIXIE_MAX_STRING_LENGTH, c_str ) );
 
     string str = { "" } ;
-    if( c_str && strlen( c_str ) < PIXIE_MAX_STRING_LENGTH )
-        strcpy( str.c_str, c_str ); 
+    if( c_str ) {
+        size_t len = strlen( c_str );
+        if( len < PIXIE_MAX_STRING_LENGTH ) {
+            memcpy( str.c_str, c_str, len + 1 ); 
+        }
+    }
     return str;
 }
 
