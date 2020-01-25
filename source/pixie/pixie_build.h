@@ -856,6 +856,27 @@ void free_text_file( char* text ) {
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_MAX_OVERSAMPLE 1
 #define STBTT_RASTERIZER_VERSION 1
+#if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
+    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+        #define STBTT_ifloor( x ) ( (int) pixie::floor( x ) )
+        #define STBTT_iceil( x ) ( (int) pixie::ceil( x ) )
+        #define STBTT_sqrt( x ) pixie::sqrt( x )
+        #define STBTT_pow( x, y ) pixie::pow( x, y )
+        #define STBTT_fmod( x, y ) pixie::fmod( x, y )
+        #define STBTT_cos( x ) pixie::cos( (float) (x) )
+        #define STBTT_acos( x ) pixie::acos( x )
+        #define STBTT_fabs( x ) pixie::fabs( x )
+    #else
+        #define STBTT_ifloor( x ) ( (int) internal_pixie_floor( x ) )
+        #define STBTT_iceil( x ) ( (int) internal_pixie_ceil( x ) )
+        #define STBTT_sqrt( x ) internal_pixie_sqrt( x )
+        #define STBTT_pow( x, y ) internal_pixie_pow( x, y )
+        #define STBTT_fmod( x, y ) internal_pixie_fmod( x, y )
+        #define STBTT_cos( x ) internal_pixie_cos( (float) (x) )
+        #define STBTT_acos( x ) internal_pixie_acos( x )
+        #define STBTT_fabs( x ) internal_pixie_fabs( x )
+    #endif
+#endif
 #include "stb_truetype.h"
 #undef STB_TRUETYPE_IMPLEMENTATION
 #pragma warning( pop )

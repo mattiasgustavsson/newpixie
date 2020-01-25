@@ -57,7 +57,6 @@ void crtemu_coordinates_bitmap_to_window( crtemu_t* crtemu, int width, int heigh
 #define _CRT_SECURE_NO_WARNINGS
 #include <stddef.h>
 #include <string.h>
-#include <math.h>
 
 #ifndef CRTEMU_MALLOC
     #include <stdlib.h>

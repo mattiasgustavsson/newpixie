@@ -65,6 +65,11 @@ void set_interact( int spr, char const* str, int interact, int offset ) {
 	sprite_pos( interact, sprite_x( spr ) + 160 + offset, sprite_y( interact ) );
 }
 
+// Color indexes of the loaded palette
+int color_green = 17;
+int color_yellow = 30;
+int color_purple = 51;
+int color_brown = 35;
 
 void setup_speech( int speech, char const* character )
 	{
@@ -75,13 +80,13 @@ void setup_speech( int speech, char const* character )
         int color;
         int wrap;
     } speech_settings[] = {
-		{ "player_sitting", 50, 85, 17 /* green */, 220 },
-		{ "player", 20, 60, 17 /* green */, 220 }, 
-		{ "player_hut", 100, 60, 17 /* green */, 220 }, 
-		{ "player_radio", 50, 20, 17 /* green */, 220 }, 
-		{ "tv_guy", 20, 20, 30 /* yellow */, 220 }, 
-		{ "book_guy", 20, 20, 51 /* purple */, 220 }, 
-		{ "penguin", 185, 75, 35 /* brown */, 120 }, 
+		{ "player_sitting", 50, 85, color_green, 220 },
+		{ "player", 20, 60, color_green, 220 }, 
+		{ "player_hut", 100, 60, color_green, 220 }, 
+		{ "player_radio", 50, 20, color_green, 220 }, 
+		{ "tv_guy", 20, 20, color_yellow, 220 }, 
+		{ "book_guy", 20, 20, color_purple, 220 }, 
+		{ "penguin", 185, 75, color_brown, 120 }, 
 	};
 
     for( int i = 0; i < ARRAY_COUNT( speech_settings ) ; ++i ) {

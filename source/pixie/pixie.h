@@ -216,6 +216,14 @@ int starts_with( string str, string start );
 string format( string format_string, ... ); // printf style formatting
 
 
+// Hash functions
+
+u32 hash_str( string str );
+
+// TODO: hash funcs for more types
+
+
+
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
 #endif
@@ -409,30 +417,6 @@ string format( string format_string, ... ); // printf style formatting
         #define tanh internal_pixie_tanh
     #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
-
-
-/*
----------------------
-    HASH FUNCTIONS
----------------------
-*/
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
-
-static u32 hash_str( string str ) {
-    u32 hash = 5381u; 
-    char const* s = str.c_str;
-    while( *s ) hash = ( ( hash << 5u ) + hash) ^ *s++;
-    return hash;
-}
-
-// TODO: hash funcs for more types
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
 
       
 /*
@@ -668,19 +652,16 @@ static u32 hash_str( string str ) {
 --------------
 */
 
-
-static int internal_sort_min( int a, int b ) {
-	return ( ( a < b ) ? a : b );
-}
-
-
-struct internal_sort_stack_t { 
-    int start; 
-    int count; 
-};
-
-
 #define SORT_FUNCTION( NAME, TYPE, COMPARE ) \
+    struct internal_sort_stack_##NAME##_t { \
+        int start; \
+        int count; \
+    }; \
+    \
+    static int internal_sort_##NAME##_min( int a, int b ) { \
+	    return ( ( a < b ) ? a : b ); \
+    } \
+    \
 	static TYPE* internal_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
 		return ( COMPARE( *a, *b ) < 0 \
 			? ( COMPARE( *b, *c ) < 0 ? b : COMPARE( *a, *c ) < 0 ? c : a ) \
@@ -706,7 +687,7 @@ struct internal_sort_stack_t {
     }\
     \
     static void NAME( TYPE* array, int count ) { \
-	    struct internal_sort_stack_t stack[ 32 ]; \
+	    struct internal_sort_stack_##NAME##_t stack[ 32 ]; \
 	    \
 	    int top = 0; \
 	    stack[ top ].start = 0; \
@@ -762,9 +743,9 @@ struct internal_sort_stack_t {
                 --pc; \
             } \
 		    TYPE* pn = a + count; \
-		    int s = internal_sort_min( (int)( pa - a ), (int)( pb - pa ) ); \
+		    int s = internal_sort_##NAME##_min( (int)( pa - a ), (int)( pb - pa ) ); \
             internal_sort_##NAME##_swap_range( a, pb - s, s ); \
-		    s = internal_sort_min( (int)( pd - pc ), (int)( pn - pd - 1 ) ); \
+		    s = internal_sort_##NAME##_min( (int)( pd - pc ), (int)( pn - pd - 1 ) ); \
             internal_sort_##NAME##_swap_range( pb, pn - s, s ); \
 		    if( ( s = (int)( pb - pa ) ) > 1 ) { \
 			    if( ++top >= sizeof( stack) / sizeof( *stack ) ) { \
@@ -810,37 +791,31 @@ struct internal_sort_stack_t {
     MATH WRAPPERS
 ---------------------
 */
-
 #if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-        #pragma warning( push )
-        #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
-        #include <math.h>
-        #pragma warning( pop )
-        namespace pixie {
-            float acos( float x ) { return acosf( x ); }
-            float asin( float x ) { return asinf( x ); }
-            float atan( float x ) { return atanf( x ); }
-            float atan2( float x, float y ) { return atan2f( x, y ); }
-            float ceil( float x ) { return ceilf( x ); }
-            float cos( float x ) { return cosf( x ); }
-            float cosh( float x ) { return coshf( x ); }
-            float exp( float x ) { return expf( x ); }
-            float fabs( float x ) { return fabsf( x ); }
-            float floor( float x ) { return floorf( x ); }
-            float fmod( float x, float y ) { return fmodf( x, y ); }
-            float log( float x ) { return logf( x ); }
-            float log10( float x ) { return log10f( x ); }
-            float modf( float x, float* y ) { return modff( x, y ); }
-            float pow( float x, float y ) { return powf( x, y ); }
-            float sqrt( float x ) { return sqrtf( x ); }
-            float sin( float x ) { return sinf( x ); }
-            float sinh( float x ) { return sinhf( x ); }
-            float tan( float x ) { return tanf( x ); }
-            float tanh( float x ) { return tanhf( x ); }
-        } /* namespace pixie */
+        // Forward declare internal math funtions for use in the implementation of Pixie itself
+        float internal_pixie_acos( float x );
+        float internal_pixie_asin( float x );
+        float internal_pixie_atan( float x );
+        float internal_pixie_atan2( float x, float y );
+        float internal_pixie_ceil( float x );
+        float internal_pixie_cos( float x );
+        float internal_pixie_cosh( float x );
+        float internal_pixie_exp( float x );
+        float internal_pixie_fabs( float x );
+        float internal_pixie_floor( float x );
+        float internal_pixie_fmod( float x, float y );
+        float internal_pixie_log( float x );
+        float internal_pixie_log10( float x );
+        float internal_pixie_modf( float x, float* y );
+        float internal_pixie_pow( float x, float y );
+        float internal_pixie_sqrt( float x );
+        float internal_pixie_sin( float x );
+        float internal_pixie_sinh( float x );
+        float internal_pixie_tan( float x );
+        float internal_pixie_tanh( float x );
     #else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
-        // Undefine the math macros so they won't conflict with symbols in <math.h>
+        // Undefine the math macros so they won't conflict with symbols in <math.h>, if it is included by any file
         #undef acos 
         #undef asin 
         #undef atan 
@@ -861,55 +836,6 @@ struct internal_sort_stack_t {
         #undef sinh 
         #undef tan  
         #undef tanh 
-
-        #pragma warning( push )
-        #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
-        #include <math.h>
-        #pragma warning( pop )
-
-        #ifdef __TINYC__
-            float internal_pixie_acos( float x ) { return (float)acos( (double) x ); }
-            float internal_pixie_asin( float x ) { return (float)asin( (double) x ); }
-            float internal_pixie_atan( float x ) { return (float)atan( (double) x ); }
-            float internal_pixie_atan2( float x, float y ) { return (float)atan2( (double) x, (double)y ); }
-            float internal_pixie_ceil( float x ) { return (float)ceil( (double) x ); }
-            float internal_pixie_cos( float x ) { return (float)cos( (double) x ); }
-            float internal_pixie_cosh( float x ) { return (float)cosh( (double) x ); }
-            float internal_pixie_exp( float x ) { return (float)exp( (double) x ); }
-            float internal_pixie_fabs( float x ) { return (float)fabs( (double) x ); }
-            float internal_pixie_floor( float x ) { return (float)floor( (double) x ); }
-            float internal_pixie_fmod( float x, float y ) { return (float)fmod( (double) x, (double)y ); }
-            float internal_pixie_log( float x ) { return (float)log( (double) x ); }
-            float internal_pixie_log10( float x ) { return (float)log10( (double) x ); }
-            float internal_pixie_mod( float x, float* y ) { return (float)modf( (double) x, (double*)y ); }
-            float internal_pixie_pow( float x, float y ) { return (float)pow( (double) x, (double)y ); }
-            float internal_pixie_sqrt( float x ) { return (float)sqrt( (double) x ); }
-            float internal_pixie_sin( float x ) { return (float)sin( (double) x ); }
-            float internal_pixie_sinh( float x ) { return (float)sinh( (double) x ); }
-            float internal_pixie_tan( float x ) { return (float)tan( (double) x ); }
-            float internal_pixie_tanh( float x ) { return (float)tanh( (double) x ); }
-        #else
-            float internal_pixie_acos( float x ) { return acosf( x ); }
-            float internal_pixie_asin( float x ) { return asinf( x ); }
-            float internal_pixie_atan( float x ) { return atanf( x ); }
-            float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
-            float internal_pixie_ceil( float x ) { return ceilf( x ); }
-            float internal_pixie_cos( float x ) { return cosf( x ); }
-            float internal_pixie_cosh( float x ) { return coshf( x ); }
-            float internal_pixie_exp( float x ) { return expf( x ); }
-            float internal_pixie_fabs( float x ) { return fabsf( x ); }
-            float internal_pixie_floor( float x ) { return floorf( x ); }
-            float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
-            float internal_pixie_log( float x ) { return logf( x ); }
-            float internal_pixie_log10( float x ) { return log10f( x ); }
-            float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
-            float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
-            float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
-            float internal_pixie_sin( float x ) { return sinf( x ); }
-            float internal_pixie_sinh( float x ) { return sinhf( x ); }
-            float internal_pixie_tan( float x ) { return tanf( x ); }
-            float internal_pixie_tanh( float x ) { return tanhf( x ); }
-        #endif
     #endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
 #endif /* PIXIE_NO_MATH */
 
@@ -2784,6 +2710,16 @@ string format( string format_string, ... ) {
 
 */
 
+
+
+u32 hash_str( string str ) {
+    u32 hash = 5381u; 
+    char const* s = str.c_str;
+    while( *s ) hash = ( ( hash << 5u ) + hash) ^ *s++;
+    return hash;
+}
+
+
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
 #endif
@@ -2842,34 +2778,6 @@ string format( string format_string, ... ) {
     #endif /* _WIN32 */
 
 #endif /* PIXIE_NO_MAIN */
-
-
-// Undefine math wrappers in case libraries include math.h
-
-#ifndef PIXIE_NO_MATH
-    #if !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE )
-        #undef acos 
-        #undef asin 
-        #undef atan 
-        #undef atan2
-        #undef ceil 
-        #undef cos  
-        #undef cosh 
-        #undef exp  
-        #undef fabs 
-        #undef floor
-        #undef fmod 
-        #undef log  
-        #undef log10
-        #undef modf 
-        #undef pow  
-        #undef sqrt 
-        #undef sin  
-        #undef sinh 
-        #undef tan  
-        #undef tanh 
-    #endif /* !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE ) */
-#endif /* PIXIE_NO_MATH */
 
 
 /*
@@ -2972,32 +2880,11 @@ string format( string format_string, ... ) {
 #pragma warning( pop )
 
 
-// Redefine math wrappers again so they can be used by the file that included implementation
-#ifndef PIXIE_NO_MATH
-    #if !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE )
-        #define acos internal_pixie_acos
-        #define asin internal_pixie_asin
-        #define atan internal_pixie_atan
-        #define atan2 internal_pixie_atan2
-        #define ceil internal_pixie_ceil
-        #define cos internal_pixie_cos 
-        #define cosh internal_pixie_cosh
-        #define exp internal_pixie_exp 
-        #define fabs internal_pixie_fabs
-        #define floor internal_pixie_floor
-        #define fmod internal_pixie_fmod
-        #define log internal_pixie_log 
-        #define log10 internal_pixie_log10
-        #define modf internal_pixie_modf
-        #define pow internal_pixie_pow 
-        #define sqrt internal_pixie_sqrt
-        #define sin internal_pixie_sin 
-        #define sinh internal_pixie_sinh
-        #define tan internal_pixie_tan 
-        #define tanh internal_pixie_tanh
-    #endif /* !defined( __cplusplus ) || defined( PIXIE_NO_NAMESPACE ) */
-#endif /* PIXIE_NO_MATH */
-
+/*
+-------------
+    ASSERT
+-------------
+*/
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 namespace pixie {
@@ -3055,6 +2942,141 @@ char const* format_assert_message( char const* format, ... ) {
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 } /* namespace pixie */
 #endif
+
+
+
+/*
+---------------------
+    MATH WRAPPERS
+---------------------
+*/
+
+#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
+
+    #pragma warning( push )
+    #pragma warning( disable: 4577 )
+    #include <cmath>
+    #pragma warning( pop )
+
+    float internal_pixie_acos( float x ) { return (float) std::acos( (double) x ); }
+    float internal_pixie_asin( float x ) { return (float) std::asin( (double) x ); }
+    float internal_pixie_atan( float x ) { return (float) std::atan( (double) x ); }
+    float internal_pixie_atan2( float x, float y ) { return (float) std::atan2( (double) x, (double)y ); }
+    float internal_pixie_ceil( float x ) { return (float) std::ceil( (double) x ); }
+    float internal_pixie_cos( float x ) { return (float) std::cos( (double) x ); }
+    float internal_pixie_cosh( float x ) { return (float) std::cosh( (double) x ); }
+    float internal_pixie_exp( float x ) { return (float) std::exp( (double) x ); }
+    float internal_pixie_fabs( float x ) { return (float) std::fabs( (double) x ); }
+    float internal_pixie_floor( float x ) { return (float) std::floor( (double) x ); }
+    float internal_pixie_fmod( float x, float y ) { return (float) std::fmod( (double) x, (double)y ); }
+    float internal_pixie_log( float x ) { return (float) std::log( (double) x ); }
+    float internal_pixie_log10( float x ) { return (float) std::log10( (double) x ); }
+    float internal_pixie_modf( float x, float* y ) { return (float) std::modf( (double) x, (double*)y ); }
+    float internal_pixie_pow( float x, float y ) { return (float) std::pow( (double) x, (double)y ); }
+    float internal_pixie_sqrt( float x ) { return (float) std::sqrt( (double) x ); }
+    float internal_pixie_sin( float x ) { return (float) std::sin( (double) x ); }
+    float internal_pixie_sinh( float x ) { return (float) std::sinh( (double) x ); }
+    float internal_pixie_tan( float x ) { return (float) std::tan( (double) x ); }
+    float internal_pixie_tanh( float x ) { return (float) std::tanh( (double) x ); }
+
+    namespace pixie {
+        float acos( float x ) { return internal_pixie_acos( x ); }
+        float asin( float x ) { return internal_pixie_asin( x ); }
+        float atan( float x ) { return internal_pixie_atan( x ); }
+        float atan2( float x, float y ) { return internal_pixie_atan2( x, y ); }
+        float ceil( float x ) { return internal_pixie_ceil( x ); }
+        float cos( float x ) { return internal_pixie_cos( x ); }
+        float cosh( float x ) { return internal_pixie_cosh( x ); }
+        float exp( float x ) { return internal_pixie_exp( x ); }
+        float fabs( float x ) { return internal_pixie_fabs( x ); }
+        float floor( float x ) { return internal_pixie_floor( x ); }
+        float fmod( float x, float y ) { return internal_pixie_fmod( x, y ); }
+        float log( float x ) { return internal_pixie_log( x ); }
+        float log10( float x ) { return internal_pixie_log10( x ); }
+        float modf( float x, float* y ) { return internal_pixie_modf( x, y ); }
+        float pow( float x, float y ) { return internal_pixie_pow( x, y ); }
+        float sqrt( float x ) { return internal_pixie_sqrt( x ); }
+        float sin( float x ) { return internal_pixie_sin( x ); }
+        float sinh( float x ) { return internal_pixie_sinh( x ); }
+        float tan( float x ) { return internal_pixie_tan( x ); }
+        float tanh( float x ) { return internal_pixie_tanh( x ); }
+    } /* namespace pixie */
+
+#else /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+
+    #pragma warning( push )
+    #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
+    #include <math.h>
+    #pragma warning( pop )
+
+    #ifdef __TINYC__
+        float internal_pixie_acos( float x ) { return (float)acos( (double) x ); }
+        float internal_pixie_asin( float x ) { return (float)asin( (double) x ); }
+        float internal_pixie_atan( float x ) { return (float)atan( (double) x ); }
+        float internal_pixie_atan2( float x, float y ) { return (float)atan2( (double) x, (double)y ); }
+        float internal_pixie_ceil( float x ) { return (float)ceil( (double) x ); }
+        float internal_pixie_cos( float x ) { return (float)cos( (double) x ); }
+        float internal_pixie_cosh( float x ) { return (float)cosh( (double) x ); }
+        float internal_pixie_exp( float x ) { return (float)exp( (double) x ); }
+        float internal_pixie_fabs( float x ) { return (float)fabs( (double) x ); }
+        float internal_pixie_floor( float x ) { return (float)floor( (double) x ); }
+        float internal_pixie_fmod( float x, float y ) { return (float)fmod( (double) x, (double)y ); }
+        float internal_pixie_log( float x ) { return (float)log( (double) x ); }
+        float internal_pixie_log10( float x ) { return (float)log10( (double) x ); }
+        float internal_pixie_modf( float x, float* y ) { return (float)modf( (double) x, (double*)y ); }
+        float internal_pixie_pow( float x, float y ) { return (float)pow( (double) x, (double)y ); }
+        float internal_pixie_sqrt( float x ) { return (float)sqrt( (double) x ); }
+        float internal_pixie_sin( float x ) { return (float)sin( (double) x ); }
+        float internal_pixie_sinh( float x ) { return (float)sinh( (double) x ); }
+        float internal_pixie_tan( float x ) { return (float)tan( (double) x ); }
+        float internal_pixie_tanh( float x ) { return (float)tanh( (double) x ); }
+    #else /* __TINYC__ */
+        float internal_pixie_acos( float x ) { return acosf( x ); }
+        float internal_pixie_asin( float x ) { return asinf( x ); }
+        float internal_pixie_atan( float x ) { return atanf( x ); }
+        float internal_pixie_atan2( float x, float y ) { return atan2f( x, y ); }
+        float internal_pixie_ceil( float x ) { return ceilf( x ); }
+        float internal_pixie_cos( float x ) { return cosf( x ); }
+        float internal_pixie_cosh( float x ) { return coshf( x ); }
+        float internal_pixie_exp( float x ) { return expf( x ); }
+        float internal_pixie_fabs( float x ) { return fabsf( x ); }
+        float internal_pixie_floor( float x ) { return floorf( x ); }
+        float internal_pixie_fmod( float x, float y ) { return fmodf( x, y ); }
+        float internal_pixie_log( float x ) { return logf( x ); }
+        float internal_pixie_log10( float x ) { return log10f( x ); }
+        float internal_pixie_modf( float x, float* y ) { return modff( x, y ); }
+        float internal_pixie_pow( float x, float y ) { return powf( x, y ); }
+        float internal_pixie_sqrt( float x ) { return sqrtf( x ); }
+        float internal_pixie_sin( float x ) { return sinf( x ); }
+        float internal_pixie_sinh( float x ) { return sinhf( x ); }
+        float internal_pixie_tan( float x ) { return tanf( x ); }
+        float internal_pixie_tanh( float x ) { return tanhf( x ); }
+    #endif
+
+    // Redefine math wrappers again so they can be used by the file that included implementation
+    #define acos internal_pixie_acos
+    #define asin internal_pixie_asin
+    #define atan internal_pixie_atan
+    #define atan2 internal_pixie_atan2
+    #define ceil internal_pixie_ceil
+    #define cos internal_pixie_cos 
+    #define cosh internal_pixie_cosh
+    #define exp internal_pixie_exp 
+    #define fabs internal_pixie_fabs
+    #define floor internal_pixie_floor
+    #define fmod internal_pixie_fmod
+    #define log internal_pixie_log 
+    #define log10 internal_pixie_log10
+    #define modf internal_pixie_modf
+    #define pow internal_pixie_pow 
+    #define sqrt internal_pixie_sqrt
+    #define sin internal_pixie_sin 
+    #define sinh internal_pixie_sinh
+    #define tan internal_pixie_tan 
+    #define tanh internal_pixie_tanh
+#endif /* defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE ) */
+
+
 
 #endif /* PIXIE_IMPLEMENTATION */
 
