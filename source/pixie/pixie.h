@@ -148,7 +148,8 @@ int asset_size( int asset_id );
 void const* asset_data( int asset_id );
 
 void text( int x, int y, char const* str, int color, int font_asset 
-	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */);
+	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, 
+    bool underline */ );
 
 typedef enum key_t { 
 	KEY_INVALID, KEY_LBUTTON, KEY_RBUTTON, KEY_CANCEL, KEY_MBUTTON,  KEY_XBUTTON1, KEY_XBUTTON2, KEY_BACK, KEY_TAB, 
@@ -199,7 +200,7 @@ string left( string source, int number ); // return the leftmost characters of a
 string right( string source, int number );  // return the rightmost characters of a string
 string mid( string source, int offset, int number );  // return a number of characters from the middle of a string
 int instr( string haystack, string needle, int start );  // search for occurrences of one string within another string
-int any( string haystack, string needles, int start );  // search for the next occurrence of any character of one string within another string
+int any( string haystack, string needles, int start );  // search haystack for next occurrence of any char from needles
 string upper( string str );  // convert a string of text to upper case
 string lower( string str ); // convert a string of text to lower case
 string string_from_int( int x ); // convert a number into a string
@@ -218,7 +219,7 @@ string format( string format_string, ... ); // printf style formatting
 
 // Hash functions
 
-u32 hash_str( string str );
+u32 hash_string( string str );
 
 // TODO: hash funcs for more types
 
@@ -228,12 +229,15 @@ u32 hash_str( string str );
 } /* namespace pixie */
 #endif
 
+
 #define LOOP for( ; ; )
+
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
     namespace pixie {
-        int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function );
-        char const* format_assert_message( char const* format, ... );
+        int internal_pixie_display_assert_message( char const* expression, char const* message, char const* file, 
+            int line, char const* function );
+        char const* internal_pixie_format_assert_message( char const* format, ... );
     } /* namespace pixie */
 
 	#if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
@@ -244,27 +248,34 @@ u32 hash_str( string str );
 		#ifdef __TINYC__ 
 			#define ASSERT( expression, message ) \
 				do { \
-					if( !( expression ) ) \
-						if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-							__asm__ volatile("int $0x03"); \
+					if( !( expression ) ) { \
+						if( pixie::internal_pixie_display_assert_message( #expression, message, __FILE__, __LINE__, \
+                            __FUNCTION__ ) ) { \
+							    __asm__ volatile("int $0x03"); \
+                        } \
+                    } \
 				} while( 0 )
 		#else
 			#define ASSERT( expression, message ) \
 				__pragma( warning( push ) ) \
 				__pragma( warning( disable: 4127 ) ) \
 				do { \
-					if( !( expression ) ) \
-						if( pixie::display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-							__debugbreak(); \
+					if( !( expression ) ) { \
+						if( pixie::internal_pixie_display_assert_message( #expression, message, __FILE__, __LINE__, \
+                            __FUNCTION__ ) ) { \
+							    __debugbreak(); \
+                        } \
+                    } \
 				} while( 0 ) \
 				__pragma( warning( pop ) )
 		#endif
 	#endif
 
-    #define ASSERTF( expression, message ) ASSERT( expression, pixie::format_assert_message message )
+    #define ASSERTF( expression, message ) ASSERT( expression, pixie::internal_pixie_format_assert_message message )
 #else
-    int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function );
-    char const* format_assert_message( char const* format, ... );
+    int internal_pixie_display_assert_message( char const* expression, char const* message, char const* file, int line, 
+        char const* function );
+    char const* internal_pixie_format_assert_message( char const* format, ... );
 
 	#if defined NDEBUG && !defined( PIXIE_ASSERT_IN_RELEASE_BUILD )
 		#define ASSERT( expression, message )
@@ -274,24 +285,30 @@ u32 hash_str( string str );
 		#ifdef __TINYC__ 
 			#define ASSERT( expression, message ) \
 				do { \
-					if( !( expression ) ) \
-						if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-							__asm__ volatile("int $0x03"); \
+					if( !( expression ) ) { \
+						if( internal_pixie_display_assert_message( #expression, message, __FILE__, __LINE__, \
+                            __FUNCTION__ ) ) { \
+							    __asm__ volatile("int $0x03"); \
+                        } \
+                    } \
 				} while( 0 )
 		#else
 			#define ASSERT( expression, message ) \
 				__pragma( warning( push ) ) \
 				__pragma( warning( disable: 4127 ) ) \
 				do { \
-					if( !( expression ) ) \
-						if( display_assert_message( #expression, message, __FILE__, __LINE__, __FUNCTION__ ) ) \
-							__debugbreak(); \
+					if( !( expression ) ) { \
+						if( internal_pixie_display_assert_message( #expression, message, __FILE__, __LINE__, \
+                            __FUNCTION__ ) ) { \
+							    __debugbreak(); \
+                        } \
+                    } \
 				} while( 0 ) \
 				__pragma( warning( pop ) )
 		#endif		
 	#endif
 
-    #define ASSERTF( expression, message ) ASSERT( expression, format_assert_message message )
+    #define ASSERTF( expression, message ) ASSERT( expression, internal_pixie_format_assert_message message )
 #endif
 
 
@@ -313,19 +330,25 @@ u32 hash_str( string str );
     #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
         #define ASSETS_BEGIN( bundle_filename ) \
             namespace pixie { \
-                int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-                static int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
-                enum assets_t {
+                int internal_pixie_load_bundle( char const* filename, char const* time, char const* definitions, \
+                    int count ); \
+                static int load_assets( void ) { return internal_pixie_load_bundle( bundle_filename, (void*) 0, \
+                    (void*) 0, -1 ); } \
+                enum internal_pixie_assets_t {
+
         #define ASSETS_END() \
-                } /* enum assets_t */; \
+                } /* enum internal_pixie_assets_t */; \
             } /* namespace pixie */
     #else
         #define ASSETS_BEGIN( bundle_filename ) \
-            int load_bundle( char const* filename, char const* time, char const* definitions, int count ); \
-            static int load_assets( void ) { return load_bundle( bundle_filename, (void*) 0, (void*) 0, -1 ); } \
-            enum assets_t {
+            int internal_pixie_load_bundle( char const* filename, char const* time, char const* definitions, \
+                int count ); \
+            static int load_assets( void ) { return internal_pixie_load_bundle( bundle_filename, (void*) 0, \
+                (void*) 0, -1 ); } \
+            enum internal_pixie_assets_t {
+
         #define ASSETS_END() \
-            } /* enum assets_t */;
+            } /* enum internal_pixie_assets_t */;
     #endif
 #else
     // If data builds are enabled, include the build function declarations from external file. Definitions are included
@@ -497,8 +520,8 @@ u32 hash_str( string str );
                 slot = (int)( ( slot + 1 ) % slot_capacity ); \
             } \
             \
-            ASSERTF( dict->slots[ slot ].item_index <= 0 && (int)( hash % slot_capacity ) == (INTERNAL_DICTIONARY_U32) base_slot, \
-                ( "Internal error" ) ); \
+            ASSERTF( dict->slots[ slot ].item_index <= 0 && \
+                (int)( hash % slot_capacity ) == (INTERNAL_DICTIONARY_U32) base_slot, ( "Internal error" ) ); \
             dict->slots[ slot ].key_hash = hash; \
             dict->slots[ slot ].item_index = dict->count + 1; \
             ++dict->slots[ base_slot ].base_count; \
@@ -653,33 +676,33 @@ u32 hash_str( string str );
 */
 
 #define SORT_FUNCTION( NAME, TYPE, COMPARE ) \
-    struct internal_sort_stack_##NAME##_t { \
+    struct internal_pixie_sort_stack_##NAME##_t { \
         int start; \
         int count; \
     }; \
     \
-    static int internal_sort_##NAME##_min( int a, int b ) { \
+    static int internal_pixie_sort_##NAME##_min( int a, int b ) { \
 	    return ( ( a < b ) ? a : b ); \
     } \
     \
-	static TYPE* internal_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
+	static TYPE* internal_pixie_sort_##NAME##_med3( TYPE* a, TYPE* b, TYPE* c ) { \
 		return ( COMPARE( *a, *b ) < 0 \
 			? ( COMPARE( *b, *c ) < 0 ? b : COMPARE( *a, *c ) < 0 ? c : a ) \
 			: ( COMPARE( *b, *c ) > 0 ? b : COMPARE( *a, *c ) > 0 ? c : a) ); \
     } \
     \
-	static void internal_sort_##NAME##_swap( TYPE* a, TYPE* b ) { \
+	static void internal_pixie_sort_##NAME##_swap( TYPE* a, TYPE* b ) { \
 		TYPE t = *a; \
         *a = *b; \
         *b = t; \
     } \
 	\
-	static void internal_sort_##NAME##_swap_range( TYPE* a, TYPE* b, int n ) { \
+	static void internal_pixie_sort_##NAME##_swap_range( TYPE* a, TYPE* b, int n ) { \
 		int sn = (n); \
         TYPE* sa = (a); \
         TYPE* sb = (b); \
         while( sn > 0 ) { \
-            internal_sort_##NAME##_swap( sa, sb ); \
+            internal_pixie_sort_##NAME##_swap( sa, sb ); \
             ++sa; \
             ++sb; \
             --sn; \
@@ -687,7 +710,7 @@ u32 hash_str( string str );
     }\
     \
     static void NAME( TYPE* array, int count ) { \
-	    struct internal_sort_stack_##NAME##_t stack[ 32 ]; \
+	    struct internal_pixie_sort_stack_##NAME##_t stack[ 32 ]; \
 	    \
 	    int top = 0; \
 	    stack[ top ].start = 0; \
@@ -700,7 +723,7 @@ u32 hash_str( string str );
 		    if( count < 24 ) { /* Insertion sort on smallest arrays */ \
 			    for( TYPE* pm = a + 1; pm < a + count; ++pm ) {\
 				    for( TYPE* pl = pm; pl > a && COMPARE( *( pl - 1 ), *pl ) > 0; --pl ) { \
-					    internal_sort_##NAME##_swap( pl, pl - 1 ); \
+					    internal_pixie_sort_##NAME##_swap( pl, pl - 1 ); \
                     } \
                 } \
 			    continue; \
@@ -710,13 +733,13 @@ u32 hash_str( string str );
 			    TYPE* pl = a; \
 			    TYPE* pn = a + count - 1; \
 			    int s = count / 8; \
-			    pl = internal_sort_##NAME##_med3( pl, pl + s, pl + 2 * s ); \
-			    pm = internal_sort_##NAME##_med3( pm - s, pm, pm + s ); \
-			    pn = internal_sort_##NAME##_med3( pn - 2 * s, pn - s, pn ); \
-			    pm = internal_sort_##NAME##_med3( pl, pm, pn ); /* Mid-size, med of 3 */ \
+			    pl = internal_pixie_sort_##NAME##_med3( pl, pl + s, pl + 2 * s ); \
+			    pm = internal_pixie_sort_##NAME##_med3( pm - s, pm, pm + s ); \
+			    pn = internal_pixie_sort_##NAME##_med3( pn - 2 * s, pn - s, pn ); \
+			    pm = internal_pixie_sort_##NAME##_med3( pl, pm, pn ); /* Mid-size, med of 3 */ \
 			} \
 		    TYPE* pv = a;  \
-            internal_sort_##NAME##_swap( pv, pm ); /* pv points to partition value */ \
+            internal_pixie_sort_##NAME##_swap( pv, pm ); /* pv points to partition value */ \
 		    TYPE* pa = a; \
 		    TYPE* pb = a; \
 		    TYPE* pc = a + count - 1; \
@@ -725,28 +748,28 @@ u32 hash_str( string str );
 			    int r; \
 			    while( pb <= pc && ( r = COMPARE( *pb, *pv ) ) <= 0 ) { \
 				    if( r == 0 ) { \
-                        internal_sort_##NAME##_swap( pa, pb ); \
+                        internal_pixie_sort_##NAME##_swap( pa, pb ); \
                         ++pa; \
                     } \
 				    ++pb; \
 				} \
 			    while( pc >= pb && ( r = COMPARE( *pc, *pv ) ) >= 0 ) { \
 				    if( r == 0 ) { \
-                        internal_sort_##NAME##_swap( pc, pd ); \
+                        internal_pixie_sort_##NAME##_swap( pc, pd ); \
                         --pd; \
                     } \
 				    --pc; \
 				} \
 			    if( pb > pc ) break; \
-			    internal_sort_##NAME##_swap( pb, pc ); \
+			    internal_pixie_sort_##NAME##_swap( pb, pc ); \
 			    ++pb; \
                 --pc; \
             } \
 		    TYPE* pn = a + count; \
-		    int s = internal_sort_##NAME##_min( (int)( pa - a ), (int)( pb - pa ) ); \
-            internal_sort_##NAME##_swap_range( a, pb - s, s ); \
-		    s = internal_sort_##NAME##_min( (int)( pd - pc ), (int)( pn - pd - 1 ) ); \
-            internal_sort_##NAME##_swap_range( pb, pn - s, s ); \
+		    int s = internal_pixie_sort_##NAME##_min( (int)( pa - a ), (int)( pb - pa ) ); \
+            internal_pixie_sort_##NAME##_swap_range( a, pb - s, s ); \
+		    s = internal_pixie_sort_##NAME##_min( (int)( pd - pc ), (int)( pn - pd - 1 ) ); \
+            internal_pixie_sort_##NAME##_swap_range( pb, pn - s, s ); \
 		    if( ( s = (int)( pb - pa ) ) > 1 ) { \
 			    if( ++top >= sizeof( stack) / sizeof( *stack ) ) { \
                     --top; \
@@ -907,12 +930,13 @@ namespace pixie {
 
 // Forward declares
 
-typedef struct pixie_t pixie_t;
-static void pixie_force_exit( pixie_t* pixie );
-static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int count );
-static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* fullscreen, int* crt_mode );
-static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
-static void const* pixie_find_asset( pixie_t* pixie, int id, int* size );
+typedef struct internal_pixie_t internal_pixie_t;
+static void internal_pixie_force_exit( internal_pixie_t* pixie );
+static void internal_pixie_update_input( internal_pixie_t* pixie, app_input_event_t* events, int count );
+static u32* internal_pixie_render_screen( internal_pixie_t* pixie, int* width, int* height, int* fullscreen, 
+    int* crt_mode );
+static void internal_pixie_render_samples( internal_pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
+static void const* internal_pixie_find_asset( internal_pixie_t* pixie, int id, int* size );
 
 
 /*
@@ -923,38 +947,40 @@ static void const* pixie_find_asset( pixie_t* pixie, int id, int* size );
 
 // Audio playback is started by the app thread, and works with a streaming sound buffer. Every time the stream have 
 // played enough to need more samples, it calls this callback function, which just pass the call on to the
-// `pixie_render_samples` which renders all currently playing sounds and mix all samples together for the sound buffer.
+// `internal_pixie_render_samples` which renders all currently playing sounds and mix all samples together for the 
+// sound buffer.
 
-void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
-    pixie_t* pixie = (pixie_t*) user_data;
-    pixie_render_samples( pixie, sample_pairs, sample_pairs_count ); 
+void internal_pixie_app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
+    internal_pixie_t* pixie = (internal_pixie_t*) user_data;
+    internal_pixie_render_samples( pixie, sample_pairs, sample_pairs_count ); 
 }
 
 
 // Holds the data needed for communicating between user thread and app thread. Most of this will be in pixie, but there
 // are also a few things which only needs to be accessed from within the `run` function and the app thread.
 
-typedef struct app_context_t {
-    pixie_t* pixie; // Main engine state
+typedef struct internal_pixie_app_context_t {
+    internal_pixie_t* pixie; // Main engine state
     int sound_buffer_size; // The `run` function defines how big a sound buffer to use, and that value is passed here
     thread_atomic_int_t exit_flag; // Set to 1 by `run` function on user thread to indicate app thread should terminate
     thread_signal_t init_complete; // Raised by app thread before entering main loop, to indicate `run` may continue
-} app_context_t;
+} internal_pixie_app_context_t;
 
 
-// Main body for the app thread (invoked by calling `app_run` in the `app_thread` entry point, invoked from `run`).
-// The app thread runs independently from the user thread, and handles the main window, rendering, audio and input.
-// After all initialization, and just before entering the main loop, it will raise the `init_complete` signal, which 
-// lets the user thread (in the `run` function) know that it is safe to call the users entry point.
-// Every iteration through the main loop, the signal `vbl.signal` is raised (as part of pixie_render_screen), and the 
-// `vbl.count` value is incremented. These are used by the `wait_vbl` function to pause the user thread until the start 
-// of the next frame. If the main window is closed (by clicking on the close button), the app thread sets the 
+// Main body for the app thread (invoked by calling `app_run` in the `internal_pixie_app_thread` entry point, invoked 
+// from `run`). The app thread runs independently from the user thread, and handles the main window, rendering, audio 
+// and input. After all initialization, and just before entering the main loop, it will raise the `init_complete` 
+// signal, which lets the user thread (in the `run` function) know that it is safe to call the users entry point.
+// Every iteration through the main loop, the signal `vbl.signal` is raised (as part of internal_pixie_render_screen), 
+// and the `vbl.count` value is incremented. These are used by the `wait_vbl` function to pause the user thread until 
+// the start of the next frame. If the main window is closed (by clicking on the close button), the app thread sets the 
 // `force_exit` value to `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The 
-// `force_exit` value is checked in the `pixie_instance` function, which is called at the start of every API call.
+// `force_exit` value is checked in the `internal_pixie_instance` function, which is called at the start of every API 
+// call.
 
-static int app_proc( app_t* app, void* user_data ) {
-    app_context_t* context = (app_context_t*) user_data;
-    pixie_t* pixie = context->pixie;
+static int internal_pixie_app_proc( app_t* app, void* user_data ) {
+    internal_pixie_app_context_t* context = (internal_pixie_app_context_t*) user_data;
+    internal_pixie_t* pixie = context->pixie;
 
     int fullscreen = 1;
     int crt_mode = 1;
@@ -972,7 +998,7 @@ static int app_proc( app_t* app, void* user_data ) {
     free( frame );
 
     // Start sound playback
-    app_sound( app, context->sound_buffer_size * 2, app_sound_callback, pixie );
+    app_sound( app, context->sound_buffer_size * 2, internal_pixie_app_sound_callback, pixie );
 
     // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
     // even if the user have disabled vsync in their graphics card settings.
@@ -989,12 +1015,12 @@ static int app_proc( app_t* app, void* user_data ) {
         app_state_t app_state = app_yield( app );
         
         app_input_t input = app_input( app );
-        pixie_update_input( pixie, input.events, input.count );
+        internal_pixie_update_input( pixie, input.events, input.count );
 
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
             // Signal that we need to force the user thread to exit
-            pixie_force_exit( pixie );
+            internal_pixie_force_exit( pixie );
             break; 
         }
 
@@ -1003,7 +1029,8 @@ static int app_proc( app_t* app, void* user_data ) {
         int pixie_crt_mode = crt_mode;
         int screen_width = 0;
         int screen_height = 0;
-        APP_U32* xbgr = pixie_render_screen( pixie, &screen_width, &screen_height, &pixie_fullscreen, &pixie_crt_mode );
+        APP_U32* xbgr = internal_pixie_render_screen( pixie, &screen_width, &screen_height, &pixie_fullscreen, 
+            &pixie_crt_mode );
     
         if( pixie_fullscreen != fullscreen ) {
             fullscreen = pixie_fullscreen;
@@ -1040,10 +1067,11 @@ static int app_proc( app_t* app, void* user_data ) {
 }
 
 
-// Entry point for the app thread, which is started from the `run` function. Just runs the app with the above `app_proc` 
+// Entry point for the app thread, which is started from the `run` function. 
+// Just runs the app with the above `internal_pixie_app_proc` 
 
-static int app_thread( void* user_data ) {
-    return app_run( app_proc, user_data, NULL, NULL, NULL );
+static int internal_pixie_app_thread( void* user_data ) {
+    return app_run( internal_pixie_app_proc, user_data, NULL, NULL, NULL );
 }
 
 
@@ -1058,11 +1086,11 @@ static int app_thread( void* user_data ) {
 // with various mutexes being used to limit concurrent access where necessary. The instance is created within the `run` 
 // function, and a pointer to it is stored in thread local storage for the user thread, so that every API method can 
 // access it to perform its function. The app thread gets a pointer to it through the user_data parameter to the 
-// app_proc.
+// internal_pixie_app_proc.
 
-typedef enum sprite_type_t { TYPE_NONE, TYPE_SPRITE, TYPE_LABEL, } sprite_type_t;
+typedef enum internal_pixie_sprite_type_t { TYPE_NONE, TYPE_SPRITE, TYPE_LABEL, } internal_pixie_sprite_type_t;
 
-typedef struct pixie_t {
+typedef struct internal_pixie_t {
     // Controls the exit of the program, both via the `end` call and the window being closed
     struct {
         jmp_buf exit_jump; // Jump target set in `run` function, to jump back to when `end` is called
@@ -1133,7 +1161,7 @@ typedef struct pixie_t {
             int origin_y;
             int visible;
 
-            sprite_type_t type;
+            internal_pixie_sprite_type_t type;
             
             union {
                 struct {
@@ -1172,24 +1200,24 @@ typedef struct pixie_t {
         tsf* sound_font;
         struct mid_t current_song;
     } audio;
-} pixie_t;
+} internal_pixie_t;
 
 
-// A global atomic pointer to the TLS instance for storing per-thread `pixie_t` pointers. Created in the `run` function
-// unless it has already been created (through a compare-and-swap). The `run` method then sets the TLS value on the 
-// instance, for the current thread.
+// A global atomic pointer to the TLS instance for storing per-thread `internal_pixie_t` pointers. Created in the `run`
+// function unless it has already been created (through a compare-and-swap). The `run` method then sets the TLS value 
+// on the instance, for the current thread.
 
-static thread_atomic_ptr_t g_tls_pixie = { NULL }; 
+static thread_atomic_ptr_t g_internal_pixie_tls = { NULL }; 
 
 
-// Retrieves the pointer to the `pixie_t` state for the current thread, as stored in the `g_tls_pixie` TLS storage
-// As this has to be called in every API function, it was also a convenient place to check if the app thread is 
-// requesting a shutdown of the program, and in that case do a forced exit (using `longjmp`) no matter how deep down a
-// call stack `pixie_instance` was called from.
+// Retrieves the pointer to the `internal_pixie_t` state for the current thread, as stored in the `g_internal_pixie_tls` 
+// TLS storage. As this has to be called in every API function, it was also a convenient place to check if the app 
+// thread is requesting a shutdown of the program, and in that case do a forced exit (using `longjmp`) no matter how 
+// deep down a call stack `internal_pixie_instance` was called from.
 
-static pixie_t* pixie_instance( void ) { 
-    // Get the `pixie_t` pointer for this thread from the global TLS instance `g_tls_pixie`
-    pixie_t*  pixie = (pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_tls_pixie ) );
+static internal_pixie_t* internal_pixie_instance( void ) { 
+    // Get the `internal_pixie_t` pointer for this thread from the global TLS instance `g_internal_pixie_tls`
+    internal_pixie_t*  pixie = (internal_pixie_t*) thread_tls_get( thread_atomic_ptr_load( &g_internal_pixie_tls ) );
 
     // Check if app thread is requesting a forced exit (the user closed the window) and if so, call the exit point
     int force_exit = thread_atomic_int_load( &pixie->exit.force_exit );
@@ -1201,9 +1229,9 @@ static pixie_t* pixie_instance( void ) {
 
 // Create the instance for holding the main engine state. Called from `run` before app thread is started.
 
-static pixie_t* pixie_create( int sound_buffer_size ) {
+static internal_pixie_t* internal_pixie_create( int sound_buffer_size ) {
     // Allocate the state and clear it, to avoid uninitialized varible problems
-    pixie_t* pixie = (pixie_t*) malloc( sizeof( pixie_t ) );
+    internal_pixie_t* pixie = (internal_pixie_t*) malloc( sizeof( internal_pixie_t ) );
     memset( pixie, 0, sizeof( *pixie ) );
 
     // Set up `exit` field. The `exit_jump` field is initialized from the `run` function at the desired point
@@ -1242,7 +1270,8 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
 
     // Set up audio
     pixie->audio.sound_buffer_size = sound_buffer_size ;
-    pixie->audio.mix_buffers = (i16*) malloc( sizeof( i16 ) * sound_buffer_size * 2 * 6 ); // 6 buffers (song, speech + 4 sounds)
+    int const mix_buffer_count = 6; // 6 buffers (song, speech + 4 sounds);
+    pixie->audio.mix_buffers = (i16*) malloc( sizeof( i16 ) * sound_buffer_size * 2 * mix_buffer_count ); 
     thread_mutex_init( &pixie->audio.song_mutex );
 
     int soundfont_size = 0;
@@ -1257,7 +1286,7 @@ static pixie_t* pixie_create( int sound_buffer_size ) {
 
 // Destroy the specified pixie instance. Called by `run` function, after app thread has finished.
 
-static void pixie_destroy( pixie_t* pixie ) {
+static void internal_pixie_destroy( internal_pixie_t* pixie ) {
     // Cleanup `vbl` field
     thread_signal_term( &pixie->vbl.signal );
 
@@ -1291,9 +1320,9 @@ static void pixie_destroy( pixie_t* pixie ) {
 
 
 // When the window is closed, this is called (from app thread) to signal that the program should exit. The `force_exit`
-// flag is checked in the `pixie_instance` function, which is called from every public API function.
+// flag is checked in the `internal_pixie_instance` function, which is called from every public API function.
 
-static void pixie_force_exit( pixie_t* pixie ) {
+static void internal_pixie_force_exit( internal_pixie_t* pixie ) {
     thread_atomic_int_store( &pixie->exit.force_exit, INT_MAX ); // INT_MAX is used to signal forced exit
             
     // In case user thread is in `wait_vbl` loop, exit it immediately so we don't have to wait for it to timeout
@@ -1302,49 +1331,54 @@ static void pixie_force_exit( pixie_t* pixie ) {
 }
 
 
-static key_t pixie_key_from_app_key( app_key_t key ) {
+static key_t internal_pixie_key_from_app_key( app_key_t key ) {
 	int index = (int) key;
 	if( key < 0 || key >= APP_KEYCOUNT ) return KEY_INVALID;
 	
 	int map[ APP_KEYCOUNT * 2 ] = { 
-		APP_KEY_INVALID, KEY_INVALID, APP_KEY_LBUTTON, KEY_LBUTTON, APP_KEY_RBUTTON, KEY_RBUTTON, APP_KEY_CANCEL, KEY_CANCEL, 
-		APP_KEY_MBUTTON, KEY_MBUTTON, APP_KEY_XBUTTON1, KEY_XBUTTON1, APP_KEY_XBUTTON2, KEY_XBUTTON2, APP_KEY_BACK, KEY_BACK, 
-		APP_KEY_TAB, KEY_TAB, APP_KEY_CLEAR, KEY_CLEAR, APP_KEY_RETURN, KEY_RETURN, APP_KEY_SHIFT, KEY_SHIFT, APP_KEY_CONTROL, 
-		KEY_CONTROL, APP_KEY_MENU, KEY_MENU, APP_KEY_PAUSE, KEY_PAUSE, APP_KEY_CAPITAL, KEY_CAPITAL, APP_KEY_KANA, KEY_KANA, 
-		APP_KEY_JUNJA, KEY_JUNJA, APP_KEY_FINAL, KEY_FINAL, APP_KEY_HANJA, KEY_HANJA, APP_KEY_ESCAPE, KEY_ESCAPE, APP_KEY_CONVERT, 
-		KEY_CONVERT, APP_KEY_NONCONVERT, KEY_NONCONVERT, APP_KEY_ACCEPT, KEY_ACCEPT, APP_KEY_MODECHANGE, KEY_MODECHANGE, APP_KEY_SPACE, 
-		KEY_SPACE, APP_KEY_PRIOR, KEY_PRIOR, APP_KEY_NEXT, KEY_NEXT, APP_KEY_END, KEY_END, APP_KEY_HOME, KEY_HOME, APP_KEY_LEFT, 
-		KEY_LEFT, APP_KEY_UP, KEY_UP, APP_KEY_RIGHT, KEY_RIGHT, APP_KEY_DOWN, KEY_DOWN, APP_KEY_SELECT, KEY_SELECT, APP_KEY_PRINT, 
-		KEY_PRINT, APP_KEY_EXEC, KEY_EXEC, APP_KEY_SNAPSHOT, KEY_SNAPSHOT, APP_KEY_INSERT, KEY_INSERT,
-		APP_KEY_DELETE, KEY_DELETE, APP_KEY_HELP, KEY_HELP, APP_KEY_0, KEY_0, APP_KEY_1, KEY_1, APP_KEY_2, KEY_2, APP_KEY_3, KEY_3, 
-		APP_KEY_4, KEY_4, APP_KEY_5, KEY_5, APP_KEY_6, KEY_6, APP_KEY_7, KEY_7, APP_KEY_8, KEY_8, APP_KEY_9, KEY_9, APP_KEY_A, KEY_A, 
-		APP_KEY_B, KEY_B, APP_KEY_C, KEY_C, APP_KEY_D, KEY_D, APP_KEY_E, KEY_E, APP_KEY_F, KEY_F, APP_KEY_G, KEY_G, APP_KEY_H, KEY_H,
-		APP_KEY_I, KEY_I, APP_KEY_J, KEY_J, APP_KEY_K, KEY_K, APP_KEY_L, KEY_L, APP_KEY_M, KEY_M, APP_KEY_N, KEY_N, APP_KEY_O, KEY_O,
-		APP_KEY_P, KEY_P, APP_KEY_Q, KEY_Q, APP_KEY_R, KEY_R, APP_KEY_S, KEY_S, APP_KEY_T, KEY_T, APP_KEY_U, KEY_U, APP_KEY_V, KEY_V,
-		APP_KEY_W, KEY_W, APP_KEY_X, KEY_X, APP_KEY_Y, KEY_Y, APP_KEY_Z, KEY_Z, APP_KEY_LWIN, KEY_LWIN, APP_KEY_RWIN, KEY_RWIN, 
-		APP_KEY_APPS, KEY_APPS, APP_KEY_SLEEP, KEY_SLEEP, APP_KEY_NUMPAD0, KEY_NUMPAD0, APP_KEY_NUMPAD1, KEY_NUMPAD1, APP_KEY_NUMPAD2, 
-		KEY_NUMPAD2, APP_KEY_NUMPAD3, KEY_NUMPAD3, APP_KEY_NUMPAD4, KEY_NUMPAD4, APP_KEY_NUMPAD5, KEY_NUMPAD5, APP_KEY_NUMPAD6, 
-		KEY_NUMPAD6, APP_KEY_NUMPAD7, KEY_NUMPAD7, APP_KEY_NUMPAD8, KEY_NUMPAD8, APP_KEY_NUMPAD9, KEY_NUMPAD9, APP_KEY_MULTIPLY, 
-		KEY_MULTIPLY, APP_KEY_ADD, KEY_ADD, APP_KEY_SEPARATOR, KEY_SEPARATOR, APP_KEY_SUBTRACT, KEY_SUBTRACT, APP_KEY_DECIMAL, 
-		KEY_DECIMAL, APP_KEY_DIVIDE, KEY_DIVIDE, APP_KEY_F1, KEY_F1, APP_KEY_F2, KEY_F2, APP_KEY_F3, KEY_F3, APP_KEY_F4, KEY_F4, 
-		APP_KEY_F5, KEY_F5, APP_KEY_F6, KEY_F6, APP_KEY_F7, KEY_F7, APP_KEY_F8, KEY_F8, APP_KEY_F9, KEY_F9, APP_KEY_F10, KEY_F10, 
-		APP_KEY_F11, KEY_F11, APP_KEY_F12, KEY_F12, APP_KEY_F13, KEY_F13, APP_KEY_F14, KEY_F14, APP_KEY_F15, KEY_F15, APP_KEY_F16, 
-		KEY_F16, APP_KEY_F17, KEY_F17, APP_KEY_F18, KEY_F18, APP_KEY_F19, KEY_F19, APP_KEY_F20, KEY_F20, APP_KEY_F21, KEY_F21, 
-		APP_KEY_F22, KEY_F22, APP_KEY_F23, KEY_F23, APP_KEY_F24, KEY_F24, APP_KEY_NUMLOCK, KEY_NUMLOCK, APP_KEY_SCROLL, KEY_SCROLL,
-		APP_KEY_LSHIFT, KEY_LSHIFT, APP_KEY_RSHIFT, KEY_RSHIFT, APP_KEY_LCONTROL, KEY_LCONTROL, APP_KEY_RCONTROL, KEY_RCONTROL,
-		APP_KEY_LMENU, KEY_LMENU, APP_KEY_RMENU, KEY_RMENU, APP_KEY_BROWSER_BACK, KEY_BROWSER_BACK, APP_KEY_BROWSER_FORWARD, 
-		KEY_BROWSER_FORWARD, APP_KEY_BROWSER_REFRESH, KEY_BROWSER_REFRESH, APP_KEY_BROWSER_STOP, KEY_BROWSER_STOP, 
-		APP_KEY_BROWSER_SEARCH, KEY_BROWSER_SEARCH, APP_KEY_BROWSER_FAVORITES, KEY_BROWSER_FAVORITES, APP_KEY_BROWSER_HOME, 
-		KEY_BROWSER_HOME, APP_KEY_VOLUME_MUTE, KEY_VOLUME_MUTE, APP_KEY_VOLUME_DOWN, KEY_VOLUME_DOWN, APP_KEY_VOLUME_UP, KEY_VOLUME_UP, 
-		APP_KEY_MEDIA_NEXT_TRACK, KEY_MEDIA_NEXT_TRACK, APP_KEY_MEDIA_PREV_TRACK, KEY_MEDIA_PREV_TRACK, APP_KEY_MEDIA_STOP, 
-		KEY_MEDIA_STOP, APP_KEY_MEDIA_PLAY_PAUSE, KEY_MEDIA_PLAY_PAUSE, APP_KEY_LAUNCH_MAIL, KEY_LAUNCH_MAIL, 
-		APP_KEY_LAUNCH_MEDIA_SELECT, KEY_LAUNCH_MEDIA_SELECT, APP_KEY_LAUNCH_APP1, KEY_LAUNCH_APP1, APP_KEY_LAUNCH_APP2, 
-		KEY_LAUNCH_APP2, APP_KEY_OEM_1, KEY_OEM_1, APP_KEY_OEM_PLUS, KEY_OEM_PLUS, APP_KEY_OEM_COMMA, KEY_OEM_COMMA, APP_KEY_OEM_MINUS, 
-		KEY_OEM_MINUS, APP_KEY_OEM_PERIOD, KEY_OEM_PERIOD, APP_KEY_OEM_2, KEY_OEM_2, APP_KEY_OEM_3, KEY_OEM_3, APP_KEY_OEM_4, KEY_OEM_4,
-		APP_KEY_OEM_5, KEY_OEM_5, APP_KEY_OEM_6, KEY_OEM_6, APP_KEY_OEM_7, KEY_OEM_7, APP_KEY_OEM_8, KEY_OEM_8, APP_KEY_OEM_102, 
-		KEY_OEM_102, APP_KEY_PROCESSKEY, KEY_PROCESSKEY, APP_KEY_ATTN, KEY_ATTN, APP_KEY_CRSEL, KEY_CRSEL, APP_KEY_EXSEL, KEY_EXSEL,
-		APP_KEY_EREOF, KEY_EREOF, APP_KEY_PLAY, KEY_PLAY, APP_KEY_ZOOM, KEY_ZOOM, APP_KEY_NONAME, KEY_NONAME, APP_KEY_PA1, KEY_PA1, 
-		APP_KEY_OEM_CLEAR, KEY_OEM_CLEAR, 
+		APP_KEY_INVALID, KEY_INVALID, APP_KEY_LBUTTON, KEY_LBUTTON, APP_KEY_RBUTTON, KEY_RBUTTON, APP_KEY_CANCEL, 
+        KEY_CANCEL, APP_KEY_MBUTTON, KEY_MBUTTON, APP_KEY_XBUTTON1, KEY_XBUTTON1, APP_KEY_XBUTTON2, KEY_XBUTTON2, 
+        APP_KEY_BACK, KEY_BACK, APP_KEY_TAB, KEY_TAB, APP_KEY_CLEAR, KEY_CLEAR, APP_KEY_RETURN, KEY_RETURN, 
+        APP_KEY_SHIFT, KEY_SHIFT, APP_KEY_CONTROL, KEY_CONTROL, APP_KEY_MENU, KEY_MENU, APP_KEY_PAUSE, KEY_PAUSE, 
+        APP_KEY_CAPITAL, KEY_CAPITAL, APP_KEY_KANA, KEY_KANA, APP_KEY_JUNJA, KEY_JUNJA, APP_KEY_FINAL, KEY_FINAL, 
+        APP_KEY_HANJA, KEY_HANJA, APP_KEY_ESCAPE, KEY_ESCAPE, APP_KEY_CONVERT, KEY_CONVERT, APP_KEY_NONCONVERT, 
+        KEY_NONCONVERT, APP_KEY_ACCEPT, KEY_ACCEPT, APP_KEY_MODECHANGE, KEY_MODECHANGE, APP_KEY_SPACE, KEY_SPACE, 
+        APP_KEY_PRIOR, KEY_PRIOR, APP_KEY_NEXT, KEY_NEXT, APP_KEY_END, KEY_END, APP_KEY_HOME, KEY_HOME, APP_KEY_LEFT, 
+		KEY_LEFT, APP_KEY_UP, KEY_UP, APP_KEY_RIGHT, KEY_RIGHT, APP_KEY_DOWN, KEY_DOWN, APP_KEY_SELECT, KEY_SELECT, 
+        APP_KEY_PRINT, KEY_PRINT, APP_KEY_EXEC, KEY_EXEC, APP_KEY_SNAPSHOT, KEY_SNAPSHOT, APP_KEY_INSERT, KEY_INSERT,
+		APP_KEY_DELETE, KEY_DELETE, APP_KEY_HELP, KEY_HELP, APP_KEY_0, KEY_0, APP_KEY_1, KEY_1, APP_KEY_2, KEY_2, 
+        APP_KEY_3, KEY_3, APP_KEY_4, KEY_4, APP_KEY_5, KEY_5, APP_KEY_6, KEY_6, APP_KEY_7, KEY_7, APP_KEY_8, KEY_8, 
+        APP_KEY_9, KEY_9, APP_KEY_A, KEY_A, APP_KEY_B, KEY_B, APP_KEY_C, KEY_C, APP_KEY_D, KEY_D, APP_KEY_E, KEY_E, 
+        APP_KEY_F, KEY_F, APP_KEY_G, KEY_G, APP_KEY_H, KEY_H,APP_KEY_I, KEY_I, APP_KEY_J, KEY_J, APP_KEY_K, KEY_K, 
+        APP_KEY_L, KEY_L, APP_KEY_M, KEY_M, APP_KEY_N, KEY_N, APP_KEY_O, KEY_O,APP_KEY_P, KEY_P, APP_KEY_Q, KEY_Q, 
+        APP_KEY_R, KEY_R, APP_KEY_S, KEY_S, APP_KEY_T, KEY_T, APP_KEY_U, KEY_U, APP_KEY_V, KEY_V, APP_KEY_W, KEY_W, 
+        APP_KEY_X, KEY_X, APP_KEY_Y, KEY_Y, APP_KEY_Z, KEY_Z, APP_KEY_LWIN, KEY_LWIN, APP_KEY_RWIN, KEY_RWIN, 
+        APP_KEY_APPS, KEY_APPS, APP_KEY_SLEEP, KEY_SLEEP, APP_KEY_NUMPAD0, KEY_NUMPAD0, APP_KEY_NUMPAD1, KEY_NUMPAD1, 
+        APP_KEY_NUMPAD2, KEY_NUMPAD2, APP_KEY_NUMPAD3, KEY_NUMPAD3, APP_KEY_NUMPAD4, KEY_NUMPAD4, APP_KEY_NUMPAD5, 
+        KEY_NUMPAD5, APP_KEY_NUMPAD6, KEY_NUMPAD6, APP_KEY_NUMPAD7, KEY_NUMPAD7, APP_KEY_NUMPAD8, KEY_NUMPAD8, 
+        APP_KEY_NUMPAD9, KEY_NUMPAD9, APP_KEY_MULTIPLY, KEY_MULTIPLY, APP_KEY_ADD, KEY_ADD, APP_KEY_SEPARATOR, 
+        KEY_SEPARATOR, APP_KEY_SUBTRACT, KEY_SUBTRACT, APP_KEY_DECIMAL, KEY_DECIMAL, APP_KEY_DIVIDE, KEY_DIVIDE, 
+        APP_KEY_F1, KEY_F1, APP_KEY_F2, KEY_F2, APP_KEY_F3, KEY_F3, APP_KEY_F4, KEY_F4, APP_KEY_F5, KEY_F5, APP_KEY_F6, 
+        KEY_F6, APP_KEY_F7, KEY_F7, APP_KEY_F8, KEY_F8, APP_KEY_F9, KEY_F9, APP_KEY_F10, KEY_F10, APP_KEY_F11, KEY_F11, 
+        APP_KEY_F12, KEY_F12, APP_KEY_F13, KEY_F13, APP_KEY_F14, KEY_F14, APP_KEY_F15, KEY_F15, APP_KEY_F16, KEY_F16, 
+        APP_KEY_F17, KEY_F17, APP_KEY_F18, KEY_F18, APP_KEY_F19, KEY_F19, APP_KEY_F20, KEY_F20, APP_KEY_F21, KEY_F21, 
+		APP_KEY_F22, KEY_F22, APP_KEY_F23, KEY_F23, APP_KEY_F24, KEY_F24, APP_KEY_NUMLOCK, KEY_NUMLOCK, APP_KEY_SCROLL, 
+        KEY_SCROLL, APP_KEY_LSHIFT, KEY_LSHIFT, APP_KEY_RSHIFT, KEY_RSHIFT, APP_KEY_LCONTROL, KEY_LCONTROL, 
+        APP_KEY_RCONTROL, KEY_RCONTROL, APP_KEY_LMENU, KEY_LMENU, APP_KEY_RMENU, KEY_RMENU, APP_KEY_BROWSER_BACK, 
+        KEY_BROWSER_BACK, APP_KEY_BROWSER_FORWARD, KEY_BROWSER_FORWARD, APP_KEY_BROWSER_REFRESH, KEY_BROWSER_REFRESH, 
+        APP_KEY_BROWSER_STOP, KEY_BROWSER_STOP, APP_KEY_BROWSER_SEARCH, KEY_BROWSER_SEARCH, APP_KEY_BROWSER_FAVORITES, 
+        KEY_BROWSER_FAVORITES, APP_KEY_BROWSER_HOME, KEY_BROWSER_HOME, APP_KEY_VOLUME_MUTE, KEY_VOLUME_MUTE, 
+        APP_KEY_VOLUME_DOWN, KEY_VOLUME_DOWN, APP_KEY_VOLUME_UP, KEY_VOLUME_UP, APP_KEY_MEDIA_NEXT_TRACK, 
+        KEY_MEDIA_NEXT_TRACK, APP_KEY_MEDIA_PREV_TRACK, KEY_MEDIA_PREV_TRACK, APP_KEY_MEDIA_STOP, KEY_MEDIA_STOP, 
+        APP_KEY_MEDIA_PLAY_PAUSE, KEY_MEDIA_PLAY_PAUSE, APP_KEY_LAUNCH_MAIL, KEY_LAUNCH_MAIL, 
+        APP_KEY_LAUNCH_MEDIA_SELECT, KEY_LAUNCH_MEDIA_SELECT, APP_KEY_LAUNCH_APP1, KEY_LAUNCH_APP1, 
+        APP_KEY_LAUNCH_APP2, KEY_LAUNCH_APP2, APP_KEY_OEM_1, KEY_OEM_1, APP_KEY_OEM_PLUS, KEY_OEM_PLUS, 
+        APP_KEY_OEM_COMMA, KEY_OEM_COMMA, APP_KEY_OEM_MINUS, KEY_OEM_MINUS, APP_KEY_OEM_PERIOD, KEY_OEM_PERIOD, 
+        APP_KEY_OEM_2, KEY_OEM_2, APP_KEY_OEM_3, KEY_OEM_3, APP_KEY_OEM_4, KEY_OEM_4,APP_KEY_OEM_5, KEY_OEM_5, 
+        APP_KEY_OEM_6, KEY_OEM_6, APP_KEY_OEM_7, KEY_OEM_7, APP_KEY_OEM_8, KEY_OEM_8, APP_KEY_OEM_102, KEY_OEM_102, 
+        APP_KEY_PROCESSKEY, KEY_PROCESSKEY, APP_KEY_ATTN, KEY_ATTN, APP_KEY_CRSEL, KEY_CRSEL, APP_KEY_EXSEL, KEY_EXSEL, 
+        APP_KEY_EREOF, KEY_EREOF, APP_KEY_PLAY, KEY_PLAY, APP_KEY_ZOOM, KEY_ZOOM, APP_KEY_NONAME, KEY_NONAME, 
+        APP_KEY_PA1, KEY_PA1, APP_KEY_OEM_CLEAR, KEY_OEM_CLEAR, 
     };
 
 	ASSERT( map[ index * 2 ] == key, "Invalid mapping from app_key to pixie key" );
@@ -1354,8 +1388,9 @@ static key_t pixie_key_from_app_key( app_key_t key ) {
 }
 
 
-static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int count ) {
-	ASSERT( sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) == sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ), "Key states size mismatch" );
+static void internal_pixie_update_input( internal_pixie_t* pixie, app_input_event_t* events, int count ) {
+	ASSERT( sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) == 
+        sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ), "Key states size mismatch" );
 	for( int i = 0; i < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ); ++i )
 		pixie->keyboard.prev[ i ] = pixie->keyboard.state[ i ];
 
@@ -1363,12 +1398,12 @@ static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int c
 		app_input_event_t* event = &events[ i ];
 		switch( event->type ) {
 			case APP_INPUT_KEY_DOWN: {
-				key_t key = pixie_key_from_app_key( event->data.key );
+				key_t key = internal_pixie_key_from_app_key( event->data.key );
 				if( key >= 0 && key < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) )
 					pixie->keyboard.state[ key ] = 1;                          
 			} break;
 			case APP_INPUT_KEY_UP: {
-				key_t key = pixie_key_from_app_key( event->data.key );
+				key_t key = internal_pixie_key_from_app_key( event->data.key );
 				if( key >= 0 && key < sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) )
 					pixie->keyboard.state[ key ] = 0;                          
 			} break;
@@ -1393,8 +1428,8 @@ static void pixie_update_input( pixie_t* pixie, app_input_event_t* events, int c
 
 // Render all sprites and convert the screen from palettized to 24-bit XBGR
 
-static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* fullscreen, int* crt_mode )
-    {
+static u32* internal_pixie_render_screen( internal_pixie_t* pixie, int* width, int* height, int* fullscreen, 
+    int* crt_mode ) {
     u32 palette[ 256 ]; // Temporary local copy of palette to reduce scope of mutex
 
     // Make a copy of the screen so we can draw sprites on top of it, and copy the palette and width/height as well
@@ -1415,11 +1450,11 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
 
     float (*easefuncs[])( float ) = { 
         NULL, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, ease_out_back, ease_out_bounce, 
-        ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, ease_out_circle,
-        ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, ease_in_expo, ease_in_cubic,
-        ease_in_quart, ease_in_quint, ease_in_circle, ease_in_out_quad, ease_in_out_back, ease_in_out_bounce, 
-        ease_in_out_sine, ease_in_out_elastic, ease_in_out_expo, ease_in_out_cubic, ease_in_out_quart, 
-        ease_in_out_quint, ease_in_out_circle,
+        ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, 
+        ease_out_circle, ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, ease_in_expo, 
+        ease_in_cubic, ease_in_quart, ease_in_quint, ease_in_circle, ease_in_out_quad, ease_in_out_back, 
+        ease_in_out_bounce, ease_in_out_sine, ease_in_out_elastic, ease_in_out_expo, ease_in_out_cubic, 
+        ease_in_out_quart, ease_in_out_quint, ease_in_out_circle,
     };
 
     // Process sprites
@@ -1488,15 +1523,16 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
     
             int cel = pixie->sprites.sprites[ i ].data.sprite.cel;
             // Find the sprite data in the memory mapped file
-            u8* frames = (u8*) pixie_find_asset( pixie, asset, NULL );
+            u8* frames = (u8*) internal_pixie_find_asset( pixie, asset, NULL );
             int frame_count = *(int*)frames;
             if( frame_count > 0 && cel >= 0 ) {
                 int* offsets = (int*)(frames + sizeof( int ) );
                 palrle_data_t* data = (palrle_data_t*)( frames + offsets[ cel % frame_count ] );
 
                 // Render pixels
-                palrle_blit( data, pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y  - pixie->sprites.sprites[ i ].origin_y, 
-                    pixie->screen.composite, screen_width, screen_height );
+                palrle_blit( data, pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, 
+                    pixie->sprites.sprites[ i ].y  - pixie->sprites.sprites[ i ].origin_y, pixie->screen.composite, 
+                    screen_width, screen_height );
             }
         // Render labels
         } else if( pixie->sprites.sprites[ i ].type == TYPE_LABEL ) {
@@ -1505,7 +1541,7 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
             --asset;
 
             // Find the font data in the memory mapped file
-            pixelfont_t const* font = VOID_CAST( pixie_find_asset( pixie, asset, NULL ) );
+            pixelfont_t const* font = VOID_CAST( internal_pixie_find_asset( pixie, asset, NULL ) );
             pixelfont_align_t pixelfont_align = PIXELFONT_ALIGN_LEFT;
             if( pixie->sprites.sprites[ i ].data.label.align == TEXT_ALIGN_CENTER ) {
                 pixelfont_align = PIXELFONT_ALIGN_CENTER;
@@ -1525,20 +1561,20 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
 			        for( int y = -1; y <= 1; ++y ) for( int x = -1; x <= 1; ++x ) {
 				        if( x == 0 && y == 0 ) continue;
 
-	                    pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + shadow_offset_x + x - pixie->sprites.sprites[ i ].origin_x, 
+	                    pixelfont_blit_u8( font, 
+                            pixie->sprites.sprites[ i ].x + shadow_offset_x + x - pixie->sprites.sprites[ i ].origin_x, 
                             pixie->sprites.sprites[ i ].y + shadow_offset_y + y - pixie->sprites.sprites[ i ].origin_y, 
-                            pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, 
-                            pixie->screen.composite, screen_width, screen_height,
-                            pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
-                            NULL );
+                            pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, pixie->screen.composite, 
+                            screen_width, screen_height, pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, 
+                                PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, NULL );
                     }
                 } else {
-	                pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + shadow_offset_x - pixie->sprites.sprites[ i ].origin_x, 
+	                pixelfont_blit_u8( font, 
+                        pixie->sprites.sprites[ i ].x + shadow_offset_x - pixie->sprites.sprites[ i ].origin_x, 
                         pixie->sprites.sprites[ i ].y + shadow_offset_y - pixie->sprites.sprites[ i ].origin_y, 
-                        pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, 
-                        pixie->screen.composite, screen_width, screen_height,
-                        pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
-                        NULL );
+                        pixie->sprites.sprites[ i ].data.label.text, (u8) shadow, pixie->screen.composite, 
+                        screen_width, screen_height, pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, 
+                        PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF,  NULL );
                 }
             }
 
@@ -1546,22 +1582,24 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
 			    for( int y = -1; y <= 1; ++y ) for( int x = -1; x <= 1; ++x ) {
 				    if( x == 0 && y == 0 ) continue;
 
-	                pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x + x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y + y - pixie->sprites.sprites[ i ].origin_y, 
-                        pixie->sprites.sprites[ i ].data.label.text, (u8) outline, 
-                        pixie->screen.composite, screen_width, screen_height,
-                        pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
-                        NULL );
+	                pixelfont_blit_u8( font, 
+                        pixie->sprites.sprites[ i ].x + x - pixie->sprites.sprites[ i ].origin_x, 
+                        pixie->sprites.sprites[ i ].y + y - pixie->sprites.sprites[ i ].origin_y, 
+                        pixie->sprites.sprites[ i ].data.label.text, (u8) outline, pixie->screen.composite, 
+                        screen_width, screen_height, pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, 
+                        PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, NULL );
                 }
             }
 
 
             int color = pixie->sprites.sprites[ i ].data.label.color;
             if( color >= 0 && color < 256 ) {
-	            pixelfont_blit_u8( font, pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, pixie->sprites.sprites[ i ].y - pixie->sprites.sprites[ i ].origin_y, 
-                    pixie->sprites.sprites[ i ].data.label.text, (u8) color, 
-                    pixie->screen.composite, screen_width, screen_height,
-                    pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
-                    NULL );
+	            pixelfont_blit_u8( font, 
+                    pixie->sprites.sprites[ i ].x - pixie->sprites.sprites[ i ].origin_x, 
+                    pixie->sprites.sprites[ i ].y - pixie->sprites.sprites[ i ].origin_y, 
+                    pixie->sprites.sprites[ i ].data.label.text, (u8) color, pixie->screen.composite, 
+                    screen_width, screen_height, pixelfont_align, wrap, 0, 0, -1, PIXELFONT_BOLD_OFF, 
+                    PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, NULL );
             }
 
         }
@@ -1584,9 +1622,9 @@ static u32* pixie_render_screen( pixie_t* pixie, int* width, int* height, int* f
     }
 
 
-// Called by audio thread (via app_sound_callback) when it needs new audio samples
+// Called by audio thread (via internal_pixie_app_sound_callback) when it needs new audio samples
 
-static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_pairs_count )
+static void internal_pixie_render_samples( internal_pixie_t* pixie, i16* sample_pairs, int sample_pairs_count )
     {
     // Render midi song to local buffer
     i16* song = pixie->audio.mix_buffers;
@@ -1609,7 +1647,7 @@ static void pixie_render_samples( pixie_t* pixie, i16* sample_pairs, int sample_
 
 // Retrieves pointer to and size of the specified asset
 
-static void const* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
+static void const* internal_pixie_find_asset( internal_pixie_t* pixie, int id, int* size ) {
     if( id < 0 || id >= pixie->assets.count ) {
         if( size ) *size = 0;
         return NULL;
@@ -1631,8 +1669,8 @@ static void const* pixie_find_asset( pixie_t* pixie, int id, int* size ) {
 // rebuilt if the values don't match. If data builds are disabled (through the define PIXIE_NO_BUILD), this checking
 // does not take place, and the bundle will be assumed to be valid. Undefined behaviour is to be expected if it is not.
 
-int load_bundle( char const* filename, char const* time, char const* definitions, int count ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+int internal_pixie_load_bundle( char const* filename, char const* time, char const* definitions, int count ) {
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     // Get size of bundle file
     struct stat s;
@@ -1707,40 +1745,42 @@ int load_bundle( char const* filename, char const* time, char const* definitions
 
 // The main starting point for a Pixie program. Called automatically from the standard C main function defined below,
 // unless `PIXIE_NO_MAIN` has been defined, in which case the user will have to define their own `main` function and
-// call `run` from it, passing in their pixie main function to it. The `run` function creates the `pixie_t` engine state
-// and stores a pointer to it in thread local storage. It creates the app thread, and waits for it to be initialized
-// before calling the users pixie main function (called `pixmain` if the built-in main is used). It also uses `setjmp`
-// to define a jump point in order to be able to exit from the user code no matter where in the call stack it is, and 
-// still get back to the `run` function to perform a controlled shutdown.
+// call `run` from it, passing in their pixie main function to it. The `run` function creates the `internal_pixie_t` 
+// engine state and stores a pointer to it in thread local storage. It creates the app thread, and waits for it to be 
+// initialized before calling the users pixie main function (called `pixmain` if the built-in main is used). It also 
+// uses `setjmp` to define a jump point in order to be able to exit from the user code no matter where in the call 
+// stack it is, and still get back to the `run` function to perform a controlled shutdown.
 
 int run( int (*main)( int, char** ) ) {
     int const SOUND_BUFFER_SIZE = 735 * 3; // Three frames worth of sound buffering
 
     // Create and initialize the main engine state used by all of pixie
-    pixie_t* pixie = pixie_create( SOUND_BUFFER_SIZE );
+    internal_pixie_t* pixie = internal_pixie_create( SOUND_BUFFER_SIZE );
 
-    // A pointer to the `pixie_t` instance needs to be stored in thread local storage, and before we do, we must create
-    // the TLS instance. But only if it is not already created, and as there's nothing stopping a user from calling the
-    // `run` function from two parallel threads at the same time, we must avoid a race condition. We do this by always
-    // creating a new TLS instance, and then we do a compare-and-swap with the global instance, to only swap if it is 
-    // not already set. If the swap does not return NULL (thus indicating it already held a value), then we destroy the
-    // TLS instance we just created, as it will no longer be needed (we'll have to use the global one instead).
+    // A pointer to the `internal_pixie_t` instance needs to be stored in thread local storage, and before we do, we 
+    // must create the TLS instance. But only if it is not already created, and as there's nothing stopping a user from 
+    // calling the `run` function from two parallel threads at the same time, we must avoid a race condition. We do 
+    // this by always creating a new TLS instance, and then we do a compare-and-swap with the global instance, to only 
+    // swap if it is not already set. If the swap does not return NULL (thus indicating it already held a value), then 
+    // we destroy the TLS instance we just created, as it will no longer be needed (we'll have to use the global one 
+    // instead).
     thread_tls_t pixie_tls = thread_tls_create();
-    if( thread_atomic_ptr_compare_and_swap( &g_tls_pixie, NULL, pixie_tls ) ) thread_tls_destroy( pixie_tls );
+    if( thread_atomic_ptr_compare_and_swap( &g_internal_pixie_tls, NULL, pixie_tls ) ) thread_tls_destroy( pixie_tls );
     
-    // Store the `pixie_t` pointer in the thread local storage for the current thread. It will be retrieved by all API
-    // functions so that we don't have to pass around an instance parameter to them.
-    thread_tls_set( thread_atomic_ptr_load( &g_tls_pixie ), pixie );
+    // Store the `internal_pixie_t` pointer in the thread local storage for the current thread. It will be retrieved by 
+    // all API functions so that we don't have to pass around an instance parameter to them.
+    thread_tls_set( thread_atomic_ptr_load( &g_internal_pixie_tls ), pixie );
     
-    // Define the `app_context_t` instance which will be shared between `run` function and `app_proc` thread.
-    app_context_t app_context = { NULL };
+    // Define the `internal_pixie_app_context_t` instance which will be shared between `run` function and 
+    // `internal_pixie_app_proc` thread.
+    internal_pixie_app_context_t app_context = { NULL };
     app_context.pixie = pixie;
     app_context.sound_buffer_size = SOUND_BUFFER_SIZE;
     thread_atomic_int_store( &app_context.exit_flag, 0 );
     thread_signal_init( &app_context.init_complete );
     
-    // Start the app thread. The entry point `app_thread` will just run `app_proc`
-    thread_ptr_t thread = thread_create( app_thread, &app_context, NULL, THREAD_STACK_SIZE_DEFAULT );
+    // Start the app thread. The entry point `internal_pixie_app_thread` will just run `internal_pixie_app_proc`
+    thread_ptr_t thread = thread_create( internal_pixie_app_thread, &app_context, NULL, THREAD_STACK_SIZE_DEFAULT );
     
     // Wait until the app thread have completed its initialization. If it takes more than 5 seconds, we just quit.
     int result = thread_signal_wait( &app_context.init_complete, 5000 ) ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -1764,8 +1804,8 @@ int run( int (*main)( int, char** ) ) {
     thread_signal_term( &app_context.init_complete );
     
     // Destroy pixie instance, and clear the thread local pointer to it
-    pixie_destroy( pixie );
-    thread_tls_set( thread_atomic_ptr_load( &g_tls_pixie ), NULL );
+    internal_pixie_destroy( pixie );
+    thread_tls_set( thread_atomic_ptr_load( &g_internal_pixie_tls ), NULL );
 
     return result;
 }
@@ -1775,7 +1815,7 @@ int run( int (*main)( int, char** ) ) {
 // as it will use `longjmp` to branch back to the top level of the `run` function.
 
 void end( int return_code ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
    
     // Jump back into the middle of the `run` function, to where `setjmp` was called, regardless of where we called from
     longjmp( pixie->exit.exit_jump, return_code );
@@ -1785,7 +1825,7 @@ void end( int return_code ) {
 // Waits until the start of the next frame. 
 
 void wait_vbl( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     // Get the vbl count before we start - we want to wait until it has changed
     int current_vbl_count = thread_atomic_int_load( &pixie->vbl.count );
@@ -1795,14 +1835,14 @@ void wait_vbl( void ) {
         // Wait until app thread says there is a new frame, or timeout after one second.
         thread_signal_wait( &pixie->vbl.signal, 1000 );
 
-        // Call `pixie_instance` again, just to trigger the check for `force_exit`, so we can terminate if need be
-        pixie_instance();
+        // Call `internal_pixie_instance` again, to trigger the check for `force_exit`, so we can terminate if need be
+        internal_pixie_instance();
     }
 }
 
 
 void wait( int jiffys ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
     (void) pixie;
     for( int i = 0; i < jiffys; ++i ) {
         wait_vbl();
@@ -1811,14 +1851,14 @@ void wait( int jiffys ) {
 
 
 int fullscreen( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     return pixie->window.fullscreen;
 }
 
 
 void fullscreen_on( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     pixie->window.fullscreen = 1;
 }
@@ -1826,7 +1866,7 @@ void fullscreen_on( void ) {
 
 
 void fullscreen_off( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     pixie->window.fullscreen = 0;
 }
@@ -1834,7 +1874,7 @@ void fullscreen_off( void ) {
 
 
 int crt_mode( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     return pixie->window.crt_mode;
 }
@@ -1842,7 +1882,7 @@ int crt_mode( void ) {
 
 
 void crt_mode_on( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     pixie->window.crt_mode = 1;
 }
@@ -1850,7 +1890,7 @@ void crt_mode_on( void ) {
 
 
 void crt_mode_off( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     pixie->window.crt_mode = 0;
 }
@@ -1860,7 +1900,7 @@ void crt_mode_off( void ) {
 // Prints the specified string to the screen using the default font.
 
 void print( char const* str ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     // Very placeholder font rendering
     thread_mutex_lock( &pixie->screen.mutex );
@@ -1887,17 +1927,17 @@ void print( char const* str ) {
 // Apply palette from file to the global palette
 
 void load_palette( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
-    void const* data = pixie_find_asset( pixie, asset, &size );
+    void const* data = internal_pixie_find_asset( pixie, asset, &size );
     if( size == sizeof( pixie->screen.palette ) )
         memcpy( pixie->screen.palette, data, sizeof( pixie->screen.palette ) );
 }
 
 
 void setcol( int index, rgb_t rgb ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( index < 0 || index >= 256 ) return;
     u32 r = (u32)( rgb.r < 0 ? 0 : rgb.r > 255 ? 255 : rgb.r );
@@ -1908,7 +1948,7 @@ void setcol( int index, rgb_t rgb ) {
 
 
 rgb_t getcol( int index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( index < 0 || index >= 256 ) {
         rgb_t rgb = { 0, 0, 0 };
@@ -1922,7 +1962,7 @@ rgb_t getcol( int index ) {
 
 
 void sprites_off( void ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -1944,7 +1984,7 @@ void sprites_off( void ) {
 // Assign a bitmap to a sprite, and give it a position
 
 int sprite( int spr_index, int x, int y, int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -1980,7 +2020,7 @@ int sprite( int spr_index, int x, int y, int asset ) {
 
 
 void sprite_bitmap( int spr_index, int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2008,7 +2048,7 @@ void sprite_bitmap( int spr_index, int asset ) {
 
 
 int sprite_visible( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2025,7 +2065,7 @@ int sprite_visible( int spr_index ) {
 
 
 void sprite_show( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2042,7 +2082,7 @@ void sprite_show( int spr_index ) {
 
 
 void sprite_hide( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2061,7 +2101,7 @@ void sprite_hide( int spr_index ) {
 // Update sprite position without changing bitmap
 
 void sprite_pos( int spr_index, int x, int y ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2077,7 +2117,7 @@ void sprite_pos( int spr_index, int x, int y ) {
 
 
 int sprite_x( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2094,7 +2134,7 @@ int sprite_x( int spr_index ) {
 
 
 int sprite_y( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2111,7 +2151,7 @@ int sprite_y( int spr_index ) {
 
 
 void sprite_origin( int spr_index, int x, int y ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2127,7 +2167,7 @@ void sprite_origin( int spr_index, int x, int y ) {
 
 
 int sprite_origin_x( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2144,7 +2184,7 @@ int sprite_origin_x( int spr_index ) {
 
 
 int sprite_origin_y( int spr_index ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2161,7 +2201,7 @@ int sprite_origin_y( int spr_index ) {
 
 
 void sprite_cel( int spr_index, int cel ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2182,7 +2222,7 @@ void sprite_cel( int spr_index, int cel ) {
 
 
 int label( int spr_index, int x, int y, char const* text, int color, int font_asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2222,7 +2262,7 @@ int label( int spr_index, int x, int y, char const* text, int color, int font_as
 
 
 int label_text( int spr_index, char const* text ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2238,7 +2278,9 @@ int label_text( int spr_index, char const* text ) {
         return 0;
     }
 
-    if( pixie->sprites.sprites[ spr_index ].data.label.text ) free( pixie->sprites.sprites[ spr_index ].data.label.text );
+    if( pixie->sprites.sprites[ spr_index ].data.label.text ) {
+        free( pixie->sprites.sprites[ spr_index ].data.label.text );
+    }
     pixie->sprites.sprites[ spr_index ].data.label.text = strdup( text ? text : "" );
     thread_mutex_unlock( &pixie->sprites.mutex );
     return spr_index + 1;
@@ -2246,7 +2288,7 @@ int label_text( int spr_index, char const* text ) {
 
 
 int label_align( int spr_index, text_align_t align ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2270,7 +2312,7 @@ int label_align( int spr_index, text_align_t align ) {
 
 
 int label_color( int spr_index, int color ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2294,7 +2336,7 @@ int label_color( int spr_index, int color ) {
 
 
 int label_outline( int spr_index, int color ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2318,7 +2360,7 @@ int label_outline( int spr_index, int color ) {
 
 
 int label_shadow( int spr_index, int color ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2342,7 +2384,7 @@ int label_shadow( int spr_index, int color ) {
 
 
 int label_wrap( int spr_index, int wrap ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
     
@@ -2366,7 +2408,7 @@ int label_wrap( int spr_index, int wrap ) {
 
 
 void set_soundfont( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( asset < 0 || asset >= pixie->assets.count ) {
         return;
@@ -2375,7 +2417,7 @@ void set_soundfont( int asset ) {
     thread_mutex_lock( &pixie->audio.song_mutex );
 
     int soundfont_size = 0;
-    void const* soundfont = pixie_find_asset( pixie, asset, &soundfont_size );
+    void const* soundfont = internal_pixie_find_asset( pixie, asset, &soundfont_size );
 
     tsf_close( pixie->audio.sound_font );
     pixie->audio.sound_font = tsf_load_memory( soundfont, soundfont_size );
@@ -2386,7 +2428,7 @@ void set_soundfont( int asset ) {
 
 
 void play_song( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( asset < 0 || asset >= pixie->assets.count ) {
         return;
@@ -2397,7 +2439,7 @@ void play_song( int asset ) {
     memset( &pixie->audio.current_song, 0, sizeof( pixie->audio.current_song ) );
 
     int mid_size = 0;
-    void const* mid_data = pixie_find_asset( pixie, asset, &mid_size );
+    void const* mid_data = internal_pixie_find_asset( pixie, asset, &mid_size );
     if( !mid_data ) {
         thread_mutex_unlock( &pixie->audio.song_mutex );
         return;
@@ -2418,35 +2460,35 @@ void play_song( int asset ) {
 
 
 char const* load_text( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
-    void const* data = pixie_find_asset( pixie, asset, &size );
+    void const* data = internal_pixie_find_asset( pixie, asset, &size );
 
     return (char const*) data;
 }
 
 
 int asset_size( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
-    pixie_find_asset( pixie, asset, &size );
+    internal_pixie_find_asset( pixie, asset, &size );
 
     return size;
 }
 
 
 void const* asset_data( int asset ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
-    return pixie_find_asset( pixie, asset, &size );
+    return internal_pixie_find_asset( pixie, asset, &size );
 }
 
 
 void move_sprite_x( int spr_index, move_t* moves, int moves_count ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2469,7 +2511,7 @@ void move_sprite_x( int spr_index, move_t* moves, int moves_count ) {
 
 
 void move_sprite_y( int spr_index, move_t* moves, int moves_count ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     thread_mutex_lock( &pixie->sprites.mutex );
 
@@ -2492,8 +2534,10 @@ void move_sprite_y( int spr_index, move_t* moves, int moves_count ) {
 
 
 void text( int x, int y, char const* str, int color, int font_asset 
-	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, bool underline */) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, 
+    bool underline */ ) {
+
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     pixelfont_align_t pixelfont_align = PIXELFONT_ALIGN_LEFT;
 	//if( align == ALIGNMENT_RIGHT ) pixelfont_align = PIXELFONT_ALIGN_RIGHT;
@@ -2503,14 +2547,15 @@ void text( int x, int y, char const* str, int color, int font_asset
 	pixelfont_bounds.width = 0;
 	pixelfont_bounds.height = 0;
 
-    pixelfont_t* pixelfont = (pixelfont_t*) pixie_find_asset( pixie, font_asset, NULL );
+    pixelfont_t* pixelfont = (pixelfont_t*) internal_pixie_find_asset( pixie, font_asset, NULL );
 	pixelfont_blit_u8( pixelfont, x, y, str, (u8) color, 
         pixie->screen.pixels, pixie->screen.screen_width, pixie->screen.screen_height,
         pixelfont_align, -1, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
         &pixelfont_bounds );
 
 		//pixelfont_align, wrap_width, hspacing, vspacing, limit, bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF, 
-		//italic ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF, underline ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF, 
+		//italic ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF, 
+        // underline ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF, 
 		//bounds ? &pixelfont_bounds : 0 );
 
 /*
@@ -2524,7 +2569,7 @@ void text( int x, int y, char const* str, int color, int font_asset
 
 
 int key_is_down( key_t key ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
 	return pixie->keyboard.state[ key ]; 
@@ -2532,7 +2577,7 @@ int key_is_down( key_t key ) {
 
 
 int key_was_pressed( key_t key ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
 	if( key < 0 || key >= sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ) ) return 0;
@@ -2544,7 +2589,7 @@ int key_was_pressed( key_t key ) {
 
 
 int key_was_released( key_t key ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->keyboard.state ) / sizeof( *pixie->keyboard.state ) ) return 0;
 	if( key < 0 || key >= sizeof( pixie->keyboard.prev ) / sizeof( *pixie->keyboard.prev ) ) return 0;
@@ -2581,10 +2626,12 @@ int length( string str ) {
 
 
 string concat( string a, string b ) {
-    ASSERTF( strlen( a.c_str ) + strlen( b.c_str ) < PIXIE_MAX_STRING_LENGTH, 
-        ( "The combined length of string a (length %d) and string b (length %d) is longer than the max length of %d.\n\n"
-          "The contents of string a are:\n%s\n\nThe contents of string b are:\n%s", 
-          (int) strlen( a.c_str ) + 1, (int) strlen( b.c_str ) + 1, PIXIE_MAX_STRING_LENGTH, a.c_str, b.c_str ) );
+    ASSERTF( strlen( a.c_str ) + strlen( b.c_str ) < PIXIE_MAX_STRING_LENGTH, (
+        "The combined length of string a (length %d) and string b (length %d) is longer than the max length of %d.\n\n"
+        "The contents of string a are:\n%s\n\nThe contents of string b are:\n%s", 
+        (int) strlen( a.c_str ) + 1, (int) strlen( b.c_str ) + 1, PIXIE_MAX_STRING_LENGTH, a.c_str, b.c_str 
+        ) 
+    );
 
     string str = { "" };
     if( strlen( a.c_str ) + strlen( b.c_str ) < PIXIE_MAX_STRING_LENGTH ) {
@@ -2712,7 +2759,7 @@ string format( string format_string, ... ) {
 
 
 
-u32 hash_str( string str ) {
+u32 hash_string( string str ) {
     u32 hash = 5381u; 
     char const* s = str.c_str;
     while( *s ) hash = ( ( hash << 5u ) + hash) ^ *s++;
@@ -2766,14 +2813,19 @@ u32 hash_str( string str ) {
     } 
 
     #ifdef _WIN32
-        // pass-through so the program will build with either /SUBSYSTEM:WINDOWS or /SUBSYSTEN:CONSOLE
+        // pass-through so the program will build with either /SUBSYSTEM:WINDOWS or /SUBSYSTEM:CONSOLE
         struct HINSTANCE__;
         #ifdef __cplusplus
-        extern "C" {
+            extern "C" {
         #endif
-            int __stdcall WinMain( struct HINSTANCE__* a, struct HINSTANCE__* b, char* c, int d ) { (void) a, b, c, d; return main( __argc, __argv ); }
+
+            int __stdcall WinMain( struct HINSTANCE__* a, struct HINSTANCE__* b, char* c, int d ) { 
+                (void) a, b, c, d; 
+                return main( __argc, __argv ); 
+            }
+
         #ifdef __cplusplus
-        }
+            }
         #endif
     #endif /* _WIN32 */
 
@@ -2890,7 +2942,7 @@ u32 hash_str( string str ) {
 namespace pixie {
 #endif
 
-char const* format_assert_message( char const* format, ... ) {
+char const* internal_pixie_format_assert_message( char const* format, ... ) {
 	static char buffer[ 4096 ];
 	va_list args;
 	va_start( args, format );
@@ -2901,7 +2953,9 @@ char const* format_assert_message( char const* format, ... ) {
 
 
 #ifdef _WIN32
-	int display_assert_message( char const* expression, char const* message, char const* file, int line, char const* function ) {
+	int internal_pixie_display_assert_message( char const* expression, char const* message, char const* file, int line, 
+        char const* function ) {
+
 	    char buf[ 4096 + 64 ];
 	    _snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\nFunction: %s\n\n%s(%d)\n", 
             message, expression, function, file, line );
@@ -2912,7 +2966,8 @@ char const* format_assert_message( char const* format, ... ) {
 	    printf( "%s", buf );
 	    printf( "**********************************************************************\n\n" );
 		strcat( buf, "\nBreak into debugger?\n" );
-	    int result = MessageBox( 0, buf, "Pixie Assert", MB_ICONERROR | MB_YESNOCANCEL | MB_SYSTEMMODAL | MB_SETFOREGROUND );
+	    int result = MessageBox( 0, buf, "Pixie Assert", 
+            MB_ICONERROR | MB_YESNOCANCEL | MB_SYSTEMMODAL | MB_SETFOREGROUND );
 	    switch( result ) {
 		    case IDCANCEL: {
 			    // Turn off memory leak reports for faster exit

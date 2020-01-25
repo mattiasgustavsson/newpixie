@@ -18,36 +18,36 @@ before you include this file in *one* C/C++ file to create the implementation.
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
     #define ASSETS_BEGIN( bundle_filename_param ) \
         namespace pixie { \
-            inline void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line ) \
+            static void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line )\
                 { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
-            enum assets_t {
+            enum internal_pixie_assets_t {
 
     #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-            int build_and_load_assets( char const* bundle_filename, char const* build_time, \
+            int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
                 char const* definitions_file, int definitions_line, int assets_count ); \
-            inline int load_assets( void ) { \
+            static int load_assets( void ) { \
                 char const* bundle_filename; \
                 int definitions_line; \
                 multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &bundle_filename, &definitions_line ); \
-                return build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, definitions_line, \
-                    TEMP_PIXIE_ASSETS_COUNT ); \
+                return internal_pixie_build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, \
+                    definitions_line, TEMP_PIXIE_ASSETS_COUNT ); \
             } \
         } /* namespace pixie */
 #else
     #define ASSETS_BEGIN( bundle_filename_param ) \
-        inline void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line ) \
+        static void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line ) \
             { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
-        enum assets_t {
+        enum internal_pixie_assets_t {
 
     #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        int build_and_load_assets( char const* bundle_filename, char const* build_time, \
+        int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
             char const* definitions_file, int definitions_line, int assets_count ); \
-        inline int load_assets( void ) { \
+        static int load_assets( void ) { \
             char const* bundle_filename; \
             int definitions_line; \
             multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &bundle_filename, &definitions_line ); \
-            return build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, definitions_line, \
-                TEMP_PIXIE_ASSETS_COUNT ); \
+            return internal_pixie_build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, \
+                definitions_line, TEMP_PIXIE_ASSETS_COUNT ); \
         } 
 #endif
 
@@ -112,16 +112,6 @@ void* build_font( char const* filenames[], int count, int* out_size );
 #include "stb_image_write.h"
 #include "stb_truetype.h"
 
-
-#ifndef PIXIE_BUILD_U8
-    #define PIXIE_BUILD_U8 unsigned char
-#endif
-
-#ifndef PIXIE_BUILD_U32
-    #define PIXIE_BUILD_U32 unsigned int
-#endif
-
-
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 namespace pixie {
 #endif
@@ -164,7 +154,9 @@ struct item_t {
     char type[ 64 ];
 };
 
-static struct item_t* read_asset_definitions( char const* asset_definitions_file, int* count, char out_bundle_filename[ 256 ] ) { 
+static struct item_t* internal_pixie_read_asset_definitions( char const* asset_definitions_file, int* count, 
+    char out_bundle_filename[ 256 ] ) { 
+
     int size = 0;
     char* file = load_text_file( asset_definitions_file, &size );
     if( !file ) {
@@ -210,7 +202,8 @@ static struct item_t* read_asset_definitions( char const* asset_definitions_file
     ++ptr;
     while( ptr < end && *ptr <= ' ' ) ++ptr;
     if( *ptr != ')' ) {
-        printf( "Asset definition file '%s': expected ')' at the end of ASSETS_BEGIN definition\n", asset_definitions_file );
+        printf( "Asset definition file '%s': expected ')' at the end of ASSETS_BEGIN definition\n", 
+            asset_definitions_file );
         free( file );
         return NULL;;
     }
@@ -286,7 +279,8 @@ static struct item_t* read_asset_definitions( char const* asset_definitions_file
 
         while( ptr < end && *ptr <= ' ' ) ++ptr;
         if( *ptr != ')' ) {
-            printf( "Asset definition file '%s': expected ')' at the end of ASSET definition\n", asset_definitions_file );
+            printf( "Asset definition file '%s': expected ')' at the end of ASSET definition\n", 
+                asset_definitions_file );
             free( items );
             free( file );
             return NULL;;
@@ -329,9 +323,9 @@ static struct item_t* read_asset_definitions( char const* asset_definitions_file
     return items;
 }
 
-PIXIE_BUILD_U32 palette_for_build_sprite[ 256 ]; // TODO: handle this properly
-int palette_for_build_sprite_count = 256;
-paldither_palette_t* paldither_palette_for_build_sprite = NULL;
+u32 internal_pixie_palette_for_build_sprite[ 256 ]; // TODO: handle this properly
+int internal_pixie_palette_for_build_sprite_count = 256;
+paldither_palette_t* internal_pixie_paldither_palette_for_build_sprite = NULL;
 
 
 void* build_palette( char const* filenames[], int count, int* out_size ) {
@@ -341,11 +335,11 @@ void* build_palette( char const* filenames[], int count, int* out_size ) {
     stbi_uc* img = stbi_load( filenames[ 0 ], &w, &h, &c, 4 );
     if( !img ) return NULL;
 
-    PIXIE_BUILD_U32 palette[ 256 ] = { 0 };
+    u32 palette[ 256 ] = { 0 };
     int pal_count = 0;      
     for( int y = 0; y < h; ++y ) {
         for( int x = 0; x < w; ++x ) {
-            PIXIE_BUILD_U32 pixel = ((PIXIE_BUILD_U32*)img)[ x + y * w ];
+            u32 pixel = ((u32*)img)[ x + y * w ];
             if( ( pixel & 0xff000000 ) == 0 ) goto skip;
             if( pal_count < 256 ) {
                 for( int i = 0; i < pal_count; ++i ) {
@@ -363,11 +357,11 @@ void* build_palette( char const* filenames[], int count, int* out_size ) {
         memset( palette, 0, sizeof( palette ) );
         pal_count = palettize_generate_palette_xbgr32( (PALETTIZE_U32*) img, w, h, palette, 256, 0 );        
     }
-    memcpy( palette_for_build_sprite, palette, sizeof( palette_for_build_sprite ) );
-    palette_for_build_sprite_count = pal_count;
-    if( paldither_palette_for_build_sprite ) {
-        paldither_palette_destroy( paldither_palette_for_build_sprite );
-        paldither_palette_for_build_sprite = NULL;
+    memcpy( internal_pixie_palette_for_build_sprite, palette, sizeof( internal_pixie_palette_for_build_sprite ) );
+    internal_pixie_palette_for_build_sprite_count = pal_count;
+    if( internal_pixie_paldither_palette_for_build_sprite ) {
+        paldither_palette_destroy( internal_pixie_paldither_palette_for_build_sprite );
+        internal_pixie_paldither_palette_for_build_sprite = NULL;
     }
     stbi_image_free( img );     
     *out_size = sizeof( palette );
@@ -379,7 +373,7 @@ void* build_palette( char const* filenames[], int count, int* out_size ) {
 
 void* build_sprite( char const* filenames[], int count, int* out_size ) {
     int capacity = 16 * 1024;
-    PIXIE_BUILD_U8* data = (PIXIE_BUILD_U8*) malloc( (size_t) capacity );
+    u8* data = (u8*) malloc( (size_t) capacity );
     *(int*) data = count;
     int* offsets = (int*)( data + sizeof( int ) );
     int pos = (int)( sizeof( int ) + sizeof( int ) * count );
@@ -388,24 +382,28 @@ void* build_sprite( char const* filenames[], int count, int* out_size ) {
         stbi_uc* img = stbi_load( filenames[ j ], &w, &h, &c, 4 );
         if( !img ) return NULL;
 
-        if( !paldither_palette_for_build_sprite ) {
-            paldither_palette_for_build_sprite = paldither_palette_create( palette_for_build_sprite, palette_for_build_sprite_count, NULL, NULL );
+        if( !internal_pixie_paldither_palette_for_build_sprite ) {
+            internal_pixie_paldither_palette_for_build_sprite = paldither_palette_create( 
+                internal_pixie_palette_for_build_sprite, internal_pixie_palette_for_build_sprite_count, NULL, NULL );
         }
    
-        PIXIE_BUILD_U8* pixels = (PIXIE_BUILD_U8*) malloc( sizeof( PIXIE_BUILD_U8 ) * w * h );
-        memset( pixels, 0, sizeof( PIXIE_BUILD_U8 ) * w * h ); 
-        paldither_palettize( (PALDITHER_U32*) img, w, h, paldither_palette_for_build_sprite, PALDITHER_TYPE_DEFAULT, pixels );
+        u8* pixels = (u8*) malloc( sizeof( u8 ) * w * h );
+        memset( pixels, 0, sizeof( u8 ) * w * h ); 
+        paldither_palettize( (PALDITHER_U32*) img, w, h, internal_pixie_paldither_palette_for_build_sprite, 
+            PALDITHER_TYPE_DEFAULT, pixels );
     
-        PIXIE_BUILD_U8* mask = (PIXIE_BUILD_U8*) malloc( (size_t) w * h );
-        for( int i = 0; i < w * h; ++i ) mask[ i ] = (PIXIE_BUILD_U8)(( (PALETTIZE_U32*) img )[ i ] >> 24 );
+        u8* mask = (u8*) malloc( (size_t) w * h );
+        for( int i = 0; i < w * h; ++i ) mask[ i ] = (u8)(( (PALETTIZE_U32*) img )[ i ] >> 24 );
 
         for( int i = 0; i < w * h; ++i ) {
-            ((PALDITHER_U32*) img)[ i ] = ( ( (PALDITHER_U32)mask[ i ] ) << 24 ) | ( palette_for_build_sprite[ pixels[ i ] ] & 0xffffffff );
+            ((PALDITHER_U32*) img)[ i ] = ( ( (PALDITHER_U32)mask[ i ] ) << 24 ) | 
+                ( internal_pixie_palette_for_build_sprite[ pixels[ i ] ] & 0xffffffff );
         }
 
         stbi_image_free( img );     
 
-        palrle_data_t* rle = palrle_encode_mask( pixels, mask, w, h, palette_for_build_sprite, 256, NULL );
+        palrle_data_t* rle = palrle_encode_mask( pixels, mask, w, h, internal_pixie_palette_for_build_sprite, 256, 
+            NULL );
         free( mask );
         free( pixels );
     
@@ -415,7 +413,7 @@ void* build_sprite( char const* filenames[], int count, int* out_size ) {
             } else {
                 capacity = pos + (int) rle->size;
             }
-            data = (PIXIE_BUILD_U8*) realloc( data, (size_t) capacity );
+            data = (u8*) realloc( data, (size_t) capacity );
             offsets = (int*)( data + sizeof( int ) );
         }
         offsets[ j ] = pos;
@@ -616,7 +614,7 @@ void* build_font( char const* filenames[], int count, int* out_size ) {
 }
 
 
-char** list_files( char const* filename, int* out_count ) {
+char** internal_pixie_list_files( char const* filename, int* out_count ) {
     int count = 0;
     int capacity = 256;
     char** files = (char**) malloc( capacity * sizeof( char* ) );
@@ -644,7 +642,7 @@ char** list_files( char const* filename, int* out_count ) {
 }
 
 
-void free_file_list( char** filenames, int count ) {
+void internal_pixie_free_file_list( char** filenames, int count ) {
     for( int i = 0; i < count; ++i ) {
         free( filenames[ i ] );
     }
@@ -652,14 +650,16 @@ void free_file_list( char** filenames, int count ) {
 }
 
 
-int load_bundle( char const* filename, char const* time, char const* definitions, int count );
+int internal_pixie_load_bundle( char const* filename, char const* time, char const* definitions, int count );
 
 
-int build_and_load_assets( char const* bundle_filename, char const* build_time, char const* definitions_file, int definitions_line, int assets_count ) { 
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, 
+    char const* definitions_file, int definitions_line, int assets_count ) { 
+
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     (void) definitions_line; // TODO: verify definition line
-    if( load_bundle( bundle_filename, build_time, definitions_file, assets_count ) == EXIT_SUCCESS ) {
+    if( internal_pixie_load_bundle( bundle_filename, build_time, definitions_file, assets_count ) == EXIT_SUCCESS ) {
         return EXIT_SUCCESS;
     }
 
@@ -673,7 +673,7 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
     char parsed_bundle_filename[ 256 ];
 
     int count = 0;
-    struct item_t* items = read_asset_definitions( definitions_file, &count, parsed_bundle_filename );
+    struct item_t* items = internal_pixie_read_asset_definitions( definitions_file, &count, parsed_bundle_filename );
     if( !items ) return EXIT_FAILURE;
 
     if( count != assets_count || strcmp( parsed_bundle_filename, bundle_filename ) != 0 ) {
@@ -712,7 +712,8 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
     int file_list_pos = (int) ftell( bundle );
     fwrite( file_list, sizeof( struct file_list_t ), (size_t) count, bundle );
 
-    memcpy( palette_for_build_sprite, default_palette(), sizeof( palette_for_build_sprite ) );
+    memcpy( internal_pixie_palette_for_build_sprite, default_palette(), 
+        sizeof( internal_pixie_palette_for_build_sprite ) );
 
     int running_offset = (int) ftell( bundle );
     for( int i = 0; i < count; ++i ) {
@@ -729,9 +730,9 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
         }
         if( build_function ) {
             int files_count = 0;
-            char const** filenames = (char const**)list_files( items[ i ].filename, &files_count );
+            char const** filenames = (char const**)internal_pixie_list_files( items[ i ].filename, &files_count );
             data = build_function( filenames, files_count, &size );
-            free_file_list( (char**)filenames, files_count );
+            internal_pixie_free_file_list( (char**)filenames, files_count );
         } else {
             printf( "\n\nAsset type '%s' is unknown\n", items[ i ].type );
             free( items );
@@ -760,17 +761,17 @@ int build_and_load_assets( char const* bundle_filename, char const* build_time, 
     free( file_list );
     fclose( bundle );
     free( items );
-    if( paldither_palette_for_build_sprite ) {
-        paldither_palette_destroy( paldither_palette_for_build_sprite );
-        paldither_palette_for_build_sprite = NULL;
+    if( internal_pixie_paldither_palette_for_build_sprite ) {
+        paldither_palette_destroy( internal_pixie_paldither_palette_for_build_sprite );
+        internal_pixie_paldither_palette_for_build_sprite = NULL;
     }
 
-    return load_bundle( bundle_filename, build_time, definitions_file, assets_count );
+    return internal_pixie_load_bundle( bundle_filename, build_time, definitions_file, assets_count );
 }
 
 
 void register_asset_type( char const* name, asset_build_function_t build_function ) {
-    pixie_t* pixie = pixie_instance(); // Get `pixie_t` instance from thread local storage
+    internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     strcpy( pixie->build.types[ pixie->build.count ].name, name );
     pixie->build.types[ pixie->build.count ].func = build_function;
