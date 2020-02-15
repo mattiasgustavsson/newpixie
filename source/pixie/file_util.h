@@ -92,10 +92,14 @@ int wildcard_compare( char const* wild, char const* string );
 #else /* _WIN32 */
 	#include <limits.h>
 	#include <stdlib.h>
-	#error unsupported platform
+	//#error unsupported platform
 #endif
 
 #include "dir.h"
+
+#ifndef MAX_PATH
+	#define MAX_PATH 260
+#endif
 
 
 char const* c_basename( char const* path, char const* extension )
@@ -140,7 +144,11 @@ char const* c_basename( char const* path, char const* extension )
 			
 			if( reslen >= extlen )
 				{
+				#ifdef _WIN32
 				if( stricmp( result + (reslen - extlen), extension ) == 0 )
+				#else
+				if( strcasecmp( result + (reslen - extlen), extension ) == 0 )
+				#endif
 					{
 					result[ reslen - extlen ] = 0;
 					}
@@ -343,7 +351,7 @@ void file_util_mkdir( char const* path )
 	#ifdef _WIN32
 		CreateDirectoryA( path, NULL );
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -353,7 +361,7 @@ void file_util_rmdir( char const* path )
 	#ifdef _WIN32
 		RemoveDirectoryA( path );
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -363,7 +371,7 @@ void change_dir( char const* path )
 	#ifdef _WIN32
 		SetCurrentDirectoryA( path );
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -383,7 +391,11 @@ static int recursive_create_path( char* fullpath,  char* dirname )
 		    dir_entry_t* ent = dir_read( dir );
 		    while( ent )
 			    {
+				#ifdef _WIN32
 			    if( stricmp( dir_name( ent ), dirname ) == 0 )
+				#else
+			    if( strcasecmp( dir_name( ent ), dirname ) == 0 )
+				#endif
 			        {
 			        if( dir_is_folder( ent ) )
 				        {
@@ -410,7 +422,7 @@ static int recursive_create_path( char* fullpath,  char* dirname )
 
 		    if( !dir_found )
 		        {
-		        mkdir( fullpath );
+		        file_util_mkdir( fullpath );
 		        }
 
 			if( next_dir )
@@ -459,7 +471,7 @@ void copy_file( char const* source, char const* destination )
 	#ifdef _WIN32
 		CopyFileA( source, destination, FALSE );
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -469,7 +481,7 @@ void move_file( char const* source, char const* destination )
 	#ifdef _WIN32
 		MoveFileA( source, destination );
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -484,7 +496,7 @@ void delete_file( char const* filename )
 			error = error;
 			}
 	#else /* _WIN32 */
-		#error unsupported platform
+		// #error unsupported platform /* TODO */
 	#endif
 	}
 
@@ -693,15 +705,19 @@ int is_folder( char const* path )
 
 int generate_temp_filename( char const* path, char const* prefix, char* filename, size_t capacity )
     {
-    char str[ MAX_PATH ] = "";
-    UINT res = GetTempFileNameA( path, prefix, 0, str );
-    if( !res ) return 0;
-    if( filename )
-        {
-        strncpy( filename, str, capacity );
-        filename[ capacity - 1 ] = '\0';
-        }
-    return (int)strlen( str );
+	#ifdef _WIN32		
+		char str[ MAX_PATH ] = "";
+		UINT res = GetTempFileNameA( path, prefix, 0, str );
+		if( !res ) return 0;
+		if( filename )
+			{
+			strncpy( filename, str, capacity );
+			filename[ capacity - 1 ] = '\0';
+			}
+		return (int)strlen( str );
+	#else
+		return 0; /* TODO */
+	#endif
     }
 
 

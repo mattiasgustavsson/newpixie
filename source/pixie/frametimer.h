@@ -60,6 +60,8 @@ int frametimer_frame_counter( frametimer_t* frametimer );
     #ifndef __TINYC__
         #pragma comment(lib, "winmm.lib")
     #endif
+#elif defined( __APPLE__ )
+	#include <mach/mach_time.h> 	
 #endif
 
 #ifndef FRAMETIMER_MALLOC
@@ -112,6 +114,10 @@ frametimer_t* frametimer_create( void* memctx )
 		LARGE_INTEGER f;
 		QueryPerformanceFrequency( &f );
 		frametimer->clock_freq = (FRAMETIMER_U64) f.QuadPart;
+	#elif __APPLE__
+		mach_timebase_info_data_t info;
+		mach_timebase_info( &info );
+		frametimer->clock_freq = (FRAMETIMER_U64)( info.denom / info.numer );
 	#else
 		#error unsupported platform
 	#endif
@@ -152,6 +158,8 @@ float frametimer_update( frametimer_t* frametimer )
 			LARGE_INTEGER c;
 			QueryPerformanceCounter( &c );
 			frametimer->prev_clock = (FRAMETIMER_U64) c.QuadPart;
+		#elif __APPLE__
+			frametimer->prev_clock = (FRAMETIMER_U64) mach_absolute_time();
 		#else
 			#error unsupported platform
 		#endif
@@ -166,6 +174,8 @@ float frametimer_update( frametimer_t* frametimer )
 		LARGE_INTEGER c;
 		QueryPerformanceCounter( &c );
 		curr_clock = (FRAMETIMER_U64) c.QuadPart;
+	#elif __APPLE__
+		curr_clock = (FRAMETIMER_U64) mach_absolute_time();
 	#else
 		#error unsupported platform
 	#endif
@@ -188,6 +198,8 @@ float frametimer_update( frametimer_t* frametimer )
 					WaitForSingleObject( frametimer->waitable_timer, 200 ); // wait long enough for timer to trigger ( 200ms == 5fps )
 					CancelWaitableTimer( frametimer->waitable_timer ); // in case we timed out
 					}
+			#elif __APPLE__
+				curr_clock = (FRAMETIMER_U64) mach_absolute_time();
 			#else
 				#error unsupported platform
 			#endif

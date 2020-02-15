@@ -723,7 +723,11 @@ int internal_pixie_build_and_load_assets( char const* bundle_filename, char cons
         void* data = NULL;
         asset_build_function_t build_function = NULL;
         for( int j = 0; j < pixie->build.count; ++j ) {
+            #ifdef _WIN32
             if( stricmp( items[ i ].type, pixie->build.types[ j ].name ) == 0 ) {
+            #else
+            if( strcasecmp( items[ i ].type, pixie->build.types[ j ].name ) == 0 ) {
+            #endif
                 build_function = pixie->build.types[ j ].func;
                 break;
             }
@@ -824,7 +828,11 @@ void free_text_file( char* text ) {
 
 
 #define DIR_IMPLEMENTATION
-#define DIR_WINDOWS
+#ifdef _WIN32
+    #define DIR_WINDOWS
+#else
+    #define DIR_POSIX
+#endif
 #include "dir.h"
 
 #define FILE_UTIL_IMPLEMENTATION

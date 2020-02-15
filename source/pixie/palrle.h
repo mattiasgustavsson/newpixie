@@ -272,7 +272,7 @@ void palrle_blit( palrle_data_t* rle_data, int x, int y, PALRLE_U8* pixels, int 
 
 
 void palrle_free( palrle_data_t* rle_data, void* memctx ) {
-    (void) rle_data, memctx;
+    (void) rle_data, (void) memctx;
     PALRLE_FREE( memctx, rle_data );
 }
 

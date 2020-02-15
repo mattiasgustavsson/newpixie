@@ -282,7 +282,7 @@ u32 hash_string( string str );
 	#elif defined PIXIE_ASSERT
 		#define ASSERT( expression, message ) PIXIE_ASSERT( expression, message )
     #else
-		#ifdef __TINYC__ 
+		#ifndef _MSC_VER 
 			#define ASSERT( expression, message ) \
 				do { \
 					if( !( expression ) ) { \
@@ -865,8 +865,11 @@ u32 hash_string( string str );
 
 // C runtime includes
 #include <setjmp.h>
+#define wait PIXIE_STD_WAIT /* osx defines a conflicting "wait" */
 #include <stdlib.h>
+#undef wait
 #include <string.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 
@@ -1569,6 +1572,8 @@ void internal_pixie_copy_user_thread_data( internal_pixie_user_thread_data_t* de
         dest->sprites.sprites[ i ].origin_y = source->sprites.sprites[ i ].origin_y;
         dest->sprites.sprites[ i ].visible = source->sprites.sprites[ i ].visible;
         switch( source->sprites.sprites[ i ].type ) {
+            case TYPE_NONE: {
+            } break;
             case TYPE_SPRITE: {
                 if( dest->sprites.sprites[ i ].type == TYPE_LABEL && dest->sprites.sprites[ i ].data.label.text ) {
                     free( dest->sprites.sprites[ i ].data.label.text );
@@ -1956,7 +1961,7 @@ int run( int (*main)( int, char** ) ) {
     // Store the `internal_pixie_t` pointer in the thread local storage for the current thread. It will be retrieved by 
     // all API functions so that we don't have to pass around an instance parameter to them.
     thread_tls_set( thread_atomic_ptr_load( &g_internal_pixie_tls ), pixie );
-    
+
     // Define the `internal_pixie_app_context_t` instance which will be shared between `run` function and 
     // `internal_pixie_app_proc` thread.
     internal_pixie_app_context_t app_context = { NULL };
@@ -1979,7 +1984,7 @@ int run( int (*main)( int, char** ) ) {
 
         // Run the user provided entry point (will be `pixmain` unless `PIXIE_NO_MAIN` was defined)
         if( jumpres == 0 ) // First time we get here we call `main`. If `exit_jump` was jumped to we will get here again
-            result = main( __argc, __argv );
+            result = main( /*__argc*/ 0, /*__argv*/ NULL ); /* TODO: handle args */
         else // Second time we save the result (`INT_MAX` is mapped to 0, as a jumpres of 0 would call main again)
             result = ( result == INT_MAX ? EXIT_SUCCESS : result );
     }
@@ -2937,7 +2942,11 @@ int len( string str ) {
 */
 
 int starts_with( string str, string start ) {
-    return strnicmp( str.c_str, start.c_str, strlen( start.c_str ) ) == 0;
+    #ifdef _WIN32 
+        return strnicmp( str.c_str, start.c_str, strlen( start.c_str ) ) == 0;
+    #else
+        return strncasecmp( str.c_str, start.c_str, strlen( start.c_str ) ) == 0;
+    #endif
 }
 /*
 
@@ -2982,7 +2991,7 @@ u32 hash_string( string str ) {
     int pixmain( int argc, char** argv );
 
     int main( int argc, char** argv ) {
-        (void) argc, argv;
+        (void) argc, (void) argv;
 		#if defined( _WIN32 ) && !defined( __TINYC__ )
             #ifndef NDEBUG
                 int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
@@ -3029,7 +3038,13 @@ u32 hash_string( string str ) {
       
 #define APP_IMPLEMENTATION
 #ifdef _WIN32
-    #define APP_WINDOWS
+    #ifndef PIXIE_WIN_SDL
+        #define APP_WINDOWS
+    #else
+        #define APP_SDL
+    #endif
+#else
+        #define APP_SDL    
 #endif
 #define APP_LOG( ctx, level, message )
 #include "app.h"
@@ -3135,7 +3150,11 @@ char const* internal_pixie_format_assert_message( char const* format, ... ) {
 	static char buffer[ 4096 ];
 	va_list args;
 	va_start( args, format );
+    #ifdef _WIN32
 	_vsnprintf( buffer, sizeof( buffer ), format, args );
+    #else
+    vsnprintf( buffer, sizeof( buffer ), format, args );
+    #endif
 	va_end( args );
 	return buffer;
 }
@@ -3179,7 +3198,19 @@ char const* internal_pixie_format_assert_message( char const* format, ... ) {
 		return 0;
 	}
 #else /* _WIN32 */
-	#error Platform not supported
+    /*TODO*/
+	int internal_pixie_display_assert_message( char const* expression, char const* message, char const* file, int line, 
+        char const* function ) {
+
+	    char buf[ 4096 + 64 ];
+	    snprintf( buf, 4095, "ASSERTION FAILED!\n\n%s\n\nExpression: %s\n\nFunction: %s\n\n%s(%d)\n", 
+            message, expression, function, file, line );
+	    printf( "\n**********************************************************************\n" );
+	    printf( "%s", buf );
+	    printf( "**********************************************************************\n\n" );
+		return 0;
+	}
+    // #error Platform not supported /* TODO */
 #endif /* _WIN32 */
 
 

@@ -12,7 +12,7 @@ ASSET_SONG( LARRY, "larry.mid" )
 ASSETS_END()
  
 int pixmain( int argc, char** argv ) {
-    (void) argc, argv;
+    (void) argc, (void) argv;
   
     if( load_assets() != 0 ) return 1;
 

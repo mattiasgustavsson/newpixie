@@ -78,65 +78,120 @@ void crtemu_coordinates_bitmap_to_window( crtemu_t* crtemu, int width, int heigh
     #endif
 #endif
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef _WIN32 
+    #define CRTEMU_SDL
 #endif
 
-    __declspec(dllimport) struct HINSTANCE__* __stdcall LoadLibraryA( char const* lpLibFileName );
-    __declspec(dllimport) int __stdcall FreeLibrary( struct HINSTANCE__* hModule );
-    #if defined(_WIN64)
-        typedef __int64 (__stdcall* CRTEMU_PROC)( void );
-        __declspec(dllimport) CRTEMU_PROC __stdcall GetProcAddress( struct HINSTANCE__* hModule, char const* lpLibFileName );
-    #else
-        typedef __int32 (__stdcall* CRTEMU_PROC)( void );
-        __declspec(dllimport) CRTEMU_PROC __stdcall GetProcAddress( struct HINSTANCE__* hModule, char const* lpLibFileName );
+
+#ifndef CRTEMU_SDL
+
+    #ifdef __cplusplus
+    extern "C" {
     #endif
 
-#ifdef __cplusplus
-    }
+        __declspec(dllimport) struct HINSTANCE__* __stdcall LoadLibraryA( char const* lpLibFileName );
+        __declspec(dllimport) int __stdcall FreeLibrary( struct HINSTANCE__* hModule );
+        #if defined(_WIN64)
+            typedef __int64 (__stdcall* CRTEMU_PROC)( void );
+            __declspec(dllimport) CRTEMU_PROC __stdcall GetProcAddress( struct HINSTANCE__* hModule, char const* lpLibFileName );
+        #else
+            typedef __int32 (__stdcall* CRTEMU_PROC)( void );
+            __declspec(dllimport) CRTEMU_PROC __stdcall GetProcAddress( struct HINSTANCE__* hModule, char const* lpLibFileName );
+        #endif
+
+    #ifdef __cplusplus
+        }
+    #endif
+
+    #define CRTEMU_GLCALLTYPE __stdcall
+    typedef unsigned int CRTEMU_GLuint;
+    typedef int CRTEMU_GLsizei;
+    typedef unsigned int CRTEMU_GLenum;
+    typedef int CRTEMU_GLint;
+    typedef float CRTEMU_GLfloat;
+    typedef char CRTEMU_GLchar;
+    typedef unsigned char CRTEMU_GLboolean;
+    typedef size_t CRTEMU_GLsizeiptr;
+    typedef unsigned int CRTEMU_GLbitfield;
+
+    #define CRTEMU_GL_FLOAT 0x1406
+    #define CRTEMU_GL_FALSE 0
+    #define CRTEMU_GL_FRAGMENT_SHADER 0x8b30
+    #define CRTEMU_GL_VERTEX_SHADER 0x8b31
+    #define CRTEMU_GL_COMPILE_STATUS 0x8b81
+    #define CRTEMU_GL_LINK_STATUS 0x8b82
+    #define CRTEMU_GL_INFO_LOG_LENGTH 0x8b84
+    #define CRTEMU_GL_ARRAY_BUFFER 0x8892
+    #define CRTEMU_GL_TEXTURE_2D 0x0de1
+    #define CRTEMU_GL_TEXTURE0 0x84c0
+    #define CRTEMU_GL_TEXTURE1 0x84c1
+    #define CRTEMU_GL_TEXTURE2 0x84c2
+    #define CRTEMU_GL_TEXTURE3 0x84c3
+    #define CRTEMU_GL_TEXTURE_MIN_FILTER 0x2801
+    #define CRTEMU_GL_TEXTURE_MAG_FILTER 0x2800
+    #define CRTEMU_GL_NEAREST 0x2600
+    #define CRTEMU_GL_LINEAR 0x2601
+    #define CRTEMU_GL_STATIC_DRAW 0x88e4
+    #define CRTEMU_GL_RGBA 0x1908
+    #define CRTEMU_GL_UNSIGNED_BYTE 0x1401
+    #define CRTEMU_GL_COLOR_BUFFER_BIT 0x00004000
+    #define CRTEMU_GL_TRIANGLE_FAN 0x0006
+    #define CRTEMU_GL_FRAMEBUFFER 0x8d40
+    #define CRTEMU_GL_VIEWPORT 0x0ba2
+    #define CRTEMU_GL_RGB 0x1907
+    #define CRTEMU_GL_COLOR_ATTACHMENT0 0x8ce0
+    #define CRTEMU_GL_TEXTURE_WRAP_S 0x2802
+    #define CRTEMU_GL_TEXTURE_WRAP_T 0x2803
+    #define CRTEMU_GL_CLAMP_TO_BORDER 0x812D
+    #define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004
+
+#else
+
+    #include <GL/glew.h>
+    #include <SDL2/SDL_opengl.h>
+    #define CRTEMU_GLCALLTYPE GLAPIENTRY
+    
+    typedef GLuint CRTEMU_GLuint;
+    typedef GLsizei CRTEMU_GLsizei;
+    typedef GLenum CRTEMU_GLenum;
+    typedef GLint CRTEMU_GLint;
+    typedef GLfloat CRTEMU_GLfloat;
+    typedef GLchar CRTEMU_GLchar;
+    typedef GLboolean CRTEMU_GLboolean;
+    typedef GLsizeiptr CRTEMU_GLsizeiptr;
+    typedef GLbitfield CRTEMU_GLbitfield;
+
+     #define CRTEMU_GL_FLOAT GL_FLOAT 
+     #define CRTEMU_GL_FALSE GL_FALSE 
+     #define CRTEMU_GL_FRAGMENT_SHADER GL_FRAGMENT_SHADER 
+     #define CRTEMU_GL_VERTEX_SHADER GL_VERTEX_SHADER 
+     #define CRTEMU_GL_COMPILE_STATUS GL_COMPILE_STATUS 
+     #define CRTEMU_GL_LINK_STATUS GL_LINK_STATUS 
+     #define CRTEMU_GL_INFO_LOG_LENGTH GL_INFO_LOG_LENGTH 
+     #define CRTEMU_GL_ARRAY_BUFFER GL_ARRAY_BUFFER 
+     #define CRTEMU_GL_TEXTURE_2D GL_TEXTURE_2D 
+     #define CRTEMU_GL_TEXTURE0 GL_TEXTURE0 
+     #define CRTEMU_GL_TEXTURE1 GL_TEXTURE1 
+     #define CRTEMU_GL_TEXTURE2 GL_TEXTURE2 
+     #define CRTEMU_GL_TEXTURE3 GL_TEXTURE3 
+     #define CRTEMU_GL_TEXTURE_MIN_FILTER GL_TEXTURE_MIN_FILTER 
+     #define CRTEMU_GL_TEXTURE_MAG_FILTER GL_TEXTURE_MAG_FILTER 
+     #define CRTEMU_GL_NEAREST GL_NEAREST 
+     #define CRTEMU_GL_LINEAR GL_LINEAR 
+     #define CRTEMU_GL_STATIC_DRAW GL_STATIC_DRAW 
+     #define CRTEMU_GL_RGBA GL_RGBA 
+     #define CRTEMU_GL_UNSIGNED_BYTE GL_UNSIGNED_BYTE 
+     #define CRTEMU_GL_COLOR_BUFFER_BIT GL_COLOR_BUFFER_BIT 
+     #define CRTEMU_GL_TRIANGLE_FAN GL_TRIANGLE_FAN 
+     #define CRTEMU_GL_FRAMEBUFFER GL_FRAMEBUFFER 
+     #define CRTEMU_GL_VIEWPORT GL_VIEWPORT 
+     #define CRTEMU_GL_RGB GL_RGB 
+     #define CRTEMU_GL_COLOR_ATTACHMENT0 GL_COLOR_ATTACHMENT0 
+     #define CRTEMU_GL_TEXTURE_WRAP_S GL_TEXTURE_WRAP_S 
+     #define CRTEMU_GL_TEXTURE_WRAP_T GL_TEXTURE_WRAP_T 
+     #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER 
+     #define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
 #endif
-
-#define CRTEMU_GLCALLTYPE __stdcall
-typedef unsigned int CRTEMU_GLuint;
-typedef int CRTEMU_GLsizei;
-typedef unsigned int CRTEMU_GLenum;
-typedef int CRTEMU_GLint;
-typedef float CRTEMU_GLfloat;
-typedef char CRTEMU_GLchar;
-typedef unsigned char CRTEMU_GLboolean;
-typedef size_t CRTEMU_GLsizeiptr;
-typedef unsigned int CRTEMU_GLbitfield;
-
-#define CRTEMU_GL_FLOAT 0x1406
-#define CRTEMU_GL_FALSE 0
-#define CRTEMU_GL_FRAGMENT_SHADER 0x8b30
-#define CRTEMU_GL_VERTEX_SHADER 0x8b31
-#define CRTEMU_GL_COMPILE_STATUS 0x8b81
-#define CRTEMU_GL_LINK_STATUS 0x8b82
-#define CRTEMU_GL_INFO_LOG_LENGTH 0x8b84
-#define CRTEMU_GL_ARRAY_BUFFER 0x8892
-#define CRTEMU_GL_TEXTURE_2D 0x0de1
-#define CRTEMU_GL_TEXTURE0 0x84c0
-#define CRTEMU_GL_TEXTURE1 0x84c1
-#define CRTEMU_GL_TEXTURE2 0x84c2
-#define CRTEMU_GL_TEXTURE3 0x84c3
-#define CRTEMU_GL_TEXTURE_MIN_FILTER 0x2801
-#define CRTEMU_GL_TEXTURE_MAG_FILTER 0x2800
-#define CRTEMU_GL_NEAREST 0x2600
-#define CRTEMU_GL_LINEAR 0x2601
-#define CRTEMU_GL_STATIC_DRAW 0x88e4
-#define CRTEMU_GL_RGBA 0x1908
-#define CRTEMU_GL_UNSIGNED_BYTE 0x1401
-#define CRTEMU_GL_COLOR_BUFFER_BIT 0x00004000
-#define CRTEMU_GL_TRIANGLE_FAN 0x0006
-#define CRTEMU_GL_FRAMEBUFFER 0x8d40
-#define CRTEMU_GL_VIEWPORT 0x0ba2
-#define CRTEMU_GL_RGB 0x1907
-#define CRTEMU_GL_COLOR_ATTACHMENT0 0x8ce0
-#define CRTEMU_GL_TEXTURE_WRAP_S 0x2802
-#define CRTEMU_GL_TEXTURE_WRAP_T 0x2803
-#define CRTEMU_GL_CLAMP_TO_BORDER 0x812D
-#define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004
 
 
 struct crtemu_t
@@ -170,50 +225,53 @@ struct crtemu_t
     int last_present_height;
 
 
-    struct HINSTANCE__* gl_dll;
-    CRTEMU_PROC (CRTEMU_GLCALLTYPE *wglGetProcAddress) (char const* );
-    void (CRTEMU_GLCALLTYPE* glTexParameterfv) (CRTEMU_GLenum target, CRTEMU_GLenum pname, CRTEMU_GLfloat const* params);
-    void (CRTEMU_GLCALLTYPE* glDeleteFramebuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint const* framebuffers);
-    void (CRTEMU_GLCALLTYPE* glGetIntegerv) (CRTEMU_GLenum pname, CRTEMU_GLint *data);
-    void (CRTEMU_GLCALLTYPE* glGenFramebuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint *framebuffers);
-    void (CRTEMU_GLCALLTYPE* glBindFramebuffer) (CRTEMU_GLenum target, CRTEMU_GLuint framebuffer);    
-    void (CRTEMU_GLCALLTYPE* glUniform1f) (CRTEMU_GLint location, CRTEMU_GLfloat v0);
-    void (CRTEMU_GLCALLTYPE* glUniform2f) (CRTEMU_GLint location, CRTEMU_GLfloat v0, CRTEMU_GLfloat v1);
-    void (CRTEMU_GLCALLTYPE* glFramebufferTexture2D) (CRTEMU_GLenum target, CRTEMU_GLenum attachment, CRTEMU_GLenum textarget, CRTEMU_GLuint texture, CRTEMU_GLint level);
-    CRTEMU_GLuint (CRTEMU_GLCALLTYPE* glCreateShader) (CRTEMU_GLenum type);
-    void (CRTEMU_GLCALLTYPE* glShaderSource) (CRTEMU_GLuint shader, CRTEMU_GLsizei count, CRTEMU_GLchar const* const* string, CRTEMU_GLint const* length);
-    void (CRTEMU_GLCALLTYPE* glCompileShader) (CRTEMU_GLuint shader);
-    void (CRTEMU_GLCALLTYPE* glGetShaderiv) (CRTEMU_GLuint shader, CRTEMU_GLenum pname, CRTEMU_GLint *params);
-    CRTEMU_GLuint (CRTEMU_GLCALLTYPE* glCreateProgram) (void);
-    void (CRTEMU_GLCALLTYPE* glAttachShader) (CRTEMU_GLuint program, CRTEMU_GLuint shader);
-    void (CRTEMU_GLCALLTYPE* glBindAttribLocation) (CRTEMU_GLuint program, CRTEMU_GLuint index, CRTEMU_GLchar const* name);
-    void (CRTEMU_GLCALLTYPE* glLinkProgram) (CRTEMU_GLuint program);
-    void (CRTEMU_GLCALLTYPE* glGetProgramiv) (CRTEMU_GLuint program, CRTEMU_GLenum pname, CRTEMU_GLint *params);
-    void (CRTEMU_GLCALLTYPE* glGenBuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint *buffers);
-    void (CRTEMU_GLCALLTYPE* glBindBuffer) (CRTEMU_GLenum target, CRTEMU_GLuint buffer);
-    void (CRTEMU_GLCALLTYPE* glEnableVertexAttribArray) (CRTEMU_GLuint index);
-    void (CRTEMU_GLCALLTYPE* glVertexAttribPointer) (CRTEMU_GLuint index, CRTEMU_GLint size, CRTEMU_GLenum type, CRTEMU_GLboolean normalized, CRTEMU_GLsizei stride, void const* pointer);
-    void (CRTEMU_GLCALLTYPE* glGenTextures) (CRTEMU_GLsizei n, CRTEMU_GLuint* textures);
-    void (CRTEMU_GLCALLTYPE* glEnable) (CRTEMU_GLenum cap);
-    void (CRTEMU_GLCALLTYPE* glActiveTexture) (CRTEMU_GLenum texture);
-    void (CRTEMU_GLCALLTYPE* glBindTexture) (CRTEMU_GLenum target, CRTEMU_GLuint texture);
-    void (CRTEMU_GLCALLTYPE* glTexParameteri) (CRTEMU_GLenum target, CRTEMU_GLenum pname, CRTEMU_GLint param);
-    void (CRTEMU_GLCALLTYPE* glDeleteBuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint const* buffers);
-    void (CRTEMU_GLCALLTYPE* glDeleteTextures) (CRTEMU_GLsizei n, CRTEMU_GLuint const* textures);
-    void (CRTEMU_GLCALLTYPE* glBufferData) (CRTEMU_GLenum target, CRTEMU_GLsizeiptr size, void const *data, CRTEMU_GLenum usage);
-    void (CRTEMU_GLCALLTYPE* glUseProgram) (CRTEMU_GLuint program);
-    void (CRTEMU_GLCALLTYPE* glUniform1i) (CRTEMU_GLint location, CRTEMU_GLint v0);
-    void (CRTEMU_GLCALLTYPE* glUniform3f) (CRTEMU_GLint location, CRTEMU_GLfloat v0, CRTEMU_GLfloat v1, CRTEMU_GLfloat v2);
-    CRTEMU_GLint (CRTEMU_GLCALLTYPE* glGetUniformLocation) (CRTEMU_GLuint program, CRTEMU_GLchar const* name);
-    void (CRTEMU_GLCALLTYPE* glTexImage2D) (CRTEMU_GLenum target, CRTEMU_GLint level, CRTEMU_GLint internalformat, CRTEMU_GLsizei width, CRTEMU_GLsizei height, CRTEMU_GLint border, CRTEMU_GLenum format, CRTEMU_GLenum type, void const* pixels);
-    void (CRTEMU_GLCALLTYPE* glClearColor) (CRTEMU_GLfloat red, CRTEMU_GLfloat green, CRTEMU_GLfloat blue, CRTEMU_GLfloat alpha);
-    void (CRTEMU_GLCALLTYPE* glClear) (CRTEMU_GLbitfield mask);
-    void (CRTEMU_GLCALLTYPE* glDrawArrays) (CRTEMU_GLenum mode, CRTEMU_GLint first, CRTEMU_GLsizei count);
-    void (CRTEMU_GLCALLTYPE* glViewport) (CRTEMU_GLint x, CRTEMU_GLint y, CRTEMU_GLsizei width, CRTEMU_GLsizei height);
-    void (CRTEMU_GLCALLTYPE* glDeleteShader) (CRTEMU_GLuint shader);
-    void (CRTEMU_GLCALLTYPE* glDeleteProgram) (CRTEMU_GLuint program);
+    #ifndef CRTEMU_SDL
+        struct HINSTANCE__* gl_dll;
+        CRTEMU_PROC (CRTEMU_GLCALLTYPE *wglGetProcAddress) (char const* );
+    #endif
+    
+    void (CRTEMU_GLCALLTYPE* TexParameterfv) (CRTEMU_GLenum target, CRTEMU_GLenum pname, CRTEMU_GLfloat const* params);
+    void (CRTEMU_GLCALLTYPE* DeleteFramebuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint const* framebuffers);
+    void (CRTEMU_GLCALLTYPE* GetIntegerv) (CRTEMU_GLenum pname, CRTEMU_GLint *data);
+    void (CRTEMU_GLCALLTYPE* GenFramebuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint *framebuffers);
+    void (CRTEMU_GLCALLTYPE* BindFramebuffer) (CRTEMU_GLenum target, CRTEMU_GLuint framebuffer);    
+    void (CRTEMU_GLCALLTYPE* Uniform1f) (CRTEMU_GLint location, CRTEMU_GLfloat v0);
+    void (CRTEMU_GLCALLTYPE* Uniform2f) (CRTEMU_GLint location, CRTEMU_GLfloat v0, CRTEMU_GLfloat v1);
+    void (CRTEMU_GLCALLTYPE* FramebufferTexture2D) (CRTEMU_GLenum target, CRTEMU_GLenum attachment, CRTEMU_GLenum textarget, CRTEMU_GLuint texture, CRTEMU_GLint level);
+    CRTEMU_GLuint (CRTEMU_GLCALLTYPE* CreateShader) (CRTEMU_GLenum type);
+    void (CRTEMU_GLCALLTYPE* ShaderSource) (CRTEMU_GLuint shader, CRTEMU_GLsizei count, CRTEMU_GLchar const* const* string, CRTEMU_GLint const* length);
+    void (CRTEMU_GLCALLTYPE* CompileShader) (CRTEMU_GLuint shader);
+    void (CRTEMU_GLCALLTYPE* GetShaderiv) (CRTEMU_GLuint shader, CRTEMU_GLenum pname, CRTEMU_GLint *params);
+    CRTEMU_GLuint (CRTEMU_GLCALLTYPE* CreateProgram) (void);
+    void (CRTEMU_GLCALLTYPE* AttachShader) (CRTEMU_GLuint program, CRTEMU_GLuint shader);
+    void (CRTEMU_GLCALLTYPE* BindAttribLocation) (CRTEMU_GLuint program, CRTEMU_GLuint index, CRTEMU_GLchar const* name);
+    void (CRTEMU_GLCALLTYPE* LinkProgram) (CRTEMU_GLuint program);
+    void (CRTEMU_GLCALLTYPE* GetProgramiv) (CRTEMU_GLuint program, CRTEMU_GLenum pname, CRTEMU_GLint *params);
+    void (CRTEMU_GLCALLTYPE* GenBuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint *buffers);
+    void (CRTEMU_GLCALLTYPE* BindBuffer) (CRTEMU_GLenum target, CRTEMU_GLuint buffer);
+    void (CRTEMU_GLCALLTYPE* EnableVertexAttribArray) (CRTEMU_GLuint index);
+    void (CRTEMU_GLCALLTYPE* VertexAttribPointer) (CRTEMU_GLuint index, CRTEMU_GLint size, CRTEMU_GLenum type, CRTEMU_GLboolean normalized, CRTEMU_GLsizei stride, void const* pointer);
+    void (CRTEMU_GLCALLTYPE* GenTextures) (CRTEMU_GLsizei n, CRTEMU_GLuint* textures);
+    void (CRTEMU_GLCALLTYPE* Enable) (CRTEMU_GLenum cap);
+    void (CRTEMU_GLCALLTYPE* ActiveTexture) (CRTEMU_GLenum texture);
+    void (CRTEMU_GLCALLTYPE* BindTexture) (CRTEMU_GLenum target, CRTEMU_GLuint texture);
+    void (CRTEMU_GLCALLTYPE* TexParameteri) (CRTEMU_GLenum target, CRTEMU_GLenum pname, CRTEMU_GLint param);
+    void (CRTEMU_GLCALLTYPE* DeleteBuffers) (CRTEMU_GLsizei n, CRTEMU_GLuint const* buffers);
+    void (CRTEMU_GLCALLTYPE* DeleteTextures) (CRTEMU_GLsizei n, CRTEMU_GLuint const* textures);
+    void (CRTEMU_GLCALLTYPE* BufferData) (CRTEMU_GLenum target, CRTEMU_GLsizeiptr size, void const *data, CRTEMU_GLenum usage);
+    void (CRTEMU_GLCALLTYPE* UseProgram) (CRTEMU_GLuint program);
+    void (CRTEMU_GLCALLTYPE* Uniform1i) (CRTEMU_GLint location, CRTEMU_GLint v0);
+    void (CRTEMU_GLCALLTYPE* Uniform3f) (CRTEMU_GLint location, CRTEMU_GLfloat v0, CRTEMU_GLfloat v1, CRTEMU_GLfloat v2);
+    CRTEMU_GLint (CRTEMU_GLCALLTYPE* GetUniformLocation) (CRTEMU_GLuint program, CRTEMU_GLchar const* name);
+    void (CRTEMU_GLCALLTYPE* TexImage2D) (CRTEMU_GLenum target, CRTEMU_GLint level, CRTEMU_GLint internalformat, CRTEMU_GLsizei width, CRTEMU_GLsizei height, CRTEMU_GLint border, CRTEMU_GLenum format, CRTEMU_GLenum type, void const* pixels);
+    void (CRTEMU_GLCALLTYPE* ClearColor) (CRTEMU_GLfloat red, CRTEMU_GLfloat green, CRTEMU_GLfloat blue, CRTEMU_GLfloat alpha);
+    void (CRTEMU_GLCALLTYPE* Clear) (CRTEMU_GLbitfield mask);
+    void (CRTEMU_GLCALLTYPE* DrawArrays) (CRTEMU_GLenum mode, CRTEMU_GLint first, CRTEMU_GLsizei count);
+    void (CRTEMU_GLCALLTYPE* Viewport) (CRTEMU_GLint x, CRTEMU_GLint y, CRTEMU_GLsizei width, CRTEMU_GLsizei height);
+    void (CRTEMU_GLCALLTYPE* DeleteShader) (CRTEMU_GLuint shader);
+    void (CRTEMU_GLCALLTYPE* DeleteProgram) (CRTEMU_GLuint program);
     #ifdef CRTEMU_REPORT_SHADER_ERRORS
-        void (CRTEMU_GLCALLTYPE* glGetShaderInfoLog) (CRTEMU_GLuint shader, CRTEMU_GLsizei bufSize, CRTEMU_GLsizei *length, CRTEMU_GLchar *infoLog);
+        void (CRTEMU_GLCALLTYPE* GetShaderInfoLog) (CRTEMU_GLuint shader, CRTEMU_GLsizei bufSize, CRTEMU_GLsizei *length, CRTEMU_GLchar *infoLog);
     #endif
     };
 
@@ -224,38 +282,38 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
         char error_message[ 1024 ]; 
     #endif
 
-    CRTEMU_GLuint vs = crtemu->glCreateShader( CRTEMU_GL_VERTEX_SHADER );
-    crtemu->glShaderSource( vs, 1, (char const**) &vs_source, NULL );
-    crtemu->glCompileShader( vs );
+    CRTEMU_GLuint vs = crtemu->CreateShader( CRTEMU_GL_VERTEX_SHADER );
+    crtemu->ShaderSource( vs, 1, (char const**) &vs_source, NULL );
+    crtemu->CompileShader( vs );
     CRTEMU_GLint vs_compiled;
-    crtemu->glGetShaderiv( vs, CRTEMU_GL_COMPILE_STATUS, &vs_compiled );
+    crtemu->GetShaderiv( vs, CRTEMU_GL_COMPILE_STATUS, &vs_compiled );
     if( !vs_compiled )
         {
         #ifdef CRTEMU_REPORT_SHADER_ERRORS
             char const* prefix = "Vertex Shader Error: ";
             strcpy( error_message, prefix );
             int len = 0, written = 0;
-            crtemu->glGetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
-            crtemu->glGetShaderInfoLog( vs, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            crtemu->GetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
+            crtemu->GetShaderInfoLog( vs, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             CRTEMU_REPORT_ERROR( error_message );
         #endif
         return 0;
         }
     
-    CRTEMU_GLuint fs = crtemu->glCreateShader( CRTEMU_GL_FRAGMENT_SHADER );
-    crtemu->glShaderSource( fs, 1, (char const**) &fs_source, NULL );
-    crtemu->glCompileShader( fs );
+    CRTEMU_GLuint fs = crtemu->CreateShader( CRTEMU_GL_FRAGMENT_SHADER );
+    crtemu->ShaderSource( fs, 1, (char const**) &fs_source, NULL );
+    crtemu->CompileShader( fs );
     CRTEMU_GLint fs_compiled;
-    crtemu->glGetShaderiv( fs, CRTEMU_GL_COMPILE_STATUS, &fs_compiled );
+    crtemu->GetShaderiv( fs, CRTEMU_GL_COMPILE_STATUS, &fs_compiled );
     if( !fs_compiled )
         {
         #ifdef CRTEMU_REPORT_SHADER_ERRORS
             char const* prefix = "Fragment Shader Error: ";
             strcpy( error_message, prefix );
             int len = 0, written = 0;
-            crtemu->glGetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
-            crtemu->glGetShaderInfoLog( fs, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            crtemu->GetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
+            crtemu->GetShaderInfoLog( fs, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             CRTEMU_REPORT_ERROR( error_message );
         #endif
@@ -263,22 +321,22 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
         }
 
 
-    CRTEMU_GLuint prg = crtemu->glCreateProgram();
-    crtemu->glAttachShader( prg, fs );
-    crtemu->glAttachShader( prg, vs );
-    crtemu->glBindAttribLocation( prg, 0, "pos" );
-    crtemu->glLinkProgram( prg );
+    CRTEMU_GLuint prg = crtemu->CreateProgram();
+    crtemu->AttachShader( prg, fs );
+    crtemu->AttachShader( prg, vs );
+    crtemu->BindAttribLocation( prg, 0, "pos" );
+    crtemu->LinkProgram( prg );
 
     CRTEMU_GLint linked;
-    crtemu->glGetProgramiv( prg, CRTEMU_GL_LINK_STATUS, &linked );
+    crtemu->GetProgramiv( prg, CRTEMU_GL_LINK_STATUS, &linked );
     if( !linked )
         {
         #ifdef CRTEMU_REPORT_SHADER_ERRORS
             char const* prefix = "Shader Link Error: ";
             strcpy( error_message, prefix );
             int len = 0, written = 0;
-            crtemu->glGetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
-            crtemu->glGetShaderInfoLog( prg, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            crtemu->GetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
+            crtemu->GetShaderInfoLog( prg, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             CRTEMU_REPORT_ERROR( error_message );
         #endif
@@ -320,152 +378,202 @@ crtemu_t* crtemu_create( void* memctx )
     crtemu->last_present_width = 0;
     crtemu->last_present_height = 0;
     
-    crtemu->gl_dll = LoadLibraryA( "opengl32.dll" );
-    if( !crtemu->gl_dll ) goto failed;
+    #ifndef CRTEMU_SDL
 
-    crtemu->wglGetProcAddress = (CRTEMU_PROC (CRTEMU_GLCALLTYPE*)(char const*)) (uintptr_t) GetProcAddress( crtemu->gl_dll, "wglGetProcAddress" );
-    if( !crtemu->gl_dll ) goto failed;
+        crtemu->gl_dll = LoadLibraryA( "opengl32.dll" );
+        if( !crtemu->gl_dll ) goto failed;
 
-    // Attempt to bind opengl functions using GetProcAddress
-    crtemu->glTexParameterfv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLfloat const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexParameterfv" );
-    crtemu->glDeleteFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteFramebuffers" );
-    crtemu->glGetIntegerv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetIntegerv" );
-    crtemu->glGenFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenFramebuffers" );
-    crtemu->glBindFramebuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindFramebuffer" );    
-    crtemu->glUniform1f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform1f" );
-    crtemu->glUniform2f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform2f" );
-    crtemu->glFramebufferTexture2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLuint, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glFramebufferTexture2D" );    
-    crtemu->glCreateShader = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCreateShader" );
-    crtemu->glShaderSource = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLchar const* const*, CRTEMU_GLint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glShaderSource" );
-    crtemu->glCompileShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCompileShader" );
-    crtemu->glGetShaderiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetShaderiv" );
-    crtemu->glCreateProgram = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (void) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCreateProgram" );
-    crtemu->glAttachShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glAttachShader" );
-    crtemu->glBindAttribLocation = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindAttribLocation" );
-    crtemu->glLinkProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glLinkProgram" );
-    crtemu->glGetProgramiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetProgramiv" );
-    crtemu->glGenBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenBuffers" );
-    crtemu->glBindBuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindBuffer" );
-    crtemu->glEnableVertexAttribArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glEnableVertexAttribArray" );
-    crtemu->glVertexAttribPointer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLboolean, CRTEMU_GLsizei, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glVertexAttribPointer" );
-    crtemu->glGenTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenTextures" );
-    crtemu->glEnable = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glEnable" );
-    crtemu->glActiveTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glActiveTexture" );
-    crtemu->glBindTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindTexture" );
-    crtemu->glTexParameteri = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexParameteri" );
-    crtemu->glDeleteBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteBuffers" );
-    crtemu->glDeleteTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteTextures" );
-    crtemu->glBufferData = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLsizeiptr, void const *, CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBufferData" );
-    crtemu->glUseProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUseProgram" );
-    crtemu->glUniform1i = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform1i" );
-    crtemu->glUniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform3f" );
-    crtemu->glGetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetUniformLocation" );
-    crtemu->glTexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexImage2D" );
-    crtemu->glClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClearColor" );
-    crtemu->glClear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClear" );
-    crtemu->glDrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDrawArrays" );
-    crtemu->glViewport = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glViewport" );
-    crtemu->glDeleteShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteShader" );
-    crtemu->glDeleteProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteProgram" );
-    #ifdef CRTEMU_REPORT_SHADER_ERRORS
-        crtemu->glGetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetShaderInfoLog" );
-    #endif
+        crtemu->wglGetProcAddress = (CRTEMU_PROC (CRTEMU_GLCALLTYPE*)(char const*)) (uintptr_t) GetProcAddress( crtemu->gl_dll, "wglGetProcAddress" );
+        if( !crtemu->gl_dll ) goto failed;
 
-    // Any opengl functions which didn't bind, try binding them using wglGetProcAddrss
-    if( !crtemu->glTexParameterfv ) crtemu->glTexParameterfv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLfloat const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexParameterfv" );
-    if( !crtemu->glDeleteFramebuffers ) crtemu->glDeleteFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteFramebuffers" );
-    if( !crtemu->glGetIntegerv ) crtemu->glGetIntegerv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint *) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetIntegerv" );
-    if( !crtemu->glGenFramebuffers ) crtemu->glGenFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenFramebuffers" );
-    if( !crtemu->glBindFramebuffer ) crtemu->glBindFramebuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindFramebuffer" );    
-    if( !crtemu->glUniform1f ) crtemu->glUniform1f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform1f" );
-    if( !crtemu->glUniform2f ) crtemu->glUniform2f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform2f" );
-    if( !crtemu->glFramebufferTexture2D ) crtemu->glFramebufferTexture2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLuint, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glFramebufferTexture2D" );    
-    if( !crtemu->glCreateShader ) crtemu->glCreateShader = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glCreateShader" );
-    if( !crtemu->glShaderSource ) crtemu->glShaderSource = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLchar const* const*, CRTEMU_GLint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glShaderSource" );
-    if( !crtemu->glCompileShader ) crtemu->glCompileShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glCompileShader" );
-    if( !crtemu->glGetShaderiv ) crtemu->glGetShaderiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetShaderiv" );
-    if( !crtemu->glCreateProgram ) crtemu->glCreateProgram = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (void) ) (uintptr_t) crtemu->wglGetProcAddress( "glCreateProgram" );
-    if( !crtemu->glAttachShader ) crtemu->glAttachShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glAttachShader" );
-    if( !crtemu->glBindAttribLocation ) crtemu->glBindAttribLocation = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindAttribLocation" );
-    if( !crtemu->glLinkProgram ) crtemu->glLinkProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glLinkProgram" );
-    if( !crtemu->glGetProgramiv ) crtemu->glGetProgramiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetProgramiv" );
-    if( !crtemu->glGenBuffers ) crtemu->glGenBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenBuffers" );
-    if( !crtemu->glBindBuffer ) crtemu->glBindBuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindBuffer" );
-    if( !crtemu->glEnableVertexAttribArray ) crtemu->glEnableVertexAttribArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glEnableVertexAttribArray" );
-    if( !crtemu->glVertexAttribPointer ) crtemu->glVertexAttribPointer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLboolean, CRTEMU_GLsizei, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glVertexAttribPointer" );
-    if( !crtemu->glGenTextures ) crtemu->glGenTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenTextures" );
-    if( !crtemu->glEnable ) crtemu->glEnable = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glEnable" );
-    if( !crtemu->glActiveTexture ) crtemu->glActiveTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glActiveTexture" );
-    if( !crtemu->glBindTexture ) crtemu->glBindTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindTexture" );
-    if( !crtemu->glTexParameteri ) crtemu->glTexParameteri = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexParameteri" );
-    if( !crtemu->glDeleteBuffers ) crtemu->glDeleteBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteBuffers" );
-    if( !crtemu->glDeleteTextures ) crtemu->glDeleteTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteTextures" );
-    if( !crtemu->glBufferData ) crtemu->glBufferData = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLsizeiptr, void const *, CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glBufferData" );
-    if( !crtemu->glUseProgram ) crtemu->glUseProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glUseProgram" );
-    if( !crtemu->glUniform1i ) crtemu->glUniform1i = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform1i" );
-    if( !crtemu->glUniform3f ) crtemu->glUniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform3f" );
-    if( !crtemu->glGetUniformLocation ) crtemu->glGetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetUniformLocation" );
-    if( !crtemu->glTexImage2D ) crtemu->glTexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexImage2D" );
-    if( !crtemu->glClearColor ) crtemu->glClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glClearColor" );
-    if( !crtemu->glClear ) crtemu->glClear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) crtemu->wglGetProcAddress( "glClear" );
-    if( !crtemu->glDrawArrays ) crtemu->glDrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) crtemu->wglGetProcAddress( "glDrawArrays" );
-    if( !crtemu->glViewport ) crtemu->glViewport = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei) ) (uintptr_t) crtemu->wglGetProcAddress( "glViewport" );
-    if( !crtemu->glDeleteShader ) crtemu->glDeleteShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteShader" );
-    if( !crtemu->glDeleteProgram ) crtemu->glDeleteProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteProgram" );
-    #ifdef CRTEMU_REPORT_SHADER_ERRORS
-        if( !crtemu->glGetShaderInfoLog ) crtemu->glGetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetShaderInfoLog" );
+        // Attempt to bind opengl functions using GetProcAddress
+        crtemu->TexParameterfv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLfloat const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexParameterfv" );
+        crtemu->DeleteFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteFramebuffers" );
+        crtemu->GetIntegerv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetIntegerv" );
+        crtemu->GenFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenFramebuffers" );
+        crtemu->BindFramebuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindFramebuffer" );    
+        crtemu->Uniform1f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform1f" );
+        crtemu->Uniform2f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform2f" );
+        crtemu->FramebufferTexture2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLuint, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glFramebufferTexture2D" );    
+        crtemu->CreateShader = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCreateShader" );
+        crtemu->ShaderSource = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLchar const* const*, CRTEMU_GLint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glShaderSource" );
+        crtemu->CompileShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCompileShader" );
+        crtemu->GetShaderiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetShaderiv" );
+        crtemu->CreateProgram = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (void) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glCreateProgram" );
+        crtemu->AttachShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glAttachShader" );
+        crtemu->BindAttribLocation = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindAttribLocation" );
+        crtemu->LinkProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glLinkProgram" );
+        crtemu->GetProgramiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetProgramiv" );
+        crtemu->GenBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenBuffers" );
+        crtemu->BindBuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindBuffer" );
+        crtemu->EnableVertexAttribArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glEnableVertexAttribArray" );
+        crtemu->VertexAttribPointer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLboolean, CRTEMU_GLsizei, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glVertexAttribPointer" );
+        crtemu->GenTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenTextures" );
+        crtemu->Enable = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glEnable" );
+        crtemu->ActiveTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glActiveTexture" );
+        crtemu->BindTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindTexture" );
+        crtemu->TexParameteri = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexParameteri" );
+        crtemu->DeleteBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteBuffers" );
+        crtemu->DeleteTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteTextures" );
+        crtemu->BufferData = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLsizeiptr, void const *, CRTEMU_GLenum) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBufferData" );
+        crtemu->UseProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUseProgram" );
+        crtemu->Uniform1i = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform1i" );
+        crtemu->Uniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform3f" );
+        crtemu->GetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetUniformLocation" );
+        crtemu->TexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexImage2D" );
+        crtemu->ClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClearColor" );
+        crtemu->Clear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClear" );
+        crtemu->DrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDrawArrays" );
+        crtemu->Viewport = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glViewport" );
+        crtemu->DeleteShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteShader" );
+        crtemu->DeleteProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteProgram" );
+        #ifdef CRTEMU_REPORT_SHADER_ERRORS
+            crtemu->GetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetShaderInfoLog" );
+        #endif
+
+        // Any opengl functions which didn't bind, try binding them using wglGetProcAddrss
+        if( !crtemu->TexParameterfv ) crtemu->TexParameterfv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLfloat const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexParameterfv" );
+        if( !crtemu->DeleteFramebuffers ) crtemu->DeleteFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteFramebuffers" );
+        if( !crtemu->GetIntegerv ) crtemu->GetIntegerv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint *) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetIntegerv" );
+        if( !crtemu->GenFramebuffers ) crtemu->GenFramebuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenFramebuffers" );
+        if( !crtemu->BindFramebuffer ) crtemu->BindFramebuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindFramebuffer" );    
+        if( !crtemu->Uniform1f ) crtemu->Uniform1f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform1f" );
+        if( !crtemu->Uniform2f ) crtemu->Uniform2f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform2f" );
+        if( !crtemu->FramebufferTexture2D ) crtemu->FramebufferTexture2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLuint, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glFramebufferTexture2D" );    
+        if( !crtemu->CreateShader ) crtemu->CreateShader = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glCreateShader" );
+        if( !crtemu->ShaderSource ) crtemu->ShaderSource = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLchar const* const*, CRTEMU_GLint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glShaderSource" );
+        if( !crtemu->CompileShader ) crtemu->CompileShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glCompileShader" );
+        if( !crtemu->GetShaderiv ) crtemu->GetShaderiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetShaderiv" );
+        if( !crtemu->CreateProgram ) crtemu->CreateProgram = ( CRTEMU_GLuint (CRTEMU_GLCALLTYPE*) (void) ) (uintptr_t) crtemu->wglGetProcAddress( "glCreateProgram" );
+        if( !crtemu->AttachShader ) crtemu->AttachShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glAttachShader" );
+        if( !crtemu->BindAttribLocation ) crtemu->BindAttribLocation = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindAttribLocation" );
+        if( !crtemu->LinkProgram ) crtemu->LinkProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glLinkProgram" );
+        if( !crtemu->GetProgramiv ) crtemu->GetProgramiv = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLenum, CRTEMU_GLint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetProgramiv" );
+        if( !crtemu->GenBuffers ) crtemu->GenBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenBuffers" );
+        if( !crtemu->BindBuffer ) crtemu->BindBuffer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindBuffer" );
+        if( !crtemu->EnableVertexAttribArray ) crtemu->EnableVertexAttribArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glEnableVertexAttribArray" );
+        if( !crtemu->VertexAttribPointer ) crtemu->VertexAttribPointer = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLboolean, CRTEMU_GLsizei, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glVertexAttribPointer" );
+        if( !crtemu->GenTextures ) crtemu->GenTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenTextures" );
+        if( !crtemu->Enable ) crtemu->Enable = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glEnable" );
+        if( !crtemu->ActiveTexture ) crtemu->ActiveTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glActiveTexture" );
+        if( !crtemu->BindTexture ) crtemu->BindTexture = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindTexture" );
+        if( !crtemu->TexParameteri ) crtemu->TexParameteri = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLenum, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexParameteri" );
+        if( !crtemu->DeleteBuffers ) crtemu->DeleteBuffers = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteBuffers" );
+        if( !crtemu->DeleteTextures ) crtemu->DeleteTextures = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteTextures" );
+        if( !crtemu->BufferData ) crtemu->BufferData = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLsizeiptr, void const *, CRTEMU_GLenum) ) (uintptr_t) crtemu->wglGetProcAddress( "glBufferData" );
+        if( !crtemu->UseProgram ) crtemu->UseProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glUseProgram" );
+        if( !crtemu->Uniform1i ) crtemu->Uniform1i = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform1i" );
+        if( !crtemu->Uniform3f ) crtemu->Uniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform3f" );
+        if( !crtemu->GetUniformLocation ) crtemu->GetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetUniformLocation" );
+        if( !crtemu->TexImage2D ) crtemu->TexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexImage2D" );
+        if( !crtemu->ClearColor ) crtemu->ClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glClearColor" );
+        if( !crtemu->Clear ) crtemu->Clear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) crtemu->wglGetProcAddress( "glClear" );
+        if( !crtemu->DrawArrays ) crtemu->DrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) crtemu->wglGetProcAddress( "glDrawArrays" );
+        if( !crtemu->Viewport ) crtemu->Viewport = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei) ) (uintptr_t) crtemu->wglGetProcAddress( "glViewport" );
+        if( !crtemu->DeleteShader ) crtemu->DeleteShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteShader" );
+        if( !crtemu->DeleteProgram ) crtemu->DeleteProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteProgram" );
+        #ifdef CRTEMU_REPORT_SHADER_ERRORS
+            if( !crtemu->GetShaderInfoLog ) crtemu->GetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetShaderInfoLog" );
+        #endif
+
+    #else
+
+         crtemu->TexParameterfv = glTexParameterfv;
+         crtemu->DeleteFramebuffers = glDeleteFramebuffers;
+         crtemu->GetIntegerv = glGetIntegerv;
+         crtemu->GenFramebuffers = glGenFramebuffers;
+         crtemu->BindFramebuffer = glBindFramebuffer;
+         crtemu->Uniform1f = glUniform1f;
+         crtemu->Uniform2f = glUniform2f;
+         crtemu->FramebufferTexture2D = glFramebufferTexture2D;
+         crtemu->CreateShader = glCreateShader;
+         crtemu->ShaderSource = glShaderSource;
+         crtemu->CompileShader = glCompileShader;
+         crtemu->GetShaderiv = glGetShaderiv;
+         crtemu->CreateProgram = glCreateProgram;
+         crtemu->AttachShader = glAttachShader;
+         crtemu->BindAttribLocation = glBindAttribLocation;
+         crtemu->LinkProgram = glLinkProgram;
+         crtemu->GetProgramiv = glGetProgramiv;
+         crtemu->GenBuffers = glGenBuffers;
+         crtemu->BindBuffer = glBindBuffer;
+         crtemu->EnableVertexAttribArray = glEnableVertexAttribArray;
+         crtemu->VertexAttribPointer = glVertexAttribPointer;
+         crtemu->GenTextures = glGenTextures;
+         crtemu->Enable = glEnable;
+         crtemu->ActiveTexture = glActiveTexture;
+         crtemu->BindTexture = glBindTexture;
+         crtemu->TexParameteri = glTexParameteri;
+         crtemu->DeleteBuffers = glDeleteBuffers;
+         crtemu->DeleteTextures = glDeleteTextures;
+         crtemu->BufferData = glBufferData;
+         crtemu->UseProgram = glUseProgram;
+         crtemu->Uniform1i = glUniform1i;
+         crtemu->Uniform3f = glUniform3f;
+         crtemu->GetUniformLocation = glGetUniformLocation;
+         crtemu->TexImage2D = glTexImage2D;
+         crtemu->ClearColor = glClearColor;
+         crtemu->Clear = glClear;
+         crtemu->DrawArrays = glDrawArrays;
+         crtemu->Viewport = glViewport;
+         crtemu->DeleteShader = glDeleteShader;
+         crtemu->DeleteProgram = glDeleteProgram;
+         #ifdef CRTEMU_REPORT_SHADER_ERRORS
+            crtemu->GetShaderInfoLog = glGetShaderInfoLog;
+         #endif
+        
     #endif
 
     // Report error if any gl function was not found.
-    if( !crtemu->glTexParameterfv ) goto failed;
-    if( !crtemu->glDeleteFramebuffers ) goto failed;
-    if( !crtemu->glGetIntegerv ) goto failed;
-    if( !crtemu->glGenFramebuffers ) goto failed;
-    if( !crtemu->glBindFramebuffer ) goto failed;
-    if( !crtemu->glUniform1f ) goto failed;
-    if( !crtemu->glUniform2f ) goto failed;
-    if( !crtemu->glFramebufferTexture2D ) goto failed;
-    if( !crtemu->glCreateShader ) goto failed;
-    if( !crtemu->glShaderSource ) goto failed;
-    if( !crtemu->glCompileShader ) goto failed;
-    if( !crtemu->glGetShaderiv ) goto failed;
-    if( !crtemu->glCreateProgram ) goto failed;
-    if( !crtemu->glAttachShader ) goto failed;
-    if( !crtemu->glBindAttribLocation ) goto failed;
-    if( !crtemu->glLinkProgram ) goto failed;
-    if( !crtemu->glGetProgramiv ) goto failed;
-    if( !crtemu->glGenBuffers ) goto failed;
-    if( !crtemu->glBindBuffer ) goto failed;
-    if( !crtemu->glEnableVertexAttribArray ) goto failed;
-    if( !crtemu->glVertexAttribPointer ) goto failed;
-    if( !crtemu->glGenTextures ) goto failed;
-    if( !crtemu->glEnable ) goto failed;
-    if( !crtemu->glActiveTexture ) goto failed;
-    if( !crtemu->glBindTexture ) goto failed;
-    if( !crtemu->glTexParameteri ) goto failed;
-    if( !crtemu->glDeleteBuffers ) goto failed;
-    if( !crtemu->glDeleteTextures ) goto failed;
-    if( !crtemu->glBufferData ) goto failed;
-    if( !crtemu->glUseProgram ) goto failed;
-    if( !crtemu->glUniform1i ) goto failed;
-    if( !crtemu->glUniform3f ) goto failed;
-    if( !crtemu->glGetUniformLocation ) goto failed;
-    if( !crtemu->glTexImage2D ) goto failed;
-    if( !crtemu->glClearColor ) goto failed;
-    if( !crtemu->glClear ) goto failed;
-    if( !crtemu->glDrawArrays ) goto failed;
-    if( !crtemu->glViewport ) goto failed;
-    if( !crtemu->glDeleteShader ) goto failed;
-    if( !crtemu->glDeleteProgram ) goto failed;
+    if( !crtemu->TexParameterfv ) goto failed;
+    if( !crtemu->DeleteFramebuffers ) goto failed;
+    if( !crtemu->GetIntegerv ) goto failed;
+    if( !crtemu->GenFramebuffers ) goto failed;
+    if( !crtemu->BindFramebuffer ) goto failed;
+    if( !crtemu->Uniform1f ) goto failed;
+    if( !crtemu->Uniform2f ) goto failed;
+    if( !crtemu->FramebufferTexture2D ) goto failed;
+    if( !crtemu->CreateShader ) goto failed;
+    if( !crtemu->ShaderSource ) goto failed;
+    if( !crtemu->CompileShader ) goto failed;
+    if( !crtemu->GetShaderiv ) goto failed;
+    if( !crtemu->CreateProgram ) goto failed;
+    if( !crtemu->AttachShader ) goto failed;
+    if( !crtemu->BindAttribLocation ) goto failed;
+    if( !crtemu->LinkProgram ) goto failed;
+    if( !crtemu->GetProgramiv ) goto failed;
+    if( !crtemu->GenBuffers ) goto failed;
+    if( !crtemu->BindBuffer ) goto failed;
+    if( !crtemu->EnableVertexAttribArray ) goto failed;
+    if( !crtemu->VertexAttribPointer ) goto failed;
+    if( !crtemu->GenTextures ) goto failed;
+    if( !crtemu->Enable ) goto failed;
+    if( !crtemu->ActiveTexture ) goto failed;
+    if( !crtemu->BindTexture ) goto failed;
+    if( !crtemu->TexParameteri ) goto failed;
+    if( !crtemu->DeleteBuffers ) goto failed;
+    if( !crtemu->DeleteTextures ) goto failed;
+    if( !crtemu->BufferData ) goto failed;
+    if( !crtemu->UseProgram ) goto failed;
+    if( !crtemu->Uniform1i ) goto failed;
+    if( !crtemu->Uniform3f ) goto failed;
+    if( !crtemu->GetUniformLocation ) goto failed;
+    if( !crtemu->TexImage2D ) goto failed;
+    if( !crtemu->ClearColor ) goto failed;
+    if( !crtemu->Clear ) goto failed;
+    if( !crtemu->DrawArrays ) goto failed;
+    if( !crtemu->Viewport ) goto failed;
+    if( !crtemu->DeleteShader ) goto failed;
+    if( !crtemu->DeleteProgram ) goto failed;
     #ifdef CRTEMU_REPORT_SHADER_ERRORS
-        if( !crtemu->glGetShaderInfoLog ) goto failed;
+        if( !crtemu->GetShaderInfoLog ) goto failed;
     #endif
 
     char const* vs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
         ""
-        "layout( location = 0 ) in vec4 pos;"
-        "out vec2 uv;"
+        "attribute vec4 pos;"
+        "varying vec2 uv;"
         ""
         "void main( void )"
         "    {"
@@ -474,10 +582,9 @@ crtemu_t* crtemu_create( void* memctx )
         "    }";
 
     char const* crt_fs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
 		""
-        "in vec2 uv;"
-        "out vec4 color;"
+        "varying vec2 uv;"
 		""
         "uniform vec3 modulate;"
         "uniform vec2 resolution;"
@@ -612,7 +719,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 0.2, 0.8 );"
         "    col = mix( col, mix( max( col, 0.0), pow( abs( f.xyz ), vec3( 1.4 ) ) * fvig, f.w * f.w), vec3( use_frame ) );"
         "    "
-        "    color = vec4( col, 1.0 );"
+        "    gl_FragColor = vec4( col, 1.0 );"
         "    }"
         "";
 
@@ -620,10 +727,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->crt_shader == 0 ) goto failed;
 
     char const* blur_fs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
 		""
-        "in vec2 uv;"
-        "out vec4 color;"
+        "varying vec2 uv;"
 		""
         "uniform vec2 blur;"
         "uniform sampler2D texture;"
@@ -639,7 +745,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
         "    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
         "    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
-        "    color = sum;"
+        "    gl_FragColor = sum;"
         "    }   "
 		"";
 
@@ -647,10 +753,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->blur_shader == 0 ) goto failed;
 
     char const* accumulate_fs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
 		""
-        "in vec2 uv;"
-        "out vec4 color;"
+        "varying vec2 uv;"
 		""
         "uniform sampler2D tex0;"
         "uniform sampler2D tex1;"
@@ -661,7 +766,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
         "    vec4 b = texture2D( tex1, uv );"
 		""
-        "    color = max( a, b * 0.96 );"
+        "    gl_FragColor = max( a, b * 0.96 );"
         "    }   "
 		"";
 
@@ -669,10 +774,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->accumulate_shader == 0 ) goto failed;
 
     char const* blend_fs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
 		""
-        "in vec2 uv;"
-        "out vec4 color;"
+        "varying vec2 uv;"
 		""
         "uniform sampler2D tex0;"
         "uniform sampler2D tex1;"
@@ -683,7 +787,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
         "    vec4 b = texture2D( tex1, uv );"
 		""
-        "    color = max( a, b * 0.32 );"
+        "    gl_FragColor = max( a, b * 0.32 );"
         "    }   "
 		"";
 
@@ -691,16 +795,15 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->blend_shader == 0 ) goto failed;
 
     char const* copy_fs_source = 
-        "#version 330\n\n"
+        "#version 120\n\n"
 		""
-        "in vec2 uv;"
-        "out vec4 color;"
+        "varying vec2 uv;"
 		""
         "uniform sampler2D tex0;"
 		""
         "void main( void )"
         "    {"
-        "    color = texture2D( tex0, uv );"
+        "    gl_FragColor = texture2D( tex0, uv );"
         "    }   "
 		"";
 
@@ -708,55 +811,57 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->copy_shader == 0 ) goto failed;
 
 
-    crtemu->glGenTextures( 1, &crtemu->accumulatetexture_a );
-    crtemu->glGenFramebuffers( 1, &crtemu->accumulatebuffer_a );
+    crtemu->GenTextures( 1, &crtemu->accumulatetexture_a );
+    crtemu->GenFramebuffers( 1, &crtemu->accumulatebuffer_a );
 
-    crtemu->glGenTextures( 1, &crtemu->accumulatetexture_b );
-    crtemu->glGenFramebuffers( 1, &crtemu->accumulatebuffer_b );
+    crtemu->GenTextures( 1, &crtemu->accumulatetexture_b );
+    crtemu->GenFramebuffers( 1, &crtemu->accumulatebuffer_b );
 
-    crtemu->glGenTextures( 1, &crtemu->blurtexture_a );
-    crtemu->glGenFramebuffers( 1, &crtemu->blurbuffer_a );
+    crtemu->GenTextures( 1, &crtemu->blurtexture_a );
+    crtemu->GenFramebuffers( 1, &crtemu->blurbuffer_a );
 
-    crtemu->glGenTextures( 1, &crtemu->blurtexture_b );
-    crtemu->glGenFramebuffers( 1, &crtemu->blurbuffer_b );
+    crtemu->GenTextures( 1, &crtemu->blurtexture_b );
+    crtemu->GenFramebuffers( 1, &crtemu->blurbuffer_b );
 
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-    crtemu->glGenTextures( 1, &crtemu->frametexture ); 
-    crtemu->glEnable( CRTEMU_GL_TEXTURE_2D ); 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE2 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->GenTextures( 1, &crtemu->frametexture ); 
+    crtemu->Enable( CRTEMU_GL_TEXTURE_2D ); 
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
 
-    crtemu->glGenTextures( 1, &crtemu->backbuffer ); 
-    crtemu->glEnable( CRTEMU_GL_TEXTURE_2D ); 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_NEAREST );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_NEAREST );
+    crtemu->GenTextures( 1, &crtemu->backbuffer ); 
+    crtemu->Enable( CRTEMU_GL_TEXTURE_2D ); 
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_NEAREST );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_NEAREST );
 
-    crtemu->glGenBuffers( 1, &crtemu->vertexbuffer );
-    crtemu->glBindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
-    crtemu->glEnableVertexAttribArray( 0 );
-    crtemu->glVertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
+    crtemu->GenBuffers( 1, &crtemu->vertexbuffer );
+    crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
+    crtemu->EnableVertexAttribArray( 0 );
+    crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
 
     return crtemu;
 
 failed:
-    if( crtemu->accumulatetexture_a ) crtemu->glDeleteTextures( 1, &crtemu->accumulatetexture_a );
-    if( crtemu->accumulatebuffer_a ) crtemu->glDeleteFramebuffers( 1, &crtemu->accumulatebuffer_a );
-    if( crtemu->accumulatetexture_b ) crtemu->glDeleteTextures( 1, &crtemu->accumulatetexture_b );
-    if( crtemu->accumulatebuffer_b ) crtemu->glDeleteFramebuffers( 1, &crtemu->accumulatebuffer_b );
-    if( crtemu->blurtexture_a ) crtemu->glDeleteTextures( 1, &crtemu->blurtexture_a );
-    if( crtemu->blurbuffer_a ) crtemu->glDeleteFramebuffers( 1, &crtemu->blurbuffer_a );
-    if( crtemu->blurtexture_b ) crtemu->glDeleteTextures( 1, &crtemu->blurtexture_b );
-    if( crtemu->blurbuffer_b ) crtemu->glDeleteFramebuffers( 1, &crtemu->blurbuffer_b );
-    if( crtemu->frametexture ) crtemu->glDeleteTextures( 1, &crtemu->frametexture ); 
-    if( crtemu->backbuffer ) crtemu->glDeleteTextures( 1, &crtemu->backbuffer ); 
-    if( crtemu->vertexbuffer ) crtemu->glDeleteBuffers( 1, &crtemu->vertexbuffer );
+    if( crtemu->accumulatetexture_a ) crtemu->DeleteTextures( 1, &crtemu->accumulatetexture_a );
+    if( crtemu->accumulatebuffer_a ) crtemu->DeleteFramebuffers( 1, &crtemu->accumulatebuffer_a );
+    if( crtemu->accumulatetexture_b ) crtemu->DeleteTextures( 1, &crtemu->accumulatetexture_b );
+    if( crtemu->accumulatebuffer_b ) crtemu->DeleteFramebuffers( 1, &crtemu->accumulatebuffer_b );
+    if( crtemu->blurtexture_a ) crtemu->DeleteTextures( 1, &crtemu->blurtexture_a );
+    if( crtemu->blurbuffer_a ) crtemu->DeleteFramebuffers( 1, &crtemu->blurbuffer_a );
+    if( crtemu->blurtexture_b ) crtemu->DeleteTextures( 1, &crtemu->blurtexture_b );
+    if( crtemu->blurbuffer_b ) crtemu->DeleteFramebuffers( 1, &crtemu->blurbuffer_b );
+    if( crtemu->frametexture ) crtemu->DeleteTextures( 1, &crtemu->frametexture ); 
+    if( crtemu->backbuffer ) crtemu->DeleteTextures( 1, &crtemu->backbuffer ); 
+    if( crtemu->vertexbuffer ) crtemu->DeleteBuffers( 1, &crtemu->vertexbuffer );
 
-    if( crtemu->gl_dll ) FreeLibrary( crtemu->gl_dll );
+    #ifndef CRTEMU_SDL
+        if( crtemu->gl_dll ) FreeLibrary( crtemu->gl_dll );
+    #endif
     CRTEMU_FREE( crtemu->memctx, crtemu );
     return 0;
     }
@@ -764,18 +869,20 @@ failed:
 
 void crtemu_destroy( crtemu_t* crtemu )
     {
-    crtemu->glDeleteTextures( 1, &crtemu->accumulatetexture_a );
-    crtemu->glDeleteFramebuffers( 1, &crtemu->accumulatebuffer_a );
-    crtemu->glDeleteTextures( 1, &crtemu->accumulatetexture_b );
-    crtemu->glDeleteFramebuffers( 1, &crtemu->accumulatebuffer_b );
-    crtemu->glDeleteTextures( 1, &crtemu->blurtexture_a );
-    crtemu->glDeleteFramebuffers( 1, &crtemu->blurbuffer_a );
-    crtemu->glDeleteTextures( 1, &crtemu->blurtexture_b );
-    crtemu->glDeleteFramebuffers( 1, &crtemu->blurbuffer_b );
-    crtemu->glDeleteTextures( 1, &crtemu->frametexture ); 
-    crtemu->glDeleteTextures( 1, &crtemu->backbuffer ); 
-    crtemu->glDeleteBuffers( 1, &crtemu->vertexbuffer );
-    FreeLibrary( crtemu->gl_dll );
+    crtemu->DeleteTextures( 1, &crtemu->accumulatetexture_a );
+    crtemu->DeleteFramebuffers( 1, &crtemu->accumulatebuffer_a );
+    crtemu->DeleteTextures( 1, &crtemu->accumulatetexture_b );
+    crtemu->DeleteFramebuffers( 1, &crtemu->accumulatebuffer_b );
+    crtemu->DeleteTextures( 1, &crtemu->blurtexture_a );
+    crtemu->DeleteFramebuffers( 1, &crtemu->blurbuffer_a );
+    crtemu->DeleteTextures( 1, &crtemu->blurtexture_b );
+    crtemu->DeleteFramebuffers( 1, &crtemu->blurbuffer_b );
+    crtemu->DeleteTextures( 1, &crtemu->frametexture ); 
+    crtemu->DeleteTextures( 1, &crtemu->backbuffer ); 
+    crtemu->DeleteBuffers( 1, &crtemu->vertexbuffer );
+    #ifndef CRTEMU_SDL
+        FreeLibrary( crtemu->gl_dll );
+    #endif
     CRTEMU_FREE( crtemu->memctx, crtemu );
     }
 
@@ -788,9 +895,9 @@ void crtemu_config(crtemu_t* crtemu, crtemu_config_t const* config)
 
 void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, int frame_height )
     {
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE3 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );   
-    crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, frame_width, frame_height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, frame_abgr ); 
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE3 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );   
+    crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, frame_width, frame_height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, frame_abgr ); 
     if( frame_abgr )
         crtemu->use_frame = 1.0f;
     else
@@ -801,31 +908,31 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b, 
     CRTEMU_GLuint blurtexture_b, float r, int width, int height )
     {
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
-    crtemu->glUseProgram( crtemu->blur_shader );
-    crtemu->glUniform2f( crtemu->glGetUniformLocation( crtemu->blur_shader, "blur" ), r / (float) width, 0 );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->blur_shader, "texture" ), 0 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, source );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
+    crtemu->UseProgram( crtemu->blur_shader );
+    crtemu->Uniform2f( crtemu->GetUniformLocation( crtemu->blur_shader, "blur" ), r / (float) width, 0 );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->blur_shader, "texture" ), 0 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, source );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_a );
-    crtemu->glUseProgram( crtemu->blur_shader );
-    crtemu->glUniform2f( crtemu->glGetUniformLocation( crtemu->blur_shader, "blur" ), 0, r / (float) height );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->blur_shader, "texture" ), 0 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, blurtexture_b );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_a );
+    crtemu->UseProgram( crtemu->blur_shader );
+    crtemu->Uniform2f( crtemu->GetUniformLocation( crtemu->blur_shader, "blur" ), 0, r / (float) height );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->blur_shader, "texture" ), 0 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, blurtexture_b );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
     }
 
 
@@ -833,35 +940,35 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr )
     {
     int viewport[ 4 ];
-    crtemu->glGetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
+    crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
     if( width != crtemu->last_present_width || height != crtemu->last_present_height )
         {
-        crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
+        crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
  
-        crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
-        crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
-        crtemu->glFramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+        crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
+        crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
+        crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-        crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );
-        crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
-        crtemu->glFramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+        crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );
+        crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
+        crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-        crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
-        crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_a );
-        crtemu->glFramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+        crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
+        crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_a );
+        crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-        crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b );
-        crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_b );
-        crtemu->glFramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b, 0 );
-        crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+        crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b );
+        crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_b );
+        crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b, 0 );
+        crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
         }
 
     
@@ -875,71 +982,71 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
          1.0f,  1.0f, 1.0f, 1.0f,
         -1.0f,  1.0f, 0.0f, 1.0f,
         };
-    crtemu->glBufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), vertices, CRTEMU_GL_STATIC_DRAW );
-    crtemu->glBindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
+    crtemu->BufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), vertices, CRTEMU_GL_STATIC_DRAW );
+    crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
 
     // Copy to backbuffer
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-    crtemu->glTexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr ); 
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
+    crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr ); 
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 
-    crtemu->glViewport( 0, 0, width, height );
+    crtemu->Viewport( 0, 0, width, height );
 
     // Blur the previous accumulation buffer
     crtemu_internal_blur( crtemu, crtemu->accumulatetexture_b, crtemu->blurbuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, 1.0f, width, height );
 
     // Update accumulation buffer
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
-    crtemu->glUseProgram( crtemu->accumulate_shader );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->accumulate_shader, "tex0" ), 0 );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->accumulate_shader, "tex1" ), 1 );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->accumulate_shader, "modulate" ), 1.0f );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE1 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE1 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
+    crtemu->UseProgram( crtemu->accumulate_shader );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->accumulate_shader, "tex0" ), 0 );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->accumulate_shader, "tex1" ), 1 );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->accumulate_shader, "modulate" ), 1.0f );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
   
     
     // Store a copy of the accumulation buffer
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
-    crtemu->glUseProgram( crtemu->copy_shader );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->copy_shader, "tex0" ), 0 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
+    crtemu->UseProgram( crtemu->copy_shader );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->copy_shader, "tex0" ), 0 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
     // Blend accumulation and backbuffer
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
-    crtemu->glUseProgram( crtemu->blend_shader );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->blend_shader, "tex0" ), 0 );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->blend_shader, "tex1" ), 1 );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->blend_shader, "modulate" ), 1.0f );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );   
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE1 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );   
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE1 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
+    crtemu->UseProgram( crtemu->blend_shader );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->blend_shader, "tex0" ), 0 );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->blend_shader, "tex1" ), 1 );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->blend_shader, "modulate" ), 1.0f );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );   
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );   
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
 
     // Add slight blur to backbuffer
@@ -950,9 +1057,9 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 
     // Present to screen with CRT shader
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
-    crtemu->glViewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
+    crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 
     int window_width = viewport[ 2 ] - viewport[ 0 ];
     int window_height = viewport[ 3 ] - viewport[ 1 ];
@@ -989,97 +1096,101 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     screen_vertices[ 12 ] = x1;
     screen_vertices[ 13 ] = y2;
 
-    crtemu->glBufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), screen_vertices, CRTEMU_GL_STATIC_DRAW );
-    crtemu->glBindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
+    crtemu->BufferData( CRTEMU_GL_ARRAY_BUFFER, 4 * 4 * sizeof( CRTEMU_GLfloat ), screen_vertices, CRTEMU_GL_STATIC_DRAW );
+    crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
 
     float r = ( ( border_xbgr >> 16 ) & 0xff ) / 255.0f;
     float g = ( ( border_xbgr >> 8  ) & 0xff ) / 255.0f;
     float b = ( ( border_xbgr       ) & 0xff ) / 255.0f;
-    crtemu->glClearColor( r, g, b, 1.0f );
-    crtemu->glClear( CRTEMU_GL_COLOR_BUFFER_BIT );
+    crtemu->ClearColor( r, g, b, 1.0f );
+    crtemu->Clear( CRTEMU_GL_COLOR_BUFFER_BIT );
 
-    crtemu->glUseProgram( crtemu->crt_shader );
+    crtemu->UseProgram( crtemu->crt_shader );
     
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->crt_shader, "backbuffer" ), 0 );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->crt_shader, "blurbuffer" ), 1 );
-    crtemu->glUniform1i( crtemu->glGetUniformLocation( crtemu->crt_shader, "frametexture" ), 2 );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "use_frame" ), crtemu->use_frame );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "time" ), 1.5f * (CRTEMU_GLfloat)( ( (double) time_us ) / 1000000.0 ) );
-    crtemu->glUniform2f( crtemu->glGetUniformLocation( crtemu->crt_shader, "resolution" ), (float) window_width, (float) window_height );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->crt_shader, "backbuffer" ), 0 );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->crt_shader, "blurbuffer" ), 1 );
+    crtemu->Uniform1i( crtemu->GetUniformLocation( crtemu->crt_shader, "frametexture" ), 2 );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "use_frame" ), crtemu->use_frame );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "time" ), 1.5f * (CRTEMU_GLfloat)( ( (double) time_us ) / 1000000.0 ) );
+    crtemu->Uniform2f( crtemu->GetUniformLocation( crtemu->crt_shader, "resolution" ), (float) window_width, (float) window_height );
 
     float mod_r = ( ( mod_xbgr >> 16 ) & 0xff ) / 255.0f;
     float mod_g = ( ( mod_xbgr >> 8  ) & 0xff ) / 255.0f;
     float mod_b = ( ( mod_xbgr       ) & 0xff ) / 255.0f;
-    crtemu->glUniform3f( crtemu->glGetUniformLocation( crtemu->crt_shader, "modulate" ), mod_r, mod_g, mod_b );
+    crtemu->Uniform3f( crtemu->GetUniformLocation( crtemu->crt_shader, "modulate" ), mod_r, mod_g, mod_b );
 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_curvature" ), crtemu->config.curvature );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_scanlines" ), crtemu->config.scanlines );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_shadow_mask" ), crtemu->config.shadow_mask );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_separation" ), crtemu->config.separation ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_ghosting" ), crtemu->config.ghosting ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_noise" ), crtemu->config.noise ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_flicker" ), crtemu->config.flicker );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_vignette" ), crtemu->config.vignette );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_distortion" ), crtemu->config.distortion ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_aspect_lock" ), crtemu->config.aspect_lock );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_hpos" ), crtemu->config.hpos );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_vpos" ), crtemu->config.vpos );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_hsize" ), crtemu->config.hsize ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_vsize" ), crtemu->config.vsize ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_contrast" ), crtemu->config.contrast ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_brightness" ), crtemu->config.brightness ); 
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_saturation" ), crtemu->config.saturation );
-    crtemu->glUniform1f( crtemu->glGetUniformLocation( crtemu->crt_shader, "cfg_degauss" ), crtemu->config.degauss );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_curvature" ), crtemu->config.curvature );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_scanlines" ), crtemu->config.scanlines );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_shadow_mask" ), crtemu->config.shadow_mask );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_separation" ), crtemu->config.separation ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_ghosting" ), crtemu->config.ghosting ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_noise" ), crtemu->config.noise ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_flicker" ), crtemu->config.flicker );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_vignette" ), crtemu->config.vignette );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_distortion" ), crtemu->config.distortion ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_aspect_lock" ), crtemu->config.aspect_lock );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_hpos" ), crtemu->config.hpos );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_vpos" ), crtemu->config.vpos );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_hsize" ), crtemu->config.hsize ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_vsize" ), crtemu->config.vsize ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_contrast" ), crtemu->config.contrast ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_brightness" ), crtemu->config.brightness ); 
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_saturation" ), crtemu->config.saturation );
+    crtemu->Uniform1f( crtemu->GetUniformLocation( crtemu->crt_shader, "cfg_degauss" ), crtemu->config.degauss );
 
     float color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE1 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE3 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );   
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-    crtemu->glTexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE3 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );   
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
+    crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );    
 
-    crtemu->glDrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );    
+    crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );    
 
-    crtemu->glActiveTexture( CRTEMU_GL_TEXTURE0 );
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 1 );   
-    crtemu->glBindTexture( CRTEMU_GL_TEXTURE_2D, 2 );   
-    crtemu->glBindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 ); 
+    crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );   
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 1 );   
+    crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 2 );   
+    crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 ); 
     }
 
 
 void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int height, int* x, int* y )
     {
     CRTEMU_GLint viewport[ 4 ];
-    crtemu->glGetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
+    crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
     int window_width = viewport[ 2 ] - viewport[ 0 ];
     int window_height = viewport[ 3 ] - viewport[ 1 ];
 
     float hscale = window_width / (float) width;
     float vscale = window_height / (float) height;
+    float pixel_scale = hscale < vscale ? hscale : vscale;
 
-    float xp = ( *x / hscale ) / (float) width;
-    float yp = ( *y / vscale ) / (float) height;
+    float hborder = ( window_width - pixel_scale * width ) / 2.0f;
+    float vborder = ( window_height - pixel_scale * height ) / 2.0f;
+    
+    float xp = ( ( *x - hborder ) / pixel_scale ) / (float) width;
+    float yp = ( ( *y - vborder ) / pixel_scale ) / (float) height;
 
     /* TODO: Common params for shader and this */
     float xc = ( xp - 0.5f ) * 2.0f;
@@ -1115,7 +1226,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 
 void crtemu_coordinates_bitmap_to_window( crtemu_t* crtemu, int width, int height, int* x, int* y )
     {
-    (void) crtemu, width, height, x, y; // TODO: implement
+    (void) crtemu, (void) width, (void) height, (void) x, (void) y; // TODO: implement
     }
 
 

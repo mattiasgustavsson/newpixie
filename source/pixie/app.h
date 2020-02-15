@@ -10,7 +10,6 @@ Do this:
 before you include this file in *one* C/C++ file to create the implementation.
 */
 
-
 #ifndef app_h
 #define app_h
 
@@ -34,7 +33,6 @@ app_state_t app_yield( app_t* app );
 void app_cancel_exit( app_t* app );
 
 void app_title( app_t* app, char const* title );
-void app_title_unicode( app_t* app, wchar_t const* title );
 
 char const* app_cmdline( app_t* app );
 char const* app_filename( app_t* app );
@@ -721,6 +719,7 @@ details.
 #ifndef APP_NULL
 
 #if defined( APP_WINDOWS )
+
     #define _CRT_NONSTDC_NO_DEPRECATE 
     #ifndef _CRT_SECURE_NO_WARNINGS
         #define _CRT_SECURE_NO_WARNINGS
@@ -736,8 +735,65 @@ details.
     typedef unsigned char APP_GLboolean;
     typedef size_t APP_GLsizeiptr;
     typedef unsigned int APP_GLbitfield;
+    
+    #define APP_GL_FLOAT 0x1406
+    #define APP_GL_FALSE 0
+    #define APP_GL_FRAGMENT_SHADER 0x8b30
+    #define APP_GL_VERTEX_SHADER 0x8b31
+    #define APP_GL_COMPILE_STATUS 0x8b81
+    #define APP_GL_LINK_STATUS 0x8b82
+    #define APP_GL_INFO_LOG_LENGTH 0x8b84
+    #define APP_GL_ARRAY_BUFFER 0x8892
+    #define APP_GL_TEXTURE_2D 0x0de1
+    #define APP_GL_TEXTURE0 0x84c0
+    #define APP_GL_TEXTURE_MIN_FILTER 0x2801
+    #define APP_GL_TEXTURE_MAG_FILTER 0x2800
+    #define APP_GL_NEAREST 0x2600
+    #define APP_GL_LINEAR 0x2601
+    #define APP_GL_STATIC_DRAW 0x88e4
+    #define APP_GL_RGBA 0x1908
+    #define APP_GL_UNSIGNED_BYTE 0x1401
+    #define APP_GL_COLOR_BUFFER_BIT 0x00004000
+    #define APP_GL_TRIANGLE_FAN 0x0006
+
+#elif defined( APP_SDL )
+
+    #include <GL/glew.h>
+    #include <SDL2/SDL_opengl.h>
+    #define APP_GLCALLTYPE GLAPIENTRY
+    typedef GLuint APP_GLuint;
+    typedef GLsizei APP_GLsizei;
+    typedef GLenum APP_GLenum;
+    typedef GLint APP_GLint;
+    typedef GLfloat APP_GLfloat;
+    typedef GLchar APP_GLchar;
+    typedef GLboolean APP_GLboolean;
+    typedef GLsizeiptr APP_GLsizeiptr;
+    typedef GLbitfield APP_GLbitfield;
+    
+    #define APP_GL_FLOAT GL_FLOAT
+    #define APP_GL_FALSE GL_FALSE
+    #define APP_GL_FRAGMENT_SHADER GL_FRAGMENT_SHADER
+    #define APP_GL_VERTEX_SHADER GL_VERTEX_SHADER
+    #define APP_GL_COMPILE_STATUS GL_COMPILE_STATUS
+    #define APP_GL_LINK_STATUS GL_LINK_STATUS
+    #define APP_GL_INFO_LOG_LENGTH GL_INFO_LOG_LENGTH
+    #define APP_GL_ARRAY_BUFFER GL_ARRAY_BUFFER
+    #define APP_GL_TEXTURE_2D GL_TEXTURE_2D
+    #define APP_GL_TEXTURE0 GL_TEXTURE0
+    #define APP_GL_TEXTURE_MIN_FILTER GL_TEXTURE_MIN_FILTER
+    #define APP_GL_TEXTURE_MAG_FILTER GL_TEXTURE_MAG_FILTER
+    #define APP_GL_NEAREST GL_NEAREST
+    #define APP_GL_LINEAR GL_LINEAR
+    #define APP_GL_STATIC_DRAW GL_STATIC_DRAW
+    #define APP_GL_RGBA GL_RGBA
+    #define APP_GL_UNSIGNED_BYTE GL_UNSIGNED_BYTE
+    #define APP_GL_COLOR_BUFFER_BIT GL_COLOR_BUFFER_BIT
+    #define APP_GL_TRIANGLE_FAN GL_TRIANGLE_FAN
+    
 #else
-    #error Undefined platform. Define APP_WINDOWS or APP_NULL.
+    
+    #error Undefined platform. Define APP_WINDOWS, APP_SDL or APP_NULL.
     #define APP_GLCALLTYPE
     typedef int APP_GLuint;
     typedef int APP_GLsizei;
@@ -748,64 +804,51 @@ details.
     typedef int APP_GLboolean;
     typedef int APP_GLsizeiptr;
     typedef int APP_GLbitfield;
+
 #endif
 
-#define APP_GL_FLOAT 0x1406
-#define APP_GL_FALSE 0
-#define APP_GL_FRAGMENT_SHADER 0x8b30
-#define APP_GL_VERTEX_SHADER 0x8b31
-#define APP_GL_COMPILE_STATUS 0x8b81
-#define APP_GL_LINK_STATUS 0x8b82
-#define APP_GL_INFO_LOG_LENGTH 0x8b84
-#define APP_GL_ARRAY_BUFFER 0x8892
-#define APP_GL_TEXTURE_2D 0x0de1
-#define APP_GL_TEXTURE0 0x84c0
-#define APP_GL_TEXTURE_MIN_FILTER 0x2801
-#define APP_GL_TEXTURE_MAG_FILTER 0x2800
-#define APP_GL_NEAREST 0x2600
-#define APP_GL_LINEAR 0x2601
-#define APP_GL_STATIC_DRAW 0x88e4
-#define APP_GL_RGBA 0x1908
-#define APP_GL_UNSIGNED_BYTE 0x1401
-#define APP_GL_COLOR_BUFFER_BIT 0x00004000
-#define APP_GL_TRIANGLE_FAN 0x0006
+
+#ifdef APP_REPORT_SHADER_ERRORS
+    #include <string.h>
+#endif
 
 struct app_internal_opengl_t
     {
-    APP_GLuint (APP_GLCALLTYPE* glCreateShader) (APP_GLenum type);
-    void (APP_GLCALLTYPE* glShaderSource) (APP_GLuint shader, APP_GLsizei count, APP_GLchar const* const* string, APP_GLint const* length);
-    void (APP_GLCALLTYPE* glCompileShader) (APP_GLuint shader);
-    void (APP_GLCALLTYPE* glGetShaderiv) (APP_GLuint shader, APP_GLenum pname, APP_GLint *params);
-    APP_GLuint (APP_GLCALLTYPE* glCreateProgram) (void);
-    void (APP_GLCALLTYPE* glAttachShader) (APP_GLuint program, APP_GLuint shader);
-    void (APP_GLCALLTYPE* glBindAttribLocation) (APP_GLuint program, APP_GLuint index, APP_GLchar const* name);
-    void (APP_GLCALLTYPE* glLinkProgram) (APP_GLuint program);
-    void (APP_GLCALLTYPE* glGetProgramiv) (APP_GLuint program, APP_GLenum pname, APP_GLint *params);
-    void (APP_GLCALLTYPE* glGenBuffers) (APP_GLsizei n, APP_GLuint *buffers);
-    void (APP_GLCALLTYPE* glBindBuffer) (APP_GLenum target, APP_GLuint buffer);
-    void (APP_GLCALLTYPE* glEnableVertexAttribArray) (APP_GLuint index);
-    void (APP_GLCALLTYPE* glVertexAttribPointer) (APP_GLuint index, APP_GLint size, APP_GLenum type, APP_GLboolean normalized, APP_GLsizei stride, void const* pointer);
-    void (APP_GLCALLTYPE* glGenTextures) (APP_GLsizei n, APP_GLuint* textures);
-    void (APP_GLCALLTYPE* glEnable) (APP_GLenum cap);
-    void (APP_GLCALLTYPE* glActiveTexture) (APP_GLenum texture);
-    void (APP_GLCALLTYPE* glBindTexture) (APP_GLenum target, APP_GLuint texture);
-    void (APP_GLCALLTYPE* glTexParameteri) (APP_GLenum target, APP_GLenum pname, APP_GLint param);
-    void (APP_GLCALLTYPE* glDeleteBuffers) (APP_GLsizei n, APP_GLuint const* buffers);
-    void (APP_GLCALLTYPE* glDeleteTextures) (APP_GLsizei n, APP_GLuint const* textures);
-    void (APP_GLCALLTYPE* glBufferData) (APP_GLenum target, APP_GLsizeiptr size, void const *data, APP_GLenum usage);
-    void (APP_GLCALLTYPE* glUseProgram) (APP_GLuint program);
-    void (APP_GLCALLTYPE* glUniform1i) (APP_GLint location, APP_GLint v0);
-    void (APP_GLCALLTYPE* glUniform3f) (APP_GLint location, APP_GLfloat v0, APP_GLfloat v1, APP_GLfloat v2);
-    APP_GLint (APP_GLCALLTYPE* glGetUniformLocation) (APP_GLuint program, APP_GLchar const* name);
-    void (APP_GLCALLTYPE* glTexImage2D) (APP_GLenum target, APP_GLint level, APP_GLint internalformat, APP_GLsizei width, APP_GLsizei height, APP_GLint border, APP_GLenum format, APP_GLenum type, void const* pixels);
-    void (APP_GLCALLTYPE* glClearColor) (APP_GLfloat red, APP_GLfloat green, APP_GLfloat blue, APP_GLfloat alpha);
-    void (APP_GLCALLTYPE* glClear) (APP_GLbitfield mask);
-    void (APP_GLCALLTYPE* glDrawArrays) (APP_GLenum mode, APP_GLint first, APP_GLsizei count);
-    void (APP_GLCALLTYPE* glViewport) (APP_GLint x, APP_GLint y, APP_GLsizei width, APP_GLsizei height);
-    void (APP_GLCALLTYPE* glDeleteShader) (APP_GLuint shader);
-    void (APP_GLCALLTYPE* glDeleteProgram) (APP_GLuint program);
+
+    APP_GLuint (APP_GLCALLTYPE* CreateShader) (APP_GLenum type);
+    void (APP_GLCALLTYPE* ShaderSource) (APP_GLuint shader, APP_GLsizei count, APP_GLchar const* const* string, APP_GLint const* length);
+    void (APP_GLCALLTYPE* CompileShader) (APP_GLuint shader);
+    void (APP_GLCALLTYPE* GetShaderiv) (APP_GLuint shader, APP_GLenum pname, APP_GLint *params);
+    APP_GLuint (APP_GLCALLTYPE* CreateProgram) (void);
+    void (APP_GLCALLTYPE* AttachShader) (APP_GLuint program, APP_GLuint shader);
+    void (APP_GLCALLTYPE* BindAttribLocation) (APP_GLuint program, APP_GLuint index, APP_GLchar const* name);
+    void (APP_GLCALLTYPE* LinkProgram) (APP_GLuint program);
+    void (APP_GLCALLTYPE* GetProgramiv) (APP_GLuint program, APP_GLenum pname, APP_GLint *params);
+    void (APP_GLCALLTYPE* GenBuffers) (APP_GLsizei n, APP_GLuint *buffers);
+    void (APP_GLCALLTYPE* BindBuffer) (APP_GLenum target, APP_GLuint buffer);
+    void (APP_GLCALLTYPE* EnableVertexAttribArray) (APP_GLuint index);
+    void (APP_GLCALLTYPE* VertexAttribPointer) (APP_GLuint index, APP_GLint size, APP_GLenum type, APP_GLboolean normalized, APP_GLsizei stride, void const* pointer);
+    void (APP_GLCALLTYPE* GenTextures) (APP_GLsizei n, APP_GLuint* textures);
+    void (APP_GLCALLTYPE* Enable) (APP_GLenum cap);
+    void (APP_GLCALLTYPE* ActiveTexture) (APP_GLenum texture);
+    void (APP_GLCALLTYPE* BindTexture) (APP_GLenum target, APP_GLuint texture);
+    void (APP_GLCALLTYPE* TexParameteri) (APP_GLenum target, APP_GLenum pname, APP_GLint param);
+    void (APP_GLCALLTYPE* DeleteBuffers) (APP_GLsizei n, APP_GLuint const* buffers);
+    void (APP_GLCALLTYPE* DeleteTextures) (APP_GLsizei n, APP_GLuint const* textures);
+    void (APP_GLCALLTYPE* BufferData) (APP_GLenum target, APP_GLsizeiptr size, void const *data, APP_GLenum usage);
+    void (APP_GLCALLTYPE* UseProgram) (APP_GLuint program);
+    void (APP_GLCALLTYPE* Uniform1i) (APP_GLint location, APP_GLint v0);
+    void (APP_GLCALLTYPE* Uniform3f) (APP_GLint location, APP_GLfloat v0, APP_GLfloat v1, APP_GLfloat v2);
+    APP_GLint (APP_GLCALLTYPE* GetUniformLocation) (APP_GLuint program, APP_GLchar const* name);
+    void (APP_GLCALLTYPE* TexImage2D) (APP_GLenum target, APP_GLint level, APP_GLint internalformat, APP_GLsizei width, APP_GLsizei height, APP_GLint border, APP_GLenum format, APP_GLenum type, void const* pixels);
+    void (APP_GLCALLTYPE* ClearColor) (APP_GLfloat red, APP_GLfloat green, APP_GLfloat blue, APP_GLfloat alpha);
+    void (APP_GLCALLTYPE* Clear) (APP_GLbitfield mask);
+    void (APP_GLCALLTYPE* DrawArrays) (APP_GLenum mode, APP_GLint first, APP_GLsizei count);
+    void (APP_GLCALLTYPE* Viewport) (APP_GLint x, APP_GLint y, APP_GLsizei width, APP_GLsizei height);
+    void (APP_GLCALLTYPE* DeleteShader) (APP_GLuint shader);
+    void (APP_GLCALLTYPE* DeleteProgram) (APP_GLuint program);
     #ifdef APP_REPORT_SHADER_ERRORS
-        void (APP_GLCALLTYPE* glGetShaderInfoLog) (APP_GLuint shader, APP_GLsizei bufSize, APP_GLsizei *length, APP_GLchar *infoLog);
+        void (APP_GLCALLTYPE* GetShaderInfoLog) (APP_GLuint shader, APP_GLsizei bufSize, APP_GLsizei *length, APP_GLchar *infoLog);
     #endif
 
     app_interpolation_t interpolation;
@@ -826,72 +869,67 @@ static int app_internal_opengl_init( app_t* app, struct app_internal_opengl_t* g
     gl->window_width = window_width;
     gl->window_height = window_height;
 
-
-    #define STR( x ) #x
-
     char const* vs_source = 
-    STR(
-        attribute vec4 pos;
-        varying vec2 uv;    
-
-        void main( void )
-            {
-            gl_Position = vec4( pos.xy, 0.0, 1.0 );
-            uv = pos.zw;
-            }
-    );
+        "#version 120\n"
+        "attribute vec4 pos;"
+        "varying vec2 uv;"
+        ""
+        "void main( void )"
+        "    {"
+        "    gl_Position = vec4( pos.xy, 0.0, 1.0 );"
+        "    uv = pos.zw;"
+        "    }"
+        ;
 
     char const* fs_source = 
-    STR (
-        varying vec2 uv;
+        "#version 120\n"
+        "varying vec2 uv;"
+        ""
+        "uniform sampler2D texture;"
+        "uniform vec3 modulate;"
+        ""
+        "void main(void)"
+        "    {"
+        "    gl_FragColor = texture2D( texture, uv ) * vec4( modulate, 1.0 );"
+        "    }"
+        ;
 
-        uniform sampler2D texture;
-        uniform vec3 modulate;
-
-        void main(void)
-            {
-            gl_FragColor= texture2D( texture, uv ) * vec4( modulate, 1.0 );
-            }           
-    );
-
-    #undef STR
-    
     #ifdef APP_REPORT_SHADER_ERRORS
         char error_message[ 1024 ]; 
     #endif
 
-    APP_GLuint vs = gl->glCreateShader( APP_GL_VERTEX_SHADER );
-    gl->glShaderSource( vs, 1, (char const**) &vs_source, NULL );
-    gl->glCompileShader( vs );
+    APP_GLuint vs = gl->CreateShader( APP_GL_VERTEX_SHADER );
+    gl->ShaderSource( vs, 1, (char const**) &vs_source, NULL );
+    gl->CompileShader( vs );
     APP_GLint vs_compiled;
-    gl->glGetShaderiv( vs, APP_GL_COMPILE_STATUS, &vs_compiled );
+    gl->GetShaderiv( vs, APP_GL_COMPILE_STATUS, &vs_compiled );
     if( !vs_compiled )
         {
         #ifdef APP_REPORT_SHADER_ERRORS     
             char const* prefix = "Vertex Shader Error: ";
-            strcpy( error_message, prefix );
+            memcpy( error_message, prefix, strlen( prefix ) + 1 );
             int len = 0, written = 0;
-            gl->glGetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
-            gl->glGetShaderInfoLog( vs, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            gl->GetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
+            gl->GetShaderInfoLog( vs, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             app_fatal_error( app, error_message );
         #endif
         return 0;
         }
     
-    APP_GLuint fs = gl->glCreateShader( APP_GL_FRAGMENT_SHADER );
-    gl->glShaderSource( fs, 1, (char const**) &fs_source, NULL );
-    gl->glCompileShader( fs );
+    APP_GLuint fs = gl->CreateShader( APP_GL_FRAGMENT_SHADER );
+    gl->ShaderSource( fs, 1, (char const**) &fs_source, NULL );
+    gl->CompileShader( fs );
     APP_GLint fs_compiled;
-    gl->glGetShaderiv( fs, APP_GL_COMPILE_STATUS, &fs_compiled );
+    gl->GetShaderiv( fs, APP_GL_COMPILE_STATUS, &fs_compiled );
     if( !fs_compiled )
         {
         #ifdef APP_REPORT_SHADER_ERRORS     
             char const* prefix = "Fragment Shader Error: ";
-            strcpy( error_message, prefix );
+            memcpy( error_message, prefix, strlen( prefix ) + 1 );
             int len = 0, written = 0;
-            gl->glGetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
-            gl->glGetShaderInfoLog( fs, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            gl->GetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
+            gl->GetShaderInfoLog( fs, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             app_fatal_error( app, error_message );
         #endif
@@ -899,22 +937,22 @@ static int app_internal_opengl_init( app_t* app, struct app_internal_opengl_t* g
         }
 
 
-    APP_GLuint prg = gl->glCreateProgram();
-    gl->glAttachShader( prg, fs );
-    gl->glAttachShader( prg, vs );
-    gl->glBindAttribLocation( prg, 0, "pos" );
-    gl->glLinkProgram( prg );
+    APP_GLuint prg = gl->CreateProgram();
+    gl->AttachShader( prg, fs );
+    gl->AttachShader( prg, vs );
+    gl->BindAttribLocation( prg, 0, "pos" );
+    gl->LinkProgram( prg );
 
     APP_GLint linked;
-    gl->glGetProgramiv( prg, APP_GL_LINK_STATUS, &linked );
+    gl->GetProgramiv( prg, APP_GL_LINK_STATUS, &linked );
     if( !linked )
         {
         #ifdef APP_REPORT_SHADER_ERRORS
             char const* prefix = "Shader Link Error: ";
-            strcpy( error_message, prefix );
+            memcpy( error_message, prefix, strlen( prefix ) + 1 );
             int len = 0, written = 0;
-            gl->glGetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
-            gl->glGetShaderInfoLog( prg, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
+            gl->GetShaderiv( vs, APP_GL_INFO_LOG_LENGTH, &len );
+            gl->GetShaderInfoLog( prg, (APP_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written, 
                 error_message + strlen( prefix ) );     
             app_fatal_error( app, error_message );
         #endif
@@ -922,20 +960,20 @@ static int app_internal_opengl_init( app_t* app, struct app_internal_opengl_t* g
         }
 
     gl->shader = prg;
-    gl->glDeleteShader( fs );
-    gl->glDeleteShader( vs );
+    gl->DeleteShader( fs );
+    gl->DeleteShader( vs );
 
-    gl->glGenBuffers( 1, &gl->vertexbuffer );
-    gl->glBindBuffer( APP_GL_ARRAY_BUFFER, gl->vertexbuffer );
-    gl->glEnableVertexAttribArray( 0 );
-    gl->glVertexAttribPointer( 0, 4, APP_GL_FLOAT, APP_GL_FALSE, 4 * sizeof( APP_GLfloat ), 0 );
+    gl->GenBuffers( 1, &gl->vertexbuffer );
+    gl->BindBuffer( APP_GL_ARRAY_BUFFER, gl->vertexbuffer );
+    gl->EnableVertexAttribArray( 0 );
+    gl->VertexAttribPointer( 0, 4, APP_GL_FLOAT, APP_GL_FALSE, 4 * sizeof( APP_GLfloat ), 0 );
 
-    gl->glGenTextures( 1, &gl->texture ); 
-    gl->glEnable( APP_GL_TEXTURE_2D ); 
-    gl->glActiveTexture( APP_GL_TEXTURE0 );
-    gl->glBindTexture( APP_GL_TEXTURE_2D, gl->texture );
-    gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_NEAREST );
-    gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_NEAREST );
+    gl->GenTextures( 1, &gl->texture ); 
+    gl->Enable( APP_GL_TEXTURE_2D ); 
+    gl->ActiveTexture( APP_GL_TEXTURE0 );
+    gl->BindTexture( APP_GL_TEXTURE_2D, gl->texture );
+    gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_NEAREST );
+    gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_NEAREST );
 
     return 1;
     }
@@ -943,9 +981,9 @@ static int app_internal_opengl_init( app_t* app, struct app_internal_opengl_t* g
 
 static int app_internal_opengl_term( struct app_internal_opengl_t* gl )
     {
-    gl->glDeleteProgram( gl->shader );
-    gl->glDeleteBuffers( 1, &gl->vertexbuffer); 
-    gl->glDeleteTextures( 1, &gl->texture ); 
+    gl->DeleteProgram( gl->shader );
+    gl->DeleteBuffers( 1, &gl->vertexbuffer); 
+    gl->DeleteTextures( 1, &gl->texture ); 
     return 1;
     }
 
@@ -1009,39 +1047,39 @@ static int app_internal_opengl_present( struct app_internal_opengl_t* gl, APP_U3
     vertices[ 14 ] = 0.0f;
     vertices[ 15 ] = 0.0f;
 
-    gl->glBindBuffer( APP_GL_ARRAY_BUFFER, gl->vertexbuffer );
-    gl->glBufferData( APP_GL_ARRAY_BUFFER, 4 * 4 * sizeof( APP_GLfloat ), vertices, APP_GL_STATIC_DRAW );
-    gl->glVertexAttribPointer( 0, 4, APP_GL_FLOAT, APP_GL_FALSE, 4 * sizeof( APP_GLfloat ), 0 );
+    gl->BindBuffer( APP_GL_ARRAY_BUFFER, gl->vertexbuffer );
+    gl->BufferData( APP_GL_ARRAY_BUFFER, 4 * 4 * sizeof( APP_GLfloat ), vertices, APP_GL_STATIC_DRAW );
+    gl->VertexAttribPointer( 0, 4, APP_GL_FLOAT, APP_GL_FALSE, 4 * sizeof( APP_GLfloat ), 0 );
 
     float mod_r = ( ( mod_xbgr >> 16 ) & 0xff ) / 255.0f;
     float mod_g = ( ( mod_xbgr >> 8  ) & 0xff ) / 255.0f;
     float mod_b = ( ( mod_xbgr       ) & 0xff ) / 255.0f;
 
-    gl->glUseProgram( gl->shader );
-    gl->glUniform1i( gl->glGetUniformLocation( gl->shader, "texture" ), 0 );
-    gl->glUniform3f( gl->glGetUniformLocation( gl->shader, "modulate" ), mod_r, mod_g, mod_b );
+    gl->UseProgram( gl->shader );
+    gl->Uniform1i( gl->GetUniformLocation( gl->shader, "texture" ), 0 );
+    gl->Uniform3f( gl->GetUniformLocation( gl->shader, "modulate" ), mod_r, mod_g, mod_b );
 
-    gl->glActiveTexture( APP_GL_TEXTURE0 );
-    gl->glBindTexture( APP_GL_TEXTURE_2D, gl->texture );
-    gl->glTexImage2D( APP_GL_TEXTURE_2D, 0, APP_GL_RGBA, width, height, 0, APP_GL_RGBA, APP_GL_UNSIGNED_BYTE, pixels_xbgr ); 
-    
+    gl->ActiveTexture( APP_GL_TEXTURE0 );
+    gl->BindTexture( APP_GL_TEXTURE_2D, gl->texture );
+    gl->TexImage2D( APP_GL_TEXTURE_2D, 0, APP_GL_RGBA, width, height, 0, APP_GL_RGBA, APP_GL_UNSIGNED_BYTE, pixels_xbgr ); 
+
     if( gl->interpolation == APP_INTERPOLATION_LINEAR )
         {
-        gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_LINEAR );
-        gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_LINEAR );
+        gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_LINEAR );
+        gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_LINEAR );
         }
     else
         {
-        gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_NEAREST );
-        gl->glTexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_NEAREST );
+        gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_NEAREST );
+        gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MAG_FILTER, APP_GL_NEAREST );
         }
 
     float r = ( ( border_xbgr >> 16 ) & 0xff ) / 255.0f;
     float g = ( ( border_xbgr >> 8  ) & 0xff ) / 255.0f;
     float b = ( ( border_xbgr       ) & 0xff ) / 255.0f;
-    gl->glClearColor( r, g, b, 1.0f );
-    gl->glClear( APP_GL_COLOR_BUFFER_BIT );
-    gl->glDrawArrays( APP_GL_TRIANGLE_FAN, 0, 4 );
+    gl->ClearColor( r, g, b, 1.0f );
+    gl->Clear( APP_GL_COLOR_BUFFER_BIT );
+    gl->DrawArrays( APP_GL_TRIANGLE_FAN, 0, 4 );
 
     return 1;
     }
@@ -1049,7 +1087,7 @@ static int app_internal_opengl_present( struct app_internal_opengl_t* gl, APP_U3
 
 static void app_internal_opengl_resize( struct app_internal_opengl_t* gl, int width, int height )
     {
-    gl->glViewport( 0, 0, width, height );    
+    gl->Viewport( 0, 0, width, height );    
     gl->window_width = width;
     gl->window_height = height;
     }
@@ -1071,23 +1109,24 @@ static void app_internal_opengl_interpolation( struct app_internal_opengl_t* gl,
 #if defined( APP_NULL )
 
 
-struct app_t { };
-int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, void* logctx, void* fatalctx ) 
-    { app_t app; return app_proc( &app, user_data ); }
-app_state_t app_yield( app_t* app ) { return APP_STATE_EXIT_REQUESTED; }
+struct app_t { void* dummy; };
+int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, void* logctx, void* fatalctx ) { app_t app; return app_proc( &app, user_data ); }
+app_state_t app_yield( app_t* app ) { return APP_STATE_NORMAL; }
 void app_cancel_exit( app_t* app ) { }
 void app_title( app_t* app, char const* title ) { }
-char const* app_cmdline( app_t* app ) { return 0; }
-char const* app_filename( app_t* app ) { return 0; }
-char const* app_userdata( app_t* app ) { return 0; }
-char const* app_appdata( app_t* app ) { return 0; }
-APP_U64 app_time_count( app_t* app ) { return 0; }
-APP_U64 app_time_freq( app_t* app ) { return 0; }
+char const* app_cmdline( app_t* app ) { return ""; }
+char const* app_filename( app_t* app ) { return ""; }
+char const* app_userdata( app_t* app ) { return ""; }
+char const* app_appdata( app_t* app ) { return ""; }
+APP_U64 app_time_count( app_t* app ) { return 0ULL; }
+APP_U64 app_time_freq( app_t* app ) { return 0ULL; }
 void app_log( app_t* app, app_log_level_t level, char const* message ) { }
 void app_fatal_error( app_t* app, char const* message ) { }
 void app_pointer( app_t* app, int width, int height, APP_U32* pixels_abgr, int hotspot_x, int hotspot_y ) { }
-void app_pointer_default( app_t* app, int* width, int* height, APP_U32* pixels_abgr, int* hotspot_x, int* hotspot_y ) { }
+void app_pointer_default( app_t* app, int* width, int* height, APP_U32* pixels_abgr, int* hotspot_x, int* hotspot_y ) { } 
 void app_pointer_pos( app_t* app, int x, int y ) { }
+int app_pointer_x( app_t* app ) { return 0; }
+int app_pointer_y( app_t* app ) { return 0;}
 void app_pointer_limit( app_t* app, int x, int y, int width, int height ) { }
 void app_pointer_limit_off( app_t* app ) { }
 void app_interpolation( app_t* app, app_interpolation_t interpolation ) { }
@@ -1098,14 +1137,13 @@ int app_window_height( app_t* app ) { return 0; }
 void app_window_pos( app_t* app, int x, int y ) { }
 int app_window_x( app_t* app ) { return 0; }
 int app_window_y( app_t* app ) { return 0; }
-app_displays_t app_displays( app_t* app ) { app_displays_t x = { 0 }; return x; }
+app_displays_t app_displays( app_t* app ) { app_displays_t ret = { 0 }; return ret; }
 void app_present( app_t* app, APP_U32 const* pixels_xbgr, int width, int height, APP_U32 mod_xbgr, APP_U32 border_xbgr ) { }
 void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ), void* user_data ) { }
 void app_sound_volume( app_t* app, float volume ) { }
-app_input_t app_input( app_t* app ) { app_input_t x = { 0 }; return x; }
+app_input_t app_input( app_t* app ) { app_input_t ret = { 0 }; return ret; }
 void app_coordinates_window_to_bitmap( app_t* app, int width, int height, int* x, int* y ) { }
-void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x, int* y ) { }
-
+void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x, int* y );
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2070,114 +2108,114 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     if( app->wglSwapIntervalEXT ) app->wglSwapIntervalEXT( 1 );
 
     // Attempt to bind opengl functions using GetProcAddress
-    app->gl.glCreateShader = ( APP_GLuint (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCreateShader" );
-    app->gl.glShaderSource = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLchar const* const*, APP_GLint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glShaderSource" );
-    app->gl.glCompileShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCompileShader" );
-    app->gl.glGetShaderiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetShaderiv" );
-    app->gl.glCreateProgram = ( APP_GLuint (APP_GLCALLTYPE*) (void) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCreateProgram" );
-    app->gl.glAttachShader = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glAttachShader" );
-    app->gl.glBindAttribLocation = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint, APP_GLchar const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindAttribLocation" );
-    app->gl.glLinkProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glLinkProgram" );
-    app->gl.glGetProgramiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetProgramiv" );
-    app->gl.glGenBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGenBuffers" );
-    app->gl.glBindBuffer = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindBuffer" );
-    app->gl.glEnableVertexAttribArray = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glEnableVertexAttribArray" );
-    app->gl.glVertexAttribPointer = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLint, APP_GLenum, APP_GLboolean, APP_GLsizei, void const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glVertexAttribPointer" );
-    app->gl.glGenTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGenTextures" );
-    app->gl.glEnable = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glEnable" );
-    app->gl.glActiveTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glActiveTexture" );
-    app->gl.glBindTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindTexture" );
-    app->gl.glTexParameteri = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLenum, APP_GLint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glTexParameteri" );
-    app->gl.glDeleteBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteBuffers" );
-    app->gl.glDeleteTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteTextures" );
-    app->gl.glBufferData = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLsizeiptr, void const *, APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBufferData" );
-    app->gl.glUseProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUseProgram" );
-    app->gl.glUniform1i = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUniform1i" );
-    app->gl.glUniform3f = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUniform3f" );
-    app->gl.glGetUniformLocation = ( APP_GLint (APP_GLCALLTYPE*) (APP_GLuint, APP_GLchar const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetUniformLocation" );
-    app->gl.glTexImage2D = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei, APP_GLint, APP_GLenum, APP_GLenum, void const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glTexImage2D" );
-    app->gl.glClearColor = ( void (APP_GLCALLTYPE*) (APP_GLfloat, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) GetProcAddress( app->gl_dll, "glClearColor" );
-    app->gl.glClear = ( void (APP_GLCALLTYPE*) (APP_GLbitfield) ) (uintptr_t) GetProcAddress( app->gl_dll, "glClear" );
-    app->gl.glDrawArrays = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLsizei) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDrawArrays" );
-    app->gl.glViewport = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei) ) (uintptr_t) GetProcAddress( app->gl_dll, "glViewport" );
-    app->gl.glDeleteShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteShader" );
-    app->gl.glDeleteProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteProgram" );
+    app->gl.CreateShader = ( APP_GLuint (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCreateShader" );
+    app->gl.ShaderSource = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLchar const* const*, APP_GLint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glShaderSource" );
+    app->gl.CompileShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCompileShader" );
+    app->gl.GetShaderiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetShaderiv" );
+    app->gl.CreateProgram = ( APP_GLuint (APP_GLCALLTYPE*) (void) ) (uintptr_t) GetProcAddress( app->gl_dll, "glCreateProgram" );
+    app->gl.AttachShader = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glAttachShader" );
+    app->gl.BindAttribLocation = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint, APP_GLchar const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindAttribLocation" );
+    app->gl.LinkProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glLinkProgram" );
+    app->gl.GetProgramiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetProgramiv" );
+    app->gl.GenBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGenBuffers" );
+    app->gl.BindBuffer = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindBuffer" );
+    app->gl.EnableVertexAttribArray = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glEnableVertexAttribArray" );
+    app->gl.VertexAttribPointer = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLint, APP_GLenum, APP_GLboolean, APP_GLsizei, void const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glVertexAttribPointer" );
+    app->gl.GenTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGenTextures" );
+    app->gl.Enable = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glEnable" );
+    app->gl.ActiveTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glActiveTexture" );
+    app->gl.BindTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBindTexture" );
+    app->gl.TexParameteri = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLenum, APP_GLint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glTexParameteri" );
+    app->gl.DeleteBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteBuffers" );
+    app->gl.DeleteTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteTextures" );
+    app->gl.BufferData = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLsizeiptr, void const *, APP_GLenum) ) (uintptr_t) GetProcAddress( app->gl_dll, "glBufferData" );
+    app->gl.UseProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUseProgram" );
+    app->gl.Uniform1i = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUniform1i" );
+    app->gl.Uniform3f = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) GetProcAddress( app->gl_dll, "glUniform3f" );
+    app->gl.GetUniformLocation = ( APP_GLint (APP_GLCALLTYPE*) (APP_GLuint, APP_GLchar const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetUniformLocation" );
+    app->gl.TexImage2D = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei, APP_GLint, APP_GLenum, APP_GLenum, void const*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glTexImage2D" );
+    app->gl.ClearColor = ( void (APP_GLCALLTYPE*) (APP_GLfloat, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) GetProcAddress( app->gl_dll, "glClearColor" );
+    app->gl.Clear = ( void (APP_GLCALLTYPE*) (APP_GLbitfield) ) (uintptr_t) GetProcAddress( app->gl_dll, "glClear" );
+    app->gl.DrawArrays = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLsizei) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDrawArrays" );
+    app->gl.Viewport = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei) ) (uintptr_t) GetProcAddress( app->gl_dll, "glViewport" );
+    app->gl.DeleteShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteShader" );
+    app->gl.DeleteProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) GetProcAddress( app->gl_dll, "glDeleteProgram" );
     #ifdef APP_REPORT_SHADER_ERRORS
-        app->gl.glGetShaderInfoLog = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLsizei*, APP_GLchar*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetShaderInfoLog" );
+        app->gl.GetShaderInfoLog = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLsizei*, APP_GLchar*) ) (uintptr_t) GetProcAddress( app->gl_dll, "glGetShaderInfoLog" );
     #endif
 
     // Any opengl functions which didn't bind, try binding them using wglGetProcAddrss
-    if( !app->gl.glCreateShader ) app->gl.glCreateShader = ( APP_GLuint (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glCreateShader" );
-    if( !app->gl.glShaderSource ) app->gl.glShaderSource = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLchar const* const*, APP_GLint const*) ) (uintptr_t) app->wglGetProcAddress( "glShaderSource" );
-    if( !app->gl.glCompileShader ) app->gl.glCompileShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glCompileShader" );
-    if( !app->gl.glGetShaderiv ) app->gl.glGetShaderiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) app->wglGetProcAddress( "glGetShaderiv" );
-    if( !app->gl.glCreateProgram ) app->gl.glCreateProgram = ( APP_GLuint (APP_GLCALLTYPE*) (void) ) (uintptr_t) app->wglGetProcAddress( "glCreateProgram" );
-    if( !app->gl.glAttachShader ) app->gl.glAttachShader = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glAttachShader" );
-    if( !app->gl.glBindAttribLocation ) app->gl.glBindAttribLocation = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint, APP_GLchar const*) ) (uintptr_t) app->wglGetProcAddress( "glBindAttribLocation" );
-    if( !app->gl.glLinkProgram ) app->gl.glLinkProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glLinkProgram" );
-    if( !app->gl.glGetProgramiv ) app->gl.glGetProgramiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) app->wglGetProcAddress( "glGetProgramiv" );
-    if( !app->gl.glGenBuffers ) app->gl.glGenBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) app->wglGetProcAddress( "glGenBuffers" );
-    if( !app->gl.glBindBuffer ) app->gl.glBindBuffer = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glBindBuffer" );
-    if( !app->gl.glEnableVertexAttribArray ) app->gl.glEnableVertexAttribArray = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glEnableVertexAttribArray" );
-    if( !app->gl.glVertexAttribPointer ) app->gl.glVertexAttribPointer = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLint, APP_GLenum, APP_GLboolean, APP_GLsizei, void const*) ) (uintptr_t) app->wglGetProcAddress( "glVertexAttribPointer" );
-    if( !app->gl.glGenTextures ) app->gl.glGenTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) app->wglGetProcAddress( "glGenTextures" );
-    if( !app->gl.glEnable ) app->gl.glEnable = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glEnable" );
-    if( !app->gl.glActiveTexture ) app->gl.glActiveTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glActiveTexture" );
-    if( !app->gl.glBindTexture ) app->gl.glBindTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glBindTexture" );
-    if( !app->gl.glTexParameteri ) app->gl.glTexParameteri = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLenum, APP_GLint) ) (uintptr_t) app->wglGetProcAddress( "glTexParameteri" );
-    if( !app->gl.glDeleteBuffers ) app->gl.glDeleteBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) app->wglGetProcAddress( "glDeleteBuffers" );
-    if( !app->gl.glDeleteTextures ) app->gl.glDeleteTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) app->wglGetProcAddress( "glDeleteTextures" );
-    if( !app->gl.glBufferData ) app->gl.glBufferData = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLsizeiptr, void const *, APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glBufferData" );
-    if( !app->gl.glUseProgram ) app->gl.glUseProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glUseProgram" );
-    if( !app->gl.glUniform1i ) app->gl.glUniform1i = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint) ) (uintptr_t) app->wglGetProcAddress( "glUniform1i" );
-    if( !app->gl.glUniform3f ) app->gl.glUniform3f = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) app->wglGetProcAddress( "glUniform3f" );
-    if( !app->gl.glGetUniformLocation ) app->gl.glGetUniformLocation = ( APP_GLint (APP_GLCALLTYPE*) (APP_GLuint, APP_GLchar const*) ) (uintptr_t) app->wglGetProcAddress( "glGetUniformLocation" );
-    if( !app->gl.glTexImage2D ) app->gl.glTexImage2D = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei, APP_GLint, APP_GLenum, APP_GLenum, void const*) ) (uintptr_t) app->wglGetProcAddress( "glTexImage2D" );
-    if( !app->gl.glClearColor ) app->gl.glClearColor = ( void (APP_GLCALLTYPE*) (APP_GLfloat, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) app->wglGetProcAddress( "glClearColor" );
-    if( !app->gl.glClear ) app->gl.glClear = ( void (APP_GLCALLTYPE*) (APP_GLbitfield) ) (uintptr_t) app->wglGetProcAddress( "glClear" );
-    if( !app->gl.glDrawArrays ) app->gl.glDrawArrays = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLsizei) ) (uintptr_t) app->wglGetProcAddress( "glDrawArrays" );
-    if( !app->gl.glViewport ) app->gl.glViewport = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei) ) (uintptr_t) app->wglGetProcAddress( "glViewport" );
-    if( !app->gl.glDeleteShader ) app->gl.glDeleteShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glDeleteShader" );
-    if( !app->gl.glDeleteProgram ) app->gl.glDeleteProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glDeleteProgram" );
+    if( !app->gl.CreateShader ) app->gl.CreateShader = ( APP_GLuint (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glCreateShader" );
+    if( !app->gl.ShaderSource ) app->gl.ShaderSource = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLchar const* const*, APP_GLint const*) ) (uintptr_t) app->wglGetProcAddress( "glShaderSource" );
+    if( !app->gl.CompileShader ) app->gl.CompileShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glCompileShader" );
+    if( !app->gl.GetShaderiv ) app->gl.GetShaderiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) app->wglGetProcAddress( "glGetShaderiv" );
+    if( !app->gl.CreateProgram ) app->gl.CreateProgram = ( APP_GLuint (APP_GLCALLTYPE*) (void) ) (uintptr_t) app->wglGetProcAddress( "glCreateProgram" );
+    if( !app->gl.AttachShader ) app->gl.AttachShader = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glAttachShader" );
+    if( !app->gl.BindAttribLocation ) app->gl.BindAttribLocation = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLuint, APP_GLchar const*) ) (uintptr_t) app->wglGetProcAddress( "glBindAttribLocation" );
+    if( !app->gl.LinkProgram ) app->gl.LinkProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glLinkProgram" );
+    if( !app->gl.GetProgramiv ) app->gl.GetProgramiv = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLenum, APP_GLint*) ) (uintptr_t) app->wglGetProcAddress( "glGetProgramiv" );
+    if( !app->gl.GenBuffers ) app->gl.GenBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) app->wglGetProcAddress( "glGenBuffers" );
+    if( !app->gl.BindBuffer ) app->gl.BindBuffer = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glBindBuffer" );
+    if( !app->gl.EnableVertexAttribArray ) app->gl.EnableVertexAttribArray = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glEnableVertexAttribArray" );
+    if( !app->gl.VertexAttribPointer ) app->gl.VertexAttribPointer = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLint, APP_GLenum, APP_GLboolean, APP_GLsizei, void const*) ) (uintptr_t) app->wglGetProcAddress( "glVertexAttribPointer" );
+    if( !app->gl.GenTextures ) app->gl.GenTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint*) ) (uintptr_t) app->wglGetProcAddress( "glGenTextures" );
+    if( !app->gl.Enable ) app->gl.Enable = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glEnable" );
+    if( !app->gl.ActiveTexture ) app->gl.ActiveTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glActiveTexture" );
+    if( !app->gl.BindTexture ) app->gl.BindTexture = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glBindTexture" );
+    if( !app->gl.TexParameteri ) app->gl.TexParameteri = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLenum, APP_GLint) ) (uintptr_t) app->wglGetProcAddress( "glTexParameteri" );
+    if( !app->gl.DeleteBuffers ) app->gl.DeleteBuffers = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) app->wglGetProcAddress( "glDeleteBuffers" );
+    if( !app->gl.DeleteTextures ) app->gl.DeleteTextures = ( void (APP_GLCALLTYPE*) (APP_GLsizei, APP_GLuint const*) ) (uintptr_t) app->wglGetProcAddress( "glDeleteTextures" );
+    if( !app->gl.BufferData ) app->gl.BufferData = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLsizeiptr, void const *, APP_GLenum) ) (uintptr_t) app->wglGetProcAddress( "glBufferData" );
+    if( !app->gl.UseProgram ) app->gl.UseProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glUseProgram" );
+    if( !app->gl.Uniform1i ) app->gl.Uniform1i = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint) ) (uintptr_t) app->wglGetProcAddress( "glUniform1i" );
+    if( !app->gl.Uniform3f ) app->gl.Uniform3f = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) app->wglGetProcAddress( "glUniform3f" );
+    if( !app->gl.GetUniformLocation ) app->gl.GetUniformLocation = ( APP_GLint (APP_GLCALLTYPE*) (APP_GLuint, APP_GLchar const*) ) (uintptr_t) app->wglGetProcAddress( "glGetUniformLocation" );
+    if( !app->gl.TexImage2D ) app->gl.TexImage2D = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei, APP_GLint, APP_GLenum, APP_GLenum, void const*) ) (uintptr_t) app->wglGetProcAddress( "glTexImage2D" );
+    if( !app->gl.ClearColor ) app->gl.ClearColor = ( void (APP_GLCALLTYPE*) (APP_GLfloat, APP_GLfloat, APP_GLfloat, APP_GLfloat) ) (uintptr_t) app->wglGetProcAddress( "glClearColor" );
+    if( !app->gl.Clear ) app->gl.Clear = ( void (APP_GLCALLTYPE*) (APP_GLbitfield) ) (uintptr_t) app->wglGetProcAddress( "glClear" );
+    if( !app->gl.DrawArrays ) app->gl.DrawArrays = ( void (APP_GLCALLTYPE*) (APP_GLenum, APP_GLint, APP_GLsizei) ) (uintptr_t) app->wglGetProcAddress( "glDrawArrays" );
+    if( !app->gl.Viewport ) app->gl.Viewport = ( void (APP_GLCALLTYPE*) (APP_GLint, APP_GLint, APP_GLsizei, APP_GLsizei) ) (uintptr_t) app->wglGetProcAddress( "glViewport" );
+    if( !app->gl.DeleteShader ) app->gl.DeleteShader = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glDeleteShader" );
+    if( !app->gl.DeleteProgram ) app->gl.DeleteProgram = ( void (APP_GLCALLTYPE*) (APP_GLuint) ) (uintptr_t) app->wglGetProcAddress( "glDeleteProgram" );
     #ifdef APP_REPORT_SHADER_ERRORS
-        if( !app->gl.glGetShaderInfoLog ) app->gl.glGetShaderInfoLog = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLsizei*, APP_GLchar*) ) (uintptr_t) app->wglGetProcAddress( "glGetShaderInfoLog" );
+        if( !app->gl.GetShaderInfoLog ) app->gl.GetShaderInfoLog = ( void (APP_GLCALLTYPE*) (APP_GLuint, APP_GLsizei, APP_GLsizei*, APP_GLchar*) ) (uintptr_t) app->wglGetProcAddress( "glGetShaderInfoLog" );
     #endif
 
     // Report error if any gl function was not found.
-    if( !app->gl.glCreateShader ) { app_fatal_error( app, "Could not find function glCreateShader." ); goto init_failed; }
-    if( !app->gl.glShaderSource ) { app_fatal_error( app, "Could not find function glShaderSource." ); goto init_failed; }
-    if( !app->gl.glCompileShader ) { app_fatal_error( app, "Could not find function glCompileShader." ); goto init_failed; }
-    if( !app->gl.glGetShaderiv ) { app_fatal_error( app, "Could not find function glGetShaderiv." ); goto init_failed; }
-    if( !app->gl.glCreateProgram ) { app_fatal_error( app, "Could not find function glCreateProgram." ); goto init_failed; }
-    if( !app->gl.glAttachShader ) { app_fatal_error( app, "Could not find function glAttachShader." ); goto init_failed; }
-    if( !app->gl.glBindAttribLocation ) { app_fatal_error( app, "Could not find function glBindAttribLocation." ); goto init_failed; }
-    if( !app->gl.glLinkProgram ) { app_fatal_error( app, "Could not find function glLinkProgram." ); goto init_failed; }
-    if( !app->gl.glGetProgramiv ) { app_fatal_error( app, "Could not find function glGetProgramiv." ); goto init_failed; }
-    if( !app->gl.glGenBuffers ) { app_fatal_error( app, "Could not find function glGenBuffers." ); goto init_failed; }
-    if( !app->gl.glBindBuffer ) { app_fatal_error( app, "Could not find function glBindBuffer." ); goto init_failed; }
-    if( !app->gl.glEnableVertexAttribArray ) { app_fatal_error( app, "Could not find function glEnableVertexAttribArray." ); goto init_failed; }
-    if( !app->gl.glVertexAttribPointer ) { app_fatal_error( app, "Could not find function glVertexAttribPointer." ); goto init_failed; }
-    if( !app->gl.glGenTextures ) { app_fatal_error( app, "Could not find function glGenTextures." ); goto init_failed; }
-    if( !app->gl.glEnable ) { app_fatal_error( app, "Could not find function glEnable." ); goto init_failed; }
-    if( !app->gl.glActiveTexture ) { app_fatal_error( app, "Could not find function glActiveTexture." ); goto init_failed; }
-    if( !app->gl.glBindTexture ) { app_fatal_error( app, "Could not find function glBindTexture." ); goto init_failed; }
-    if( !app->gl.glTexParameteri ) { app_fatal_error( app, "Could not find function glTexParameteri." ); goto init_failed; }
-    if( !app->gl.glDeleteBuffers ) { app_fatal_error( app, "Could not find function glDeleteBuffers." ); goto init_failed; }
-    if( !app->gl.glDeleteTextures ) { app_fatal_error( app, "Could not find function glDeleteTextures." ); goto init_failed; }
-    if( !app->gl.glBufferData ) { app_fatal_error( app, "Could not find function glBufferData." ); goto init_failed; }
-    if( !app->gl.glUseProgram ) { app_fatal_error( app, "Could not find function glUseProgram." ); goto init_failed; }
-    if( !app->gl.glUniform1i ) { app_fatal_error( app, "Could not find function glUniform1i." ); goto init_failed; }
-    if( !app->gl.glUniform3f ) { app_fatal_error( app, "Could not find function glUniform3f." ); goto init_failed; }
-    if( !app->gl.glGetUniformLocation ) { app_fatal_error( app, "Could not find function glGetUniformLocation." ); goto init_failed; }
-    if( !app->gl.glTexImage2D ) { app_fatal_error( app, "Could not find function glTexImage2D." ); goto init_failed; }
-    if( !app->gl.glClearColor ) { app_fatal_error( app, "Could not find function glClearColor." ); goto init_failed; }
-    if( !app->gl.glClear ) { app_fatal_error( app, "Could not find function glClear." ); goto init_failed; }
-    if( !app->gl.glDrawArrays ) { app_fatal_error( app, "Could not find function glDrawArrays." ); goto init_failed; }
-    if( !app->gl.glViewport ) { app_fatal_error( app, "Could not find function glViewport." ); goto init_failed; }
-    if( !app->gl.glDeleteShader ) { app_fatal_error( app, "Could not find function glDeleteShader." ); goto init_failed; }
-    if( !app->gl.glDeleteProgram ) { app_fatal_error( app, "Could not find function glDeleteProgram." ); goto init_failed; }
+    if( !app->gl.CreateShader ) { app_fatal_error( app, "Could not find function CreateShader." ); goto init_failed; }
+    if( !app->gl.ShaderSource ) { app_fatal_error( app, "Could not find function ShaderSource." ); goto init_failed; }
+    if( !app->gl.CompileShader ) { app_fatal_error( app, "Could not find function CompileShader." ); goto init_failed; }
+    if( !app->gl.GetShaderiv ) { app_fatal_error( app, "Could not find function GetShaderiv." ); goto init_failed; }
+    if( !app->gl.CreateProgram ) { app_fatal_error( app, "Could not find function CreateProgram." ); goto init_failed; }
+    if( !app->gl.AttachShader ) { app_fatal_error( app, "Could not find function AttachShader." ); goto init_failed; }
+    if( !app->gl.BindAttribLocation ) { app_fatal_error( app, "Could not find function BindAttribLocation." ); goto init_failed; }
+    if( !app->gl.LinkProgram ) { app_fatal_error( app, "Could not find function LinkProgram." ); goto init_failed; }
+    if( !app->gl.GetProgramiv ) { app_fatal_error( app, "Could not find function GetProgramiv." ); goto init_failed; }
+    if( !app->gl.GenBuffers ) { app_fatal_error( app, "Could not find function GenBuffers." ); goto init_failed; }
+    if( !app->gl.BindBuffer ) { app_fatal_error( app, "Could not find function BindBuffer." ); goto init_failed; }
+    if( !app->gl.EnableVertexAttribArray ) { app_fatal_error( app, "Could not find function EnableVertexAttribArray." ); goto init_failed; }
+    if( !app->gl.VertexAttribPointer ) { app_fatal_error( app, "Could not find function VertexAttribPointer." ); goto init_failed; }
+    if( !app->gl.GenTextures ) { app_fatal_error( app, "Could not find function GenTextures." ); goto init_failed; }
+    if( !app->gl.Enable ) { app_fatal_error( app, "Could not find function Enable." ); goto init_failed; }
+    if( !app->gl.ActiveTexture ) { app_fatal_error( app, "Could not find function ActiveTexture." ); goto init_failed; }
+    if( !app->gl.BindTexture ) { app_fatal_error( app, "Could not find function BindTexture." ); goto init_failed; }
+    if( !app->gl.TexParameteri ) { app_fatal_error( app, "Could not find function TexParameteri." ); goto init_failed; }
+    if( !app->gl.DeleteBuffers ) { app_fatal_error( app, "Could not find function DeleteBuffers." ); goto init_failed; }
+    if( !app->gl.DeleteTextures ) { app_fatal_error( app, "Could not find function DeleteTextures." ); goto init_failed; }
+    if( !app->gl.BufferData ) { app_fatal_error( app, "Could not find function BufferData." ); goto init_failed; }
+    if( !app->gl.UseProgram ) { app_fatal_error( app, "Could not find function UseProgram." ); goto init_failed; }
+    if( !app->gl.Uniform1i ) { app_fatal_error( app, "Could not find function Uniform1i." ); goto init_failed; }
+    if( !app->gl.Uniform3f ) { app_fatal_error( app, "Could not find function Uniform3f." ); goto init_failed; }
+    if( !app->gl.GetUniformLocation ) { app_fatal_error( app, "Could not find function GetUniformLocation." ); goto init_failed; }
+    if( !app->gl.TexImage2D ) { app_fatal_error( app, "Could not find function TexImage2D." ); goto init_failed; }
+    if( !app->gl.ClearColor ) { app_fatal_error( app, "Could not find function ClearColor." ); goto init_failed; }
+    if( !app->gl.Clear ) { app_fatal_error( app, "Could not find function Clear." ); goto init_failed; }
+    if( !app->gl.DrawArrays ) { app_fatal_error( app, "Could not find function DrawArrays." ); goto init_failed; }
+    if( !app->gl.Viewport ) { app_fatal_error( app, "Could not find function Viewport." ); goto init_failed; }
+    if( !app->gl.DeleteShader ) { app_fatal_error( app, "Could not find function DeleteShader." ); goto init_failed; }
+    if( !app->gl.DeleteProgram ) { app_fatal_error( app, "Could not find function DeleteProgram." ); goto init_failed; }
     #ifdef APP_REPORT_SHADER_ERRORS
-        if( !app->gl.glGetShaderInfoLog ) { app_fatal_error( app, "Could not find function glGetShaderInfoLog." ); goto init_failed; }
+        if( !app->gl.GetShaderInfoLog ) { app_fatal_error( app, "Could not find function GetShaderInfoLog." ); goto init_failed; }
     #endif
 
     // Platform independent OpenGL initialization
@@ -2359,10 +2397,6 @@ void app_title( app_t* app, char const* title )
     #endif
     }
 
-void app_title_unicode( app_t* app, wchar_t const* title )
-    {
-    SetWindowTextW( app->hwnd, title );
-    }
 
 char const* app_cmdline( app_t* app )
     {
@@ -3196,9 +3230,727 @@ void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x
         *y += (int)( vborder );
         }
     }
+    
+    
+    
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    SDL
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#elif defined( APP_SDL )
+
+#ifndef APP_MALLOC
+    #include <stdlib.h>
+    #if defined(__cplusplus)
+        #define APP_MALLOC( ctx, size ) ( ::malloc( size ) )
+        #define APP_FREE( ctx, ptr ) ( ::free( ptr ) )
+    #else
+        #define APP_MALLOC( ctx, size ) ( malloc( size ) )
+        #define APP_FREE( ctx, ptr ) ( free( ptr ) )
+    #endif
+#endif
+
+#include <string.h>
+#include <stdio.h>
+#include <SDL2/SDL.h>
+
+#ifndef APP_FATAL_ERROR
+    #define APP_FATAL_ERROR( ctx, message ) { \
+            SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Fatal Error!", message, NULL ); exit( 0xff ); }
+#endif
+
+struct app_t 
+    { 
+    void* memctx;
+    void* logctx;
+    void* fatalctx;
+    struct app_internal_opengl_t gl;    
+	int initialized;
+	int exit_requested;
+	int has_focus;
+	app_interpolation_t interpolation;
+	app_screenmode_t screenmode;
+
+    SDL_Window* window;	
+    SDL_Cursor* cursor;
+
+	SDL_AudioDeviceID sound_device;
+	void (*sound_callback)( APP_S16* sample_pairs, int sample_pairs_count, void* user_data );
+	void* sound_user_data;
+    int volume;
+
+    app_input_event_t input_events[ 1024 ];
+    int input_count;
+
+    int display_count;
+    app_display_t displays[ 16 ];
+
+    };
+
+
+int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, void* logctx, void* fatalctx ) 
+    { 
+    app_t* app = (app_t*) APP_MALLOC( memctx, sizeof( app_t ) );
+    memset( app, 0, (int)sizeof( app_t ) );
+    app->memctx = memctx;
+    app->logctx = logctx;
+    app->fatalctx = fatalctx;
+    app->interpolation = APP_INTERPOLATION_LINEAR;
+    app->screenmode = APP_SCREENMODE_FULLSCREEN;
+
+    int result = 0xff;
+   
+    if( SDL_Init( SDL_INIT_EVERYTHING ) < 0 )
+        {
+//        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
+        goto init_failed;
+        }    
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+
+    app->window = SDL_CreateWindow( "", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 400, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE );
+    if( !app->window )
+    {
+//        printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+        goto init_failed;
+    }
+
+    SDL_HideWindow( app->window );
+	app->has_focus = 1;
+    app->volume = 256;
+
+	int display_count = SDL_GetNumVideoDisplays();
+	for( int i = 0; i < display_count; ++i )
+		{
+		SDL_Rect r;
+		SDL_GetDisplayBounds( i, &r );
+		app_display_t d;
+		sprintf( d.id, "DISPLAY%d", i );
+		d.x = r.x;
+		d.y = r.y;
+		d.width = r.w;
+		d.height = r.h;
+		app->displays[ i ] = d;
+		}
+	app->display_count = display_count;
+    
+    SDL_GL_CreateContext( app->window );
+    glewInit();
+    
+    SDL_GL_SetSwapInterval( 1 );
+
+    app->gl.CreateShader = glCreateShader;
+    app->gl.ShaderSource = glShaderSource;
+    app->gl.CompileShader = glCompileShader;
+    app->gl.GetShaderiv = glGetShaderiv;
+    app->gl.CreateProgram = glCreateProgram;
+    app->gl.AttachShader = glAttachShader;
+    app->gl.BindAttribLocation = glBindAttribLocation;
+    app->gl.LinkProgram = glLinkProgram;
+    app->gl.GetProgramiv = glGetProgramiv;
+    app->gl.GenBuffers = glGenBuffers;
+    app->gl.BindBuffer = glBindBuffer;
+    app->gl.EnableVertexAttribArray = glEnableVertexAttribArray;
+    app->gl.VertexAttribPointer = glVertexAttribPointer;
+    app->gl.GenTextures = glGenTextures;
+    app->gl.Enable = glEnable;
+    app->gl.ActiveTexture = glActiveTexture;
+    app->gl.BindTexture = glBindTexture;
+    app->gl.TexParameteri = glTexParameteri;
+    app->gl.DeleteBuffers = glDeleteBuffers;
+    app->gl.DeleteTextures = glDeleteTextures;
+    app->gl.BufferData = glBufferData;
+    app->gl.UseProgram = glUseProgram;
+    app->gl.Uniform1i = glUniform1i;
+    app->gl.Uniform3f = glUniform3f;
+    app->gl.GetUniformLocation = glGetUniformLocation;
+    app->gl.TexImage2D = glTexImage2D;
+    app->gl.ClearColor = glClearColor;
+    app->gl.Clear = glClear;
+    app->gl.DrawArrays = glDrawArrays;
+    app->gl.Viewport = glViewport;
+    app->gl.DeleteShader = glDeleteShader;
+    app->gl.DeleteProgram = glDeleteProgram;
+    #ifdef APP_REPORT_SHADER_ERRORS
+        app->gl.GetShaderInfoLog = glGetShaderInfoLog;
+    #endif
+	
+    int glres = app_internal_opengl_init( app, &app->gl, app->interpolation, 640, 400 );
+    if( !glres ) 
+        {
+        app_fatal_error( app, "OpenGL init fail" );
+        goto init_failed;
+        }
+
+    result = app_proc( app, user_data ); 
+    
+init_failed:
+    if( app->sound_device )
+        {
+		SDL_PauseAudioDevice( app->sound_device, 1 );			
+		SDL_CloseAudioDevice( app->sound_device );
+        app->sound_device = 0;
+		app->sound_callback = NULL;
+		app->sound_user_data = NULL;		
+        }
+        
+    if( app->cursor ) SDL_FreeCursor( app->cursor );
+
+    //Destroy window
+    SDL_DestroyWindow( app->window );
+
+
+    //Quit SDL subsystems
+    SDL_Quit();
+    
+    APP_FREE( memctx, app );
+    return result;
+    }
+
+
+static app_key_t app_internal_scancode_to_appkey( app_t* app, SDL_Scancode scancode )
+
+    {
+    int map[ 287 * 2 ] = { APP_KEY_INVALID, SDL_SCANCODE_UNKNOWN, APP_KEY_INVALID, 1, APP_KEY_INVALID, 2, APP_KEY_INVALID, 3, APP_KEY_A, SDL_SCANCODE_A,
+		APP_KEY_B, SDL_SCANCODE_B, APP_KEY_C, SDL_SCANCODE_C, APP_KEY_D, SDL_SCANCODE_D, APP_KEY_E, SDL_SCANCODE_E, APP_KEY_F, SDL_SCANCODE_F, APP_KEY_G, 
+		SDL_SCANCODE_G, APP_KEY_H, SDL_SCANCODE_H, APP_KEY_I, SDL_SCANCODE_I, APP_KEY_J, SDL_SCANCODE_J, APP_KEY_K, SDL_SCANCODE_K, APP_KEY_L, 
+		SDL_SCANCODE_L, APP_KEY_M, SDL_SCANCODE_M, APP_KEY_N, SDL_SCANCODE_N, APP_KEY_O, SDL_SCANCODE_O, APP_KEY_P, SDL_SCANCODE_P, APP_KEY_Q, 
+		SDL_SCANCODE_Q, APP_KEY_R, SDL_SCANCODE_R, APP_KEY_S, SDL_SCANCODE_S, APP_KEY_T, SDL_SCANCODE_T, APP_KEY_U, SDL_SCANCODE_U, APP_KEY_V, 
+		SDL_SCANCODE_V, APP_KEY_W, SDL_SCANCODE_W, APP_KEY_X, SDL_SCANCODE_X, APP_KEY_Y, SDL_SCANCODE_Y, APP_KEY_Z, SDL_SCANCODE_Z, APP_KEY_1, 
+		SDL_SCANCODE_1, APP_KEY_2, SDL_SCANCODE_2, APP_KEY_3, SDL_SCANCODE_3, APP_KEY_4, SDL_SCANCODE_4, APP_KEY_5, SDL_SCANCODE_5, APP_KEY_6, 
+		SDL_SCANCODE_6, APP_KEY_7, SDL_SCANCODE_7, APP_KEY_8, SDL_SCANCODE_8, APP_KEY_9, SDL_SCANCODE_9, APP_KEY_0, SDL_SCANCODE_0, APP_KEY_RETURN, 
+		SDL_SCANCODE_RETURN, APP_KEY_ESCAPE, SDL_SCANCODE_ESCAPE, APP_KEY_BACK, SDL_SCANCODE_BACKSPACE, APP_KEY_TAB, SDL_SCANCODE_TAB, APP_KEY_SPACE, 
+		SDL_SCANCODE_SPACE, APP_KEY_OEM_MINUS, SDL_SCANCODE_MINUS, APP_KEY_INVALID, SDL_SCANCODE_EQUALS, APP_KEY_OEM_4, SDL_SCANCODE_LEFTBRACKET, 
+		APP_KEY_OEM_6, SDL_SCANCODE_RIGHTBRACKET, APP_KEY_OEM_5, SDL_SCANCODE_BACKSLASH, APP_KEY_INVALID, SDL_SCANCODE_NONUSHASH, APP_KEY_OEM_1, 
+		SDL_SCANCODE_SEMICOLON, APP_KEY_OEM_7, SDL_SCANCODE_APOSTROPHE, APP_KEY_INVALID, SDL_SCANCODE_GRAVE, APP_KEY_OEM_COMMA, SDL_SCANCODE_COMMA, 
+		APP_KEY_OEM_PERIOD, SDL_SCANCODE_PERIOD, APP_KEY_OEM_2, SDL_SCANCODE_SLASH, APP_KEY_CAPITAL, SDL_SCANCODE_CAPSLOCK, APP_KEY_F1, SDL_SCANCODE_F1,
+		APP_KEY_F2, SDL_SCANCODE_F2, APP_KEY_F3, SDL_SCANCODE_F3, APP_KEY_F4, SDL_SCANCODE_F4, APP_KEY_F5, SDL_SCANCODE_F5, APP_KEY_F6, SDL_SCANCODE_F6,
+		APP_KEY_F7, SDL_SCANCODE_F7, APP_KEY_F8, SDL_SCANCODE_F8, APP_KEY_F9, SDL_SCANCODE_F9, APP_KEY_F10, SDL_SCANCODE_F10, APP_KEY_F11, 
+		SDL_SCANCODE_F11, APP_KEY_F12, SDL_SCANCODE_F12, APP_KEY_SNAPSHOT, SDL_SCANCODE_PRINTSCREEN, APP_KEY_SCROLL, SDL_SCANCODE_SCROLLLOCK, 
+		APP_KEY_PAUSE, SDL_SCANCODE_PAUSE, APP_KEY_INSERT, SDL_SCANCODE_INSERT, APP_KEY_HOME, SDL_SCANCODE_HOME, APP_KEY_PRIOR, SDL_SCANCODE_PAGEUP, 
+		APP_KEY_DELETE, SDL_SCANCODE_DELETE, APP_KEY_END, SDL_SCANCODE_END, APP_KEY_NEXT, SDL_SCANCODE_PAGEDOWN, APP_KEY_RIGHT, SDL_SCANCODE_RIGHT, 
+		APP_KEY_LEFT, SDL_SCANCODE_LEFT, APP_KEY_DOWN, SDL_SCANCODE_DOWN, APP_KEY_UP, SDL_SCANCODE_UP, APP_KEY_NUMLOCK, SDL_SCANCODE_NUMLOCKCLEAR, 
+		APP_KEY_DIVIDE, SDL_SCANCODE_KP_DIVIDE, APP_KEY_MULTIPLY, SDL_SCANCODE_KP_MULTIPLY, APP_KEY_SUBTRACT, SDL_SCANCODE_KP_MINUS, APP_KEY_ADD, 
+		SDL_SCANCODE_KP_PLUS, APP_KEY_RETURN, SDL_SCANCODE_KP_ENTER, APP_KEY_NUMPAD1,SDL_SCANCODE_KP_1, APP_KEY_NUMPAD2,SDL_SCANCODE_KP_2, APP_KEY_NUMPAD3,
+		SDL_SCANCODE_KP_3, APP_KEY_NUMPAD4,SDL_SCANCODE_KP_4, APP_KEY_NUMPAD5,SDL_SCANCODE_KP_5, APP_KEY_NUMPAD6,SDL_SCANCODE_KP_6, APP_KEY_NUMPAD7,
+		SDL_SCANCODE_KP_7, APP_KEY_NUMPAD8,SDL_SCANCODE_KP_8, APP_KEY_NUMPAD9,SDL_SCANCODE_KP_9, APP_KEY_NUMPAD0,SDL_SCANCODE_KP_0, APP_KEY_DECIMAL, 
+		SDL_SCANCODE_KP_PERIOD, APP_KEY_INVALID, SDL_SCANCODE_NONUSBACKSLASH, APP_KEY_APPS, SDL_SCANCODE_APPLICATION, APP_KEY_INVALID, SDL_SCANCODE_POWER,
+		APP_KEY_RETURN, SDL_SCANCODE_KP_EQUALS, APP_KEY_F13, SDL_SCANCODE_F13, APP_KEY_F14, SDL_SCANCODE_F14, APP_KEY_F15, SDL_SCANCODE_F15, APP_KEY_F16, 
+		SDL_SCANCODE_F16, APP_KEY_F17, SDL_SCANCODE_F17, APP_KEY_F18, SDL_SCANCODE_F18, APP_KEY_F19, SDL_SCANCODE_F19, APP_KEY_F20, SDL_SCANCODE_F20,
+		APP_KEY_F21, SDL_SCANCODE_F21, APP_KEY_F22, SDL_SCANCODE_F22, APP_KEY_F23, SDL_SCANCODE_F23, APP_KEY_F24, SDL_SCANCODE_F24, APP_KEY_EXEC, 
+		SDL_SCANCODE_EXECUTE, APP_KEY_HELP, SDL_SCANCODE_HELP, APP_KEY_MENU, SDL_SCANCODE_MENU, APP_KEY_SELECT, SDL_SCANCODE_SELECT, APP_KEY_MEDIA_STOP, 
+		SDL_SCANCODE_STOP, APP_KEY_INVALID, SDL_SCANCODE_AGAIN, APP_KEY_INVALID, SDL_SCANCODE_UNDO, APP_KEY_INVALID, SDL_SCANCODE_CUT, APP_KEY_INVALID, 
+		SDL_SCANCODE_COPY, APP_KEY_INVALID, SDL_SCANCODE_PASTE, APP_KEY_INVALID, SDL_SCANCODE_FIND, APP_KEY_VOLUME_MUTE, SDL_SCANCODE_MUTE, 
+		APP_KEY_VOLUME_UP, SDL_SCANCODE_VOLUMEUP, APP_KEY_VOLUME_DOWN, SDL_SCANCODE_VOLUMEDOWN, APP_KEY_INVALID, 130, APP_KEY_INVALID, 131, 
+		APP_KEY_INVALID, 132, APP_KEY_SEPARATOR, SDL_SCANCODE_KP_COMMA, APP_KEY_INVALID, SDL_SCANCODE_KP_EQUALSAS400, APP_KEY_INVALID, 
+		SDL_SCANCODE_INTERNATIONAL1, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL2, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL3, APP_KEY_INVALID, 
+		SDL_SCANCODE_INTERNATIONAL4, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL5, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL6, APP_KEY_INVALID, 
+		SDL_SCANCODE_INTERNATIONAL7, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL8, APP_KEY_INVALID, SDL_SCANCODE_INTERNATIONAL9, APP_KEY_HANGUL, 
+		SDL_SCANCODE_LANG1, APP_KEY_HANJA, SDL_SCANCODE_LANG2,  APP_KEY_INVALID, SDL_SCANCODE_LANG3, APP_KEY_INVALID, SDL_SCANCODE_LANG4, APP_KEY_INVALID, 
+		SDL_SCANCODE_LANG5, APP_KEY_INVALID, SDL_SCANCODE_LANG6, APP_KEY_INVALID, SDL_SCANCODE_LANG7, APP_KEY_INVALID, SDL_SCANCODE_LANG8, APP_KEY_INVALID, 
+		SDL_SCANCODE_LANG9, APP_KEY_INVALID, SDL_SCANCODE_ALTERASE, APP_KEY_INVALID, SDL_SCANCODE_SYSREQ, APP_KEY_CANCEL, SDL_SCANCODE_CANCEL, APP_KEY_CLEAR, 
+		SDL_SCANCODE_CLEAR, APP_KEY_PRIOR, SDL_SCANCODE_PRIOR, APP_KEY_RETURN, SDL_SCANCODE_RETURN2, APP_KEY_OEM_COMMA, SDL_SCANCODE_SEPARATOR, 
+		APP_KEY_INVALID, SDL_SCANCODE_OUT, APP_KEY_INVALID, SDL_SCANCODE_OPER, APP_KEY_INVALID, SDL_SCANCODE_CLEARAGAIN, APP_KEY_CRSEL, SDL_SCANCODE_CRSEL,
+		APP_KEY_EXSEL, SDL_SCANCODE_EXSEL, APP_KEY_INVALID, 165, APP_KEY_INVALID, 166, APP_KEY_INVALID, 167, APP_KEY_INVALID, 168, APP_KEY_INVALID, 169, 
+		APP_KEY_INVALID, 170, APP_KEY_INVALID, 171, APP_KEY_INVALID, 172, APP_KEY_INVALID, 173, APP_KEY_INVALID, 174, APP_KEY_INVALID, 175, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_00, APP_KEY_INVALID, SDL_SCANCODE_KP_000, APP_KEY_INVALID, SDL_SCANCODE_THOUSANDSSEPARATOR, APP_KEY_INVALID, 
+		SDL_SCANCODE_DECIMALSEPARATOR, APP_KEY_INVALID, SDL_SCANCODE_CURRENCYUNIT, APP_KEY_INVALID, SDL_SCANCODE_CURRENCYSUBUNIT, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_LEFTPAREN, APP_KEY_INVALID, SDL_SCANCODE_KP_RIGHTPAREN, APP_KEY_INVALID, SDL_SCANCODE_KP_LEFTBRACE, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_RIGHTBRACE, APP_KEY_INVALID, SDL_SCANCODE_KP_TAB, APP_KEY_INVALID, SDL_SCANCODE_KP_BACKSPACE, APP_KEY_INVALID, SDL_SCANCODE_KP_A, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_B, APP_KEY_INVALID, SDL_SCANCODE_KP_C, APP_KEY_INVALID, SDL_SCANCODE_KP_D, APP_KEY_INVALID, SDL_SCANCODE_KP_E, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_F, APP_KEY_INVALID, SDL_SCANCODE_KP_XOR, APP_KEY_INVALID, SDL_SCANCODE_KP_POWER, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_PERCENT, APP_KEY_INVALID, SDL_SCANCODE_KP_LESS, APP_KEY_INVALID, SDL_SCANCODE_KP_GREATER, APP_KEY_INVALID, SDL_SCANCODE_KP_AMPERSAND, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_DBLAMPERSAND, APP_KEY_INVALID, SDL_SCANCODE_KP_VERTICALBAR, APP_KEY_INVALID, SDL_SCANCODE_KP_DBLVERTICALBAR, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_COLON, APP_KEY_INVALID, SDL_SCANCODE_KP_HASH, APP_KEY_INVALID, SDL_SCANCODE_KP_SPACE, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_AT, APP_KEY_INVALID, SDL_SCANCODE_KP_EXCLAM, APP_KEY_INVALID, SDL_SCANCODE_KP_MEMSTORE, APP_KEY_INVALID, SDL_SCANCODE_KP_MEMRECALL, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_MEMCLEAR, APP_KEY_INVALID, SDL_SCANCODE_KP_MEMADD, APP_KEY_INVALID, SDL_SCANCODE_KP_MEMSUBTRACT, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_MEMMULTIPLY, APP_KEY_INVALID, SDL_SCANCODE_KP_MEMDIVIDE, APP_KEY_INVALID, SDL_SCANCODE_KP_PLUSMINUS, APP_KEY_INVALID, 
+		SDL_SCANCODE_KP_CLEAR, APP_KEY_INVALID, SDL_SCANCODE_KP_CLEARENTRY, APP_KEY_INVALID, SDL_SCANCODE_KP_BINARY, APP_KEY_INVALID, SDL_SCANCODE_KP_OCTAL, 
+		APP_KEY_INVALID, SDL_SCANCODE_KP_DECIMAL, APP_KEY_INVALID, SDL_SCANCODE_KP_HEXADECIMAL, APP_KEY_INVALID, 222, APP_KEY_INVALID, 223, APP_KEY_LCONTROL, 
+		SDL_SCANCODE_LCTRL, APP_KEY_LSHIFT, SDL_SCANCODE_LSHIFT, APP_KEY_LMENU, SDL_SCANCODE_LALT, APP_KEY_LWIN, SDL_SCANCODE_LGUI, APP_KEY_RCONTROL, 
+		SDL_SCANCODE_RCTRL, APP_KEY_RSHIFT, SDL_SCANCODE_RSHIFT, APP_KEY_RMENU, SDL_SCANCODE_RALT, APP_KEY_RWIN, SDL_SCANCODE_RGUI, APP_KEY_INVALID, 232, 
+		APP_KEY_INVALID, 233, APP_KEY_INVALID, 234, APP_KEY_INVALID, 235, APP_KEY_INVALID, 236, APP_KEY_INVALID, 237, APP_KEY_INVALID, 238, APP_KEY_INVALID, 
+		239, APP_KEY_INVALID, 240, APP_KEY_INVALID, 241, APP_KEY_INVALID, 242, APP_KEY_INVALID, 243, APP_KEY_INVALID, 244, APP_KEY_INVALID, 245, 
+		APP_KEY_INVALID, 246, APP_KEY_INVALID, 247, APP_KEY_INVALID, 248, APP_KEY_INVALID, 249, APP_KEY_INVALID, 250, APP_KEY_INVALID, 251, APP_KEY_INVALID, 
+		252, APP_KEY_INVALID, 253, APP_KEY_INVALID, 254, APP_KEY_INVALID, 255, APP_KEY_INVALID, 256, APP_KEY_MODECHANGE, SDL_SCANCODE_MODE, 
+		APP_KEY_MEDIA_NEXT_TRACK, SDL_SCANCODE_AUDIONEXT, APP_KEY_MEDIA_PREV_TRACK, SDL_SCANCODE_AUDIOPREV, APP_KEY_MEDIA_PLAY_PAUSE, SDL_SCANCODE_AUDIOSTOP, 
+		APP_KEY_PLAY, SDL_SCANCODE_AUDIOPLAY, APP_KEY_VOLUME_MUTE, SDL_SCANCODE_AUDIOMUTE, APP_KEY_LAUNCH_MEDIA_SELECT, SDL_SCANCODE_MEDIASELECT, 
+		APP_KEY_INVALID, SDL_SCANCODE_WWW, APP_KEY_LAUNCH_MAIL, SDL_SCANCODE_MAIL, APP_KEY_INVALID, SDL_SCANCODE_CALCULATOR, APP_KEY_INVALID, 
+		SDL_SCANCODE_COMPUTER, APP_KEY_BROWSER_SEARCH, SDL_SCANCODE_AC_SEARCH, APP_KEY_BROWSER_HOME, SDL_SCANCODE_AC_HOME, APP_KEY_BROWSER_BACK, 
+		SDL_SCANCODE_AC_BACK, APP_KEY_BROWSER_FORWARD, SDL_SCANCODE_AC_FORWARD, APP_KEY_BROWSER_STOP, SDL_SCANCODE_AC_STOP, APP_KEY_BROWSER_REFRESH, 
+		SDL_SCANCODE_AC_REFRESH, APP_KEY_BROWSER_FAVORITES, SDL_SCANCODE_AC_BOOKMARKS, APP_KEY_INVALID, SDL_SCANCODE_BRIGHTNESSDOWN, APP_KEY_INVALID, 
+		SDL_SCANCODE_BRIGHTNESSUP, APP_KEY_INVALID, SDL_SCANCODE_DISPLAYSWITCH, APP_KEY_INVALID, SDL_SCANCODE_KBDILLUMTOGGLE, APP_KEY_INVALID, 
+		SDL_SCANCODE_KBDILLUMDOWN, APP_KEY_INVALID, SDL_SCANCODE_KBDILLUMUP, APP_KEY_INVALID, SDL_SCANCODE_EJECT, APP_KEY_SLEEP, SDL_SCANCODE_SLEEP, 
+		APP_KEY_LAUNCH_APP1, SDL_SCANCODE_APP1, APP_KEY_LAUNCH_APP2, SDL_SCANCODE_APP2, APP_KEY_INVALID, SDL_SCANCODE_AUDIOREWIND, APP_KEY_INVALID, 
+		SDL_SCANCODE_AUDIOFASTFORWARD, };
+		
+    if( scancode < 0 || scancode >= sizeof( map ) / ( 2 * sizeof( *map ) ) ) return APP_KEY_INVALID;
+    if( map[ scancode * 2 + 1 ] != scancode )
+        {
+        app_log( app, APP_LOG_LEVEL_ERROR, "Keymap definition error" );
+        return APP_KEY_INVALID;
+        }
+    return (app_key_t) map[ scancode * 2 ];
+    }
+
+    
+static void app_internal_add_input_event( app_t* app, app_input_event_t* event )
+    {
+    if( app->has_focus )
+        {
+        if( app->input_count < sizeof( app->input_events ) / sizeof( *app->input_events ) )
+            app->input_events[ app->input_count++ ] = *event;
+        }
+    }
+
+	
+app_state_t app_yield( app_t* app ) 
+    { 
+	if( !app->initialized ) 
+		{
+		app->initialized = 1;
+        if( app->screenmode == APP_SCREENMODE_FULLSCREEN ) SDL_SetWindowFullscreen( app->window, SDL_WINDOW_FULLSCREEN_DESKTOP );
+		SDL_ShowWindow( app->window );
+		int w = app->gl.window_width;
+		int h = app->gl.window_height;
+		SDL_GL_GetDrawableSize( app->window, &w, &h );
+		app_internal_opengl_resize( &app->gl, w, h );
+		}
+        
+    SDL_Event e;
+    while( SDL_PollEvent( &e ) )
+        {
+        if( e.type == SDL_WINDOWEVENT ) 
+            {
+			if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
+				{			
+				int w = app->gl.window_width;
+				int h = app->gl.window_height;
+				SDL_GL_GetDrawableSize( app->window, &w, &h );
+				if( w != app->gl.window_width || h != app->gl.window_height ) 
+					{
+					app_internal_opengl_resize( &app->gl, w, h );
+					}
+				}
+			else if( e.window.event == SDL_WINDOWEVENT_CLOSE )
+				{
+				app->exit_requested = 1;
+				}
+			else if( e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED )
+				{
+				app->has_focus = 1;
+				}
+			else if( e.window.event == SDL_WINDOWEVENT_FOCUS_LOST )
+				{
+				app->has_focus = 0;
+				}
+            }
+        else if( e.type == SDL_KEYDOWN )
+            {
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_KEY_DOWN; 
+			input_event.data.key = app_internal_scancode_to_appkey( app, e.key.keysym.scancode ); 
+			app_internal_add_input_event( app, &input_event ); 
+            }
+        else if( e.type == SDL_KEYUP )
+            {
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_KEY_UP; 
+			input_event.data.key = app_internal_scancode_to_appkey( app, e.key.keysym.scancode ); 
+			app_internal_add_input_event( app, &input_event ); 
+            }
+        else if( e.type == SDL_MOUSEMOTION )
+            {
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_MOUSE_MOVE; 
+            input_event.data.mouse_pos.x = e.motion.x; 
+            input_event.data.mouse_pos.y = e.motion.y; 
+            app_internal_add_input_event( app, &input_event );
+            }
+        else if( e.type == SDL_MOUSEBUTTONDOWN )
+            {
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_KEY_DOWN; 
+            if( e.button.button == SDL_BUTTON_LEFT )
+                input_event.data.key = APP_KEY_LBUTTON; 
+            else if( e.button.button == SDL_BUTTON_RIGHT )
+                input_event.data.key = APP_KEY_RBUTTON; 
+            else if( e.button.button == SDL_BUTTON_MIDDLE )
+                input_event.data.key = APP_KEY_MBUTTON; 
+            else if( e.button.button == SDL_BUTTON_X1 )
+                input_event.data.key = APP_KEY_XBUTTON1; 
+            else if( e.button.button == SDL_BUTTON_X2 )
+                input_event.data.key = APP_KEY_XBUTTON2; 
+			app_internal_add_input_event( app, &input_event ); 
+            }
+        else if( e.type == SDL_MOUSEBUTTONUP )     
+            {
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_KEY_UP; 
+            if( e.button.button == SDL_BUTTON_LEFT )
+                input_event.data.key = APP_KEY_LBUTTON; 
+            else if( e.button.button == SDL_BUTTON_RIGHT )
+                input_event.data.key = APP_KEY_RBUTTON; 
+            else if( e.button.button == SDL_BUTTON_MIDDLE )
+                input_event.data.key = APP_KEY_MBUTTON; 
+            else if( e.button.button == SDL_BUTTON_X1 )
+                input_event.data.key = APP_KEY_XBUTTON1; 
+            else if( e.button.button == SDL_BUTTON_X2 )
+                input_event.data.key = APP_KEY_XBUTTON2; 
+			app_internal_add_input_event( app, &input_event ); 
+            }
+        else if( e.type == SDL_MOUSEWHEEL )     
+            {
+            float const microsoft_mouse_wheel_constant = 120.0f;
+            float wheel_delta = ( (float) e.wheel.y ) / microsoft_mouse_wheel_constant;
+            if( app->input_count > 0 && app->input_events[ app->input_count - 1 ].type == APP_INPUT_SCROLL_WHEEL )
+                {
+                app_input_event_t* event = &app->input_events[ app->input_count - 1 ];
+                event->data.wheel_delta += wheel_delta;                 
+                }
+            else
+                {
+                app_input_event_t input_event;
+                input_event.type = APP_INPUT_SCROLL_WHEEL;
+                input_event.data.wheel_delta = wheel_delta;
+                app_internal_add_input_event( app, &input_event ); 
+                }
+            }
+            
+        }
+        
+    return app->exit_requested ? APP_STATE_EXIT_REQUESTED : APP_STATE_NORMAL; 
+    }
+	
+    
+void app_cancel_exit( app_t* app ) 
+	{ 
+	app->exit_requested = 0;
+	}
+
+
+void app_title( app_t* app, char const* title ) 
+	{ 
+	SDL_SetWindowTitle( app->window, title );
+	}
+	
+
+char const* app_cmdline( app_t* app ) { /* NOT IMPLEMENTED */ return NULL; }
+char const* app_filename( app_t* app ) { /* NOT IMPLEMENTED */ return NULL; }
+char const* app_userdata( app_t* app ) { /* NOT IMPLEMENTED */ return NULL; }
+char const* app_appdata( app_t* app ) { /* NOT IMPLEMENTED */ return NULL; }
+
+
+APP_U64 app_time_count( app_t* app ) 
+	{ 
+	return SDL_GetPerformanceCounter(); 
+	}
+
+    
+APP_U64 app_time_freq( app_t* app ) 
+	{ 
+	return SDL_GetPerformanceFrequency(); 
+	}
+
+    
+void app_log( app_t* app, app_log_level_t level, char const* message ) { /* NOT IMPLEMENTED */ }
+
+
+void app_fatal_error( app_t* app, char const* message ) 
+	{ 
+	APP_FATAL_ERROR( app->fatalctx, message ); 
+	}
+
+	
+void app_pointer( app_t* app, int width, int height, APP_U32* pixels_abgr, int hotspot_x, int hotspot_y ) 
+    { 
+    SDL_Surface* surf = SDL_CreateRGBSurfaceFrom( (void*)pixels_abgr, width, height, 32, 4 * width, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 );   
+    if( app->cursor ) SDL_FreeCursor( app->cursor );
+    app->cursor = SDL_CreateColorCursor( surf, hotspot_x, hotspot_y );
+    SDL_SetCursor( app->cursor );
+    SDL_FreeSurface( surf );
+    }
+
+   
+void app_pointer_default( app_t* app, int* width, int* height, APP_U32* pixels_abgr, int* hotspot_x, int* hotspot_y ) { /* NOT IMPLEMENTED */ } 
+
+
+void app_pointer_pos( app_t* app, int x, int y ) 
+    { 
+    SDL_WarpMouseInWindow( app->window, x, y );
+    }
+
+
+int app_pointer_x( app_t* app ) 
+    { 
+    int x = 0;
+    SDL_GetMouseState( &x, NULL );
+    return x; 
+    }
+
+    
+int app_pointer_y( app_t* app ) 
+    { 
+    int y = 0;
+    SDL_GetMouseState( NULL, &y );
+    return y; 
+    }
+
+
+void app_pointer_limit( app_t* app, int x, int y, int width, int height ) { /* NOT IMPLEMENTED */ }
+void app_pointer_limit_off( app_t* app ) { /* NOT IMPLEMENTED */ }
+
+void app_interpolation( app_t* app, app_interpolation_t interpolation ) 
+	{ 
+    if( interpolation == app->interpolation ) return;
+    app->interpolation = interpolation;
+
+	int mouse_x;
+	int mouse_y;
+	SDL_GetMouseState( &mouse_x, &mouse_y );
+
+    app_input_event_t input_event;
+    input_event.type = APP_INPUT_MOUSE_MOVE; 
+    input_event.data.mouse_pos.x = mouse_x; 
+    input_event.data.mouse_pos.y = mouse_y; 
+    app_internal_add_input_event( app, &input_event );
+
+    app_internal_opengl_interpolation( &app->gl, interpolation );
+	}
+
+
+void app_screenmode( app_t* app, app_screenmode_t screenmode ) 
+	{ 
+	if( screenmode != app->screenmode ) 
+		{
+		app->screenmode = screenmode;
+		SDL_SetWindowFullscreen( app->window, 
+			screenmode == APP_SCREENMODE_FULLSCREEN ? SDL_WINDOW_FULLSCREEN_DESKTOP  : 0 );
+		}
+	}
+
+
+void app_window_size( app_t* app, int width, int height ) 
+    { 
+    SDL_SetWindowSize( app->window, width, height );
+    }
+
+
+int app_window_width( app_t* app ) 
+    { 
+    int width = 0;
+    SDL_GetWindowSize( app->window, &width, NULL );    
+    return width; 
+    }
+    
+    
+int app_window_height( app_t* app )
+    { 
+    int height = 0;
+    SDL_GetWindowSize( app->window, NULL, &height );    
+    return height; 
+    }
+
+
+void app_window_pos( app_t* app, int x, int y ) 
+    { 
+    SDL_SetWindowPosition( app->window, x, y );
+    }
+
+
+int app_window_x( app_t* app ) 
+    { 
+    int x = 0;
+    SDL_GetWindowPosition( app->window, &x, NULL );
+    return x; 
+    }
+    
+    
+int app_window_y( app_t* app ) 
+    { 
+    int y = 0;
+    SDL_GetWindowPosition( app->window, NULL, &y );
+    return y; 
+    }
+    
+
+app_displays_t app_displays( app_t* app ) 
+	{ 
+    app_displays_t displays; 
+    displays.count = app->display_count;
+    displays.displays = app->displays;
+    return displays; 
+	}
+
+
+void app_present( app_t* app, APP_U32 const* pixels_xbgr, int width, int height, APP_U32 mod_xbgr, APP_U32 border_xbgr )
+    {
+    if( pixels_xbgr ) app_internal_opengl_present( &app->gl, pixels_xbgr, width, height, mod_xbgr, border_xbgr );  
+    SDL_GL_SwapWindow( app->window );
+    }
+
+
+static void app_internal_sdl_sound_callback( void* userdata, Uint8* stream, int len )
+	{
+	app_t* app = (app_t*) userdata;
+	if( app->sound_callback ) 
+        {
+        app->sound_callback( (APP_S16*) stream, len / ( 2 * sizeof( APP_S16 ) ), app->sound_user_data );
+        if( app->volume < 256 )
+            {
+            APP_S16* samples = (APP_S16*) stream;
+            for( int i = 0; i < len / sizeof( APP_S16 ); ++i )
+                {
+                int s = (int)(*samples);
+                s = ( s * app->volume ) >> 8;                
+                *samples++ = (APP_S16) s;
+                }
+            }
+        }
+	}
+	
+
+void app_sound( app_t* app, int sample_pairs_count, void (*sound_callback)( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ), void* user_data ) 
+	{ 
+	if( app->sound_device )
+		{
+		SDL_PauseAudioDevice( app->sound_device, 1 );			
+		SDL_CloseAudioDevice( app->sound_device );
+    	app->sound_callback = NULL;
+		app->sound_user_data = NULL;		
+        app->sound_device = 0;
+		}
+	if( sample_pairs_count > 0 && sound_callback ) 
+		{
+		SDL_AudioSpec spec;
+		spec.freq = 44100;
+		spec.format = AUDIO_S16;
+		spec.channels = 2;
+		spec.silence = 0;
+		spec.samples = sample_pairs_count * 2;
+        spec.padding = 0;
+		spec.size = 0;
+		spec.callback = app_internal_sdl_sound_callback;
+		spec.userdata = app;
+		
+		app->sound_device = SDL_OpenAudioDevice( NULL, 0, &spec, NULL, 0 );
+		if( !app->sound_device ) return;
+		
+		app->sound_callback = sound_callback;
+		app->sound_user_data = user_data;
+		SDL_PauseAudioDevice( app->sound_device, 0 );					
+		}
+	}
+	
+	
+void app_sound_volume( app_t* app, float volume ) 
+    {
+    int v = (int) ( volume * 256.0f ); 
+    app->volume = v < 0 ? 0 : v > 256 ? 256 : v;
+    }
+
+
+app_input_t app_input( app_t* app ) 
+	{
+    app_input_t input; 
+    input.events = app->input_events; 
+    input.count = app->input_count;
+    app->input_count = 0;
+    return input;
+	}
+
+
+void app_coordinates_window_to_bitmap( app_t* app, int width, int height, int* x, int* y )
+    {
+    if( width == 0 || height == 0 ) return;
+    int window_width;
+    int window_height;
+	SDL_GL_GetDrawableSize( app->window, &window_width, &window_height );
+
+
+    if( app->interpolation == APP_INTERPOLATION_LINEAR )
+        {
+        float hscale = window_width / (float) width;
+        float vscale = window_height / (float) height;
+        float pixel_scale = hscale < vscale ? hscale : vscale;
+        if( pixel_scale > 0.0f )
+            {
+            float hborder = ( window_width - pixel_scale * width ) / 2.0f;
+            float vborder = ( window_height - pixel_scale * height ) / 2.0f;
+            *x -= (int)( hborder );
+            *y -= (int)( vborder );
+            *x = (int)( *x / pixel_scale );
+            *y = (int)( *y / pixel_scale );
+            }
+        else 
+            {
+            *x = 0;
+            *y = 0;
+            }
+        }
+    else
+        {
+        int hscale = window_width / width;
+        int vscale = window_height / height;
+        int pixel_scale = pixel_scale = hscale < vscale ? hscale : vscale;
+        pixel_scale = pixel_scale < 1 ? 1 : pixel_scale;
+        int hborder = ( window_width - pixel_scale * width ) / 2;
+        int vborder = ( window_height - pixel_scale * height ) / 2;
+        *x -= (int)( hborder );
+        *y -= (int)( vborder );
+        *x = (int)( *x / pixel_scale );
+        *y = (int)( *y / pixel_scale );
+        }
+    }
+
+
+void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x, int* y )
+    {
+    int window_width;
+    int window_height;
+	SDL_GL_GetDrawableSize( app->window, &window_width, &window_height );
+
+    if( app->interpolation == APP_INTERPOLATION_LINEAR )
+        {
+        float hscale = window_width / (float) width;
+        float vscale = window_height / (float) height;
+        float pixel_scale = hscale < vscale ? hscale : vscale;
+        if( pixel_scale > 0.0f )
+            {
+            float hborder = ( window_width - pixel_scale * width ) / 2.0f;
+            float vborder = ( window_height - pixel_scale * height ) / 2.0f;
+            *x = (int)( *x * pixel_scale );
+            *y = (int)( *y * pixel_scale );
+            *x += (int)( hborder );
+            *y += (int)( vborder );
+            }
+        else 
+            {
+            *x = 0;
+            *y = 0;
+            }
+        }
+    else
+        {
+        int hscale = window_width / width;
+        int vscale = window_height / height;
+        int pixel_scale = pixel_scale = hscale < vscale ? hscale : vscale;
+        pixel_scale = pixel_scale < 1 ? 1 : pixel_scale;
+        int hborder = ( window_width - pixel_scale * width ) / 2;
+        int vborder = ( window_height - pixel_scale * height ) / 2;
+        *x = (int)( *x * pixel_scale );
+        *y = (int)( *y * pixel_scale );
+        *x += (int)( hborder );
+        *y += (int)( vborder );
+        }
+    }
+
 
 #else
-    #error Undefined platform. Define APP_WINDOWS or APP_NULL.
+    #error Undefined platform. Define APP_WINDOWS, APP_SDL or APP_NULL.
 #endif 
 
 
