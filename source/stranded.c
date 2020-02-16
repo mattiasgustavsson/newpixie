@@ -138,7 +138,7 @@ ARRAY_TYPE( objects, int, 32 );
 
 
 int pixmain( int argc, char** argv ) {
-    (void) argc, argv;
+    (void) argc, (void) argv;
     #ifndef PIXIE_NO_BUILD
         register_asset_type( "DIALOG", build_dialog );
         register_asset_type( "SPRITE", adjust_sprite );

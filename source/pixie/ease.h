@@ -120,252 +120,271 @@ float ease_in_out_circle( float t );
 #endif
 
 
-float ease_linear( float t ) 
-	{ 
+float ease_linear( float t ) { 
 	return t; 
-	}
+}
 
 
-float ease_smoothstep( float t ) 
-	{ 
+float ease_smoothstep( float t ) { 
 	return t * t * ( 3.0f - 2.0f * t ); 
-	}
+}
 
 
-float ease_smootherstep( float t ) 
-	{ 
+float ease_smootherstep( float t )  { 
 	return t * t * t * ( t * ( t * 6.0f - 15.0f ) + 10.0f ); 
-	}
+}
 
 
-float ease_out_quad( float t ) 
-	{ 
+float ease_out_quad( float t ) { 
 	return -t * ( t - 2.0f ); 
-	}
+}
 	
 	
-float ease_in_quad( float t ) 
-	{ 
+float ease_in_quad( float t ) { 
 	return t * t; 
-	}
+}
 
 	
-float ease_in_out_quad( float t ) 
-	{ 
+float ease_in_out_quad( float t ) { 
 	return ( ( t *= 2.0f ) < 1.0f ) 
 		? ( 0.5f * t * t ) 
 		: ( -0.5f * ( ( t - 1.0f ) * ( t - 3.0f ) - 1.0f ) ); 
-	}
+}
 
 
-float ease_out_back( float t ) 
-	{ 
-	return ( ( t -= 1.0f ) * t * ( ( 1.70158f + 1.0f ) * t + 1.70158f ) + 1.0f ); 
-	}
+float ease_out_back( float t ) { 
+    t -= 1.0f;
+	return ( t * t * ( ( 1.70158f + 1.0f ) * t + 1.70158f ) + 1.0f ); 
+}
 	
 	
-float ease_in_back( float t ) 
-	{ 
+float ease_in_back( float t ) { 
 	return t * t * ( ( 1.70158f + 1.0f ) * t - 1.70158f ); 
-	}
+}
 	
 	
-float ease_in_out_back( float t ) 
-	{ 
-	float s = 1.70158f; 
+float ease_in_out_back( float t ) { 
+	float s = 1.70158f * 1.525f; 
+    t *= 2.0f;
 	
-	return ( ( t *= 2.0f ) < 1.0f ) 
-		? 0.5f * ( t * t * ( ( ( s *= 1.525f ) + 1.0f ) * t - s ) ) 
-		: 0.5f * ( ( t -= 2.0f ) * t * ( ( ( s *= 1.525f ) + 1.0f) * t + s ) + 2.0f ); 
-	}
+	if( t < 1.0f ) {
+		return 0.5f * ( t * t * ( ( s + 1.0f ) * t - s ) );
+    } else {
+        t -= 2.0f;
+        return 0.5f * ( t * t * ( ( s + 1.0f ) * t + s ) + 2.0f ); 
+    }
+}
 	
 
-float ease_out_bounce( float t ) 
-	{ 
-	if( t < ( 1.0f / 2.75f ) ) 
+float ease_out_bounce( float t ) { 
+	if( t < ( 1.0f / 2.75f ) ) {
 		return 7.5625f * t * t; 
-	else if( t < ( 2.0f / 2.75f ) ) 
-		return 7.5625f * ( t -= ( 1.50f / 2.75f ) ) * t + 0.75f; 
-	else if( t < ( 2.5f / 2.75f ) ) 
-		return 7.5625f * ( t -= ( 2.25f / 2.75f ) ) * t + 0.9375f; 
-	else 
-		return 7.5625f * ( t -= ( 2.625f / 2.75f ) ) * t + 0.984375f; 
-	}
+    } else if( t < ( 2.0f / 2.75f ) ) {
+        t -= ( 1.50f / 2.75f );
+		return 7.5625f * t * t + 0.75f; 
+    } else if( t < ( 2.5f / 2.75f ) ) {
+        t -= ( 2.25f / 2.75f );
+		return 7.5625f * t * t + 0.9375f; 
+    } else {
+        t -= ( 2.625f / 2.75f );
+		return 7.5625f * t * t + 0.984375f; 
+    }
+}
 	
 	
-float ease_in_bounce( float t ) 
-	{ 
+float ease_in_bounce( float t )  { 
 	return 1.0f - ease_out_bounce( 1.0f - t ); 
-	}
+}
 	
 	
-float ease_in_out_bounce( float t ) 
-	{ 
+float ease_in_out_bounce( float t ) { 
 	return ( t < 0.5f ) 
 		? ( ease_in_bounce( t * 2.0f ) * 0.5f ) 
 		: ( ease_out_bounce( t * 2.0f - 1.0f ) * 0.5f + 0.5f ); 
-	}
+}
 
 
-float ease_out_sine( float t ) 
-	{ 
+float ease_out_sine( float t ) { 
 	return EASE_SIN( t * EASE_ACOS( 0.0f ) ); 
-	}
+}
 	
 	
-float ease_in_sine( float t ) 
-	{ 
+float ease_in_sine( float t ) { 
 	return 1.0f - EASE_COS( t * EASE_ACOS( 0.0f ) ); 
-	}
+}
 
 
-float ease_in_out_sine( float t ) 
-	{ 
+float ease_in_out_sine( float t ) { 
 	return -( EASE_COS( EASE_ACOS( -1.0f ) * t ) - 1.0f ) / 2.0f; 
-	}
+}
 
 
-float ease_out_elastic( float t ) 
-	{ 
-	if( t == 0.0f ) return 0.0f; 	
-	if( t == 1.0f ) return 1.0f; 
+float ease_out_elastic( float t ) { 
+	if( t == 0.0f ) {
+        return 0.0f; 	
+    }
+	if( t == 1.0f ) {
+        return 1.0f; 
+    }
 	
 	float p = 0.4f; 
 	float s = p / 4.0f; 
 	return ( EASE_POW( 2.0f, -10.0f * t ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p ) + 1.0f ); 
-	}
+}
 
 
-float ease_in_elastic( float t ) 
-	{ 
-	if( t == 0.0f ) return 0.0f; 
-	if( t == 1.0f ) return 1.0f; 
+float ease_in_elastic( float t )  { 
+	if( t == 0.0f ) { 
+        return 0.0f; 
+    }
+	if( t == 1.0f ) {
+        return 1.0f; 
+    }
 		
 	float p = 0.4f; 
 	float s = p / 4.0f; 
-	return -( EASE_POW( 2.0f, 10.0f * ( t -= 1.0f ) ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p ) ); 
-	}
+    t -= 1.0f;
+	return -( EASE_POW( 2.0f, 10.0f * t ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p ) ); 
+}
 	
 	
-float ease_in_out_elastic( float t ) 
-	{ 
-	if( t == 0.0f) return 0.0f; 
-	if( ( t *= 2.0f ) == 2.0f ) return 1.0f; 
+float ease_in_out_elastic( float t ) { 
+	if( t == 0.0f) {
+        return 0.0f; 
+    }
+    t *= 2.0f;
+	if( t == 2.0f ) {
+        return 1.0f; 
+    }
 	
 	float p = 0.3f * 1.5f; 
 	float s = p / 4.0f; 
-	if( t < 1.0f ) 
-		return -0.5f * ( EASE_POW( 2.0f, 10.0f * ( t -= 1.0f ) ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p ) ); 
-	else 
-		return EASE_POW( 2.0f, -10.0f * ( t -= 1.0f ) ) * EASE_SIN( ( t - s ) * (2.0f * EASE_ACOS( -1.0f ) ) / p) * 0.5f + 1.0f; 
-	}
+	if( t < 1.0f ) {
+        t -= 1.0f;
+		return -0.5f * ( EASE_POW( 2.0f, 10.0f * t ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p ) ); 
+    } else {
+        t -= 1.0f;
+		return EASE_POW( 2.0f, -10.0f * t ) * EASE_SIN( ( t - s ) * ( 2.0f * EASE_ACOS( -1.0f ) ) / p) * 0.5f + 1.0f; 
+    }
+}
 
 
-float ease_out_expo( float t ) 
-	{ 
+float ease_out_expo( float t ) { 
 	return t == 1.0f 
 		? 1.0f 
 		: ( 1.0f - EASE_POW( 2.0f, -10.0f * t ) ); 
-	}
+}
 	
 	
-float ease_in_expo( float t ) 
-	{ 
+float ease_in_expo( float t ) { 
 	return t == 0.0f 
 		? 0.0f 
 		: EASE_POW( 2.0f, 10.0f * ( t - 1.0f ) ); 
-	}
+}
 	
 	
-float ease_in_out_expo( float t ) 
-	{ 
-	if( t == 0.0f ) return 0.0f;
-	if( t == 1.0f ) return 1.0f; 
-	if( ( t *= 2.0f ) < 1.0f ) 
+float ease_in_out_expo( float t ) { 
+	if( t == 0.0f ) {
+        return 0.0f;
+    }
+	if( t == 1.0f ) {
+        return 1.0f; 
+    }
+    t *= 2.0f;
+	if( t < 1.0f ) {
 		return 0.5f * EASE_POW( 2.0f, 10.0f * ( t - 1.0f ) ); 
-	else 
-		return 0.5f * ( 2.0f - EASE_POW( 2.0f, -10.0f * --t ) ); 
+    } else {
+        return 0.5f * ( 2.0f - EASE_POW( 2.0f, -10.0f * --t ) ); 
 	}
+}
 
 
-float ease_out_cubic( float t ) 
-	{ 
-	return --t * t * t + 1.0f; 
-	}
+float ease_out_cubic( float t ) { 
+    t -= 1.0f;
+	return t * t * t + 1.0f; 
+}
 	
 	
-float ease_in_cubic( float t ) 
-	{ 
+float ease_in_cubic( float t ) { 
 	return t * t * t; 
-	}
+}
 	
 	
-float ease_in_out_cubic( float t ) 
-	{ 
-	return ( ( t *= 2.0f ) < 1.0f ) 
-		? 0.5f * t * t * t 
-		: 0.5f * ( ( t -= 2.0f ) * t * t + 2.0f ); 
-	}
+float ease_in_out_cubic( float t ) { 
+    t *= 2.0f;
+	if( t < 1.0f ) {
+        return 0.5f * t * t * t;
+    } else {
+        t -= 2.0f;
+		return 0.5f * ( t * t * t + 2.0f ); 
+    }
+}
 
 
-float ease_out_quart( float t ) 
-	{ 
-	return -( --t * t * t * t - 1.0f ); 
-	}
+float ease_out_quart( float t ) { 
+    t -= 1.0f;
+	return -( t * t * t * t - 1.0f ); 
+}
 	
 	
-float ease_in_quart( float t ) 
-	{ 
+float ease_in_quart( float t ) { 
 	return t * t * t * t; 
-	}
+}
 
 
-float ease_in_out_quart( float t ) 
-	{ 
-	return ( ( t *= 2.0f ) < 1.0f ) 
-		? 0.5f * t * t * t * t 
-		: -0.5f * ( ( t -= 2.0f ) * t * t * t - 2.0f ); 
-	}
+float ease_in_out_quart( float t ) { 
+    t *= 2.0f;
+	if( t < 1.0f ) {
+		return 0.5f * t * t * t * t;
+    } else {
+        t -= 2.0f;
+		return -0.5f * ( t * t * t * t - 2.0f ); 
+    }
+}
 	
 
-float ease_out_quint( float t ) 
-	{ 
-	return --t * t * t * t * t + 1.0f; 
-	}
+float ease_out_quint( float t ) { 
+    t -= 1.0f;
+	return t * t * t * t * t + 1.0f; 
+}
 	
 	
-float ease_in_quint( float t ) 
-	{ 
+float ease_in_quint( float t ) { 
 	return t * t * t * t * t; 
-	}
+}
 	
 	
-float ease_in_out_quint( float t ) 
-	{ 
-	return ( ( t *= 2.0f ) < 1.0f ) 
-		? 0.5f * t * t * t * t * t
-		: -0.5f * ( ( t -= 2.0f ) * t * t * t * t - 2.0f ); 
-	}
+float ease_in_out_quint( float t ) { 
+    t *= 2.0f;
+	if( t < 1.0f ) {
+		return 0.5f * t * t * t * t * t;
+    } else {
+        t -= 2.0f;
+		return 0.5f * ( t * t * t * t * t + 2.0f ); 
+    }
+}
 
 
-float ease_out_circle( float t ) 
-	{ 
-	return EASE_SQRT( 1.0f - ( t -= 1.0f ) * t ); 
-	}
+float ease_out_circle( float t ) { 
+    t -= 1.0f;
+	return EASE_SQRT( 1.0f - t * t ); 
+}
 	
 	
-float ease_in_circle( float t ) 
-	{ 
+float ease_in_circle( float t ) { 
 	return 1.0f - EASE_SQRT( 1.0f - t * t ); 
-	}
+}
 	
-	
-float ease_in_out_circle( float t ) 
-	{ 
-	return ( ( t *= 2.0f ) < 1.0f ) 
-		? 0.5f * (1.0f - EASE_SQRT( 1.0f - t * t ) ) 
-		: 0.5f * ( EASE_SQRT( 1.0f - ( t -= 2.0f ) * t ) + 1.0f ); 
-	}
+
+float ease_in_out_circle( float t ) { 
+    t *= 2.0f;
+	if( t < 1.0f ) {
+		return 0.5f * (1.0f - EASE_SQRT( 1.0f - t * t ) );
+    } else {
+        t -= 2.0f;
+		return 0.5f * ( EASE_SQRT( 1.0f - t * t ) + 1.0f ); 
+    }
+}
 
 
 #endif /* EASE_IMPLEMENTATION */

@@ -1284,7 +1284,7 @@ struct IDirectSound8;
 typedef struct IDirectSoundBuffer8 { struct IDirectSoundBuffer8Vtbl* lpVtbl; } IDirectSoundBuffer8; 
 typedef struct IDirectSoundBuffer8Vtbl IDirectSoundBuffer8Vtbl;
 
-const struct IDirectSoundBuffer8Vtbl
+struct IDirectSoundBuffer8Vtbl
 {
     // IUnknown methods
     HRESULT (STDMETHODCALLTYPE *QueryInterface)       (IDirectSoundBuffer8*, REFIID, LPVOID*);
@@ -2442,14 +2442,14 @@ APP_U64 app_time_freq( app_t* app )
 
 void app_log( app_t* app, app_log_level_t level, char const* message )
     {
-    (void) app, level, message;
+    (void) app, (void) level, (void) message;
     APP_LOG( app->logctx, level, message );
     }
 
 
 void app_fatal_error( app_t* app, char const* message )
     {
-    (void) app, message;
+    (void) app, (void) message;
     APP_FATAL_ERROR( app->fatalctx, message );
     }
 

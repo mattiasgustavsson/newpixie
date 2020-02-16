@@ -1476,7 +1476,7 @@ void internal_pixie_copy_user_thread_data( internal_pixie_user_thread_data_t* de
 
 
 void internal_pixie_update_sprite_movement( int* value, internal_pixie_sprite_moves_t* moves ) {
-    static float const (*easefuncs[])( float ) = { 
+    static float (* const easefuncs[])( float ) = { 
         NULL, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, ease_out_back, ease_out_bounce, 
         ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, 
         ease_out_circle, ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, ease_in_expo, 
@@ -3066,7 +3066,7 @@ u32 hash_string( string str ) {
         #endif
 
             int __stdcall WinMain( struct HINSTANCE__* a, struct HINSTANCE__* b, char* c, int d ) { 
-                (void) a, b, c, d; 
+                (void) a, (void) b, (void) c, (void) d; 
                 return main( __argc, __argv ); 
             }
 
