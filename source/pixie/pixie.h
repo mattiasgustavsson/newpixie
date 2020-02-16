@@ -70,7 +70,7 @@ namespace pixie {
 
 // API Functions
 
-int run( int (*main)( int, char** ) );
+int run( int (*main)( int, char** ), int argc, char** argv );
 void end( int return_code );
 void wait_vbl( void );
 void wait( int jiffys );
@@ -928,156 +928,6 @@ namespace pixie {
 #endif
 
 
-
-
-
-// Forward declares
-
-typedef struct internal_pixie_t internal_pixie_t;
-static void internal_pixie_force_exit( internal_pixie_t* pixie );
-static void internal_pixie_update_input( internal_pixie_t* pixie, app_input_event_t* events, int count );
-static u32* internal_pixie_frame_update( internal_pixie_t* pixie, int* width, int* height, int* fullscreen, 
-    int* crt_mode );
-static void internal_pixie_render_samples( internal_pixie_t* pixie, i16* sample_pairs, int sample_pairs_count );
-static void const* internal_pixie_find_asset( internal_pixie_t* pixie, int id, int* size );
-
-
-/*
-------------------
-    APP THREAD
-------------------
-*/
-
-// Audio playback is started by the app thread, and works with a streaming sound buffer. Every time the stream have 
-// played enough to need more samples, it calls this callback function, which just pass the call on to the
-// `internal_pixie_render_samples` which renders all currently playing sounds and mix all samples together for the 
-// sound buffer.
-
-void internal_pixie_app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
-    internal_pixie_t* pixie = (internal_pixie_t*) user_data;
-    internal_pixie_render_samples( pixie, sample_pairs, sample_pairs_count ); 
-}
-
-
-// Holds the data needed for communicating between user thread and app thread. Most of this will be in pixie, but there
-// are also a few things which only needs to be accessed from within the `run` function and the app thread.
-
-typedef struct internal_pixie_app_context_t {
-    internal_pixie_t* pixie; // Main engine state
-    int sound_buffer_size; // The `run` function defines how big a sound buffer to use, and that value is passed here
-    thread_atomic_int_t exit_flag; // Set to 1 by `run` function on user thread to indicate app thread should terminate
-    thread_signal_t init_complete; // Raised by app thread before entering main loop, to indicate `run` may continue
-} internal_pixie_app_context_t;
-
-
-// Main body for the app thread (invoked by calling `app_run` in the `internal_pixie_app_thread` entry point, invoked 
-// from `run`). The app thread runs independently from the user thread, and handles the main window, rendering, audio 
-// and input. After all initialization, and just before entering the main loop, it will raise the `init_complete` 
-// signal, which lets the user thread (in the `run` function) know that it is safe to call the users entry point.
-// Every iteration through the main loop, the signal `vbl.signal` is raised (as part of internal_pixie_frame_update), 
-// and the `vbl.count` value is incremented. These are used by the `wait_vbl` function to pause the user thread until 
-// the start of the next frame. If the main window is closed (by clicking on the close button), the app thread sets the 
-// `force_exit` value to `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The 
-// `force_exit` value is checked in the `internal_pixie_instance` function, which is called at the start of every API 
-// call.
-
-static int internal_pixie_app_proc( app_t* app, void* user_data ) {
-    internal_pixie_app_context_t* context = (internal_pixie_app_context_t*) user_data;
-    internal_pixie_t* pixie = context->pixie;
-
-    int fullscreen = 1;
-    int crt_mode = 1;
-    
-    // Set up initial app parameters
-    app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
-    app_interpolation( app, APP_INTERPOLATION_NONE );
-
-    // Create and set up the CRT emulation instance
-    crtemu_t* crtemu = crtemu_create( NULL );
-    CRTEMU_U64 crt_time_us = 0;
-    CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( sizeof( CRT_FRAME_U32 ) * CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT );
-    crt_frame( frame );
-    crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT );
-    free( frame );
-
-    // Start sound playback
-    app_sound( app, context->sound_buffer_size * 2, internal_pixie_app_sound_callback, pixie );
-
-    // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
-    // even if the user have disabled vsync in their graphics card settings.
-    frametimer_t* frametimer = frametimer_create( NULL );
-    frametimer_lock_rate( frametimer, 60 );
-
-    // Signal to the `run` function on the user thread that app initialization is complete, and it can start running
-    thread_signal_raise( &context->init_complete );
-
-    // Main loop
-    APP_U64 prev_time = app_time_count( app );       
-    while( !thread_atomic_int_load( &context->exit_flag ) ) {
-        // Run app update (reading inputs etc)
-        app_state_t app_state = app_yield( app );
-        
-        app_input_t input = app_input( app );
-        internal_pixie_update_input( pixie, input.events, input.count );
-
-        // Check if the close button on the window was clicked (or Alt+F4 was pressed)
-        if( app_state == APP_STATE_EXIT_REQUESTED ) {
-            // Signal that we need to force the user thread to exit
-            internal_pixie_force_exit( pixie );
-            break; 
-        }
-
-        // Render screen buffer
-        int pixie_fullscreen = fullscreen;
-        int pixie_crt_mode = crt_mode;
-        int screen_width = 0;
-        int screen_height = 0;
-        APP_U32* xbgr = internal_pixie_frame_update( pixie, &screen_width, &screen_height, &pixie_fullscreen, 
-            &pixie_crt_mode );
-    
-        if( pixie_fullscreen != fullscreen ) {
-            fullscreen = pixie_fullscreen;
-            app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
-        }
-
-        if( pixie_crt_mode != crt_mode ) {
-            crt_mode = pixie_crt_mode;
-        }
-
-
-        // Present the screen buffer to the window
-        APP_U64 time = app_time_count( app );
-        APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
-        prev_time = time;
-        crt_time_us += delta_time_us;
-        if( crt_mode ) {
-            crtemu_present( crtemu, crt_time_us, xbgr, screen_width, screen_height, 0xffffff, 0x101010 );
-            app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
-        } else {
-            app_present( app, xbgr, screen_width, screen_height, 0xffffff, 0x000000 );
-        }
-
-        // Ensure we don't run faster than 60 frames per second
-        frametimer_update( frametimer );
-    }
-
-    // Stop sound playback
-    app_sound( app, 0, NULL, NULL );
-
-    frametimer_destroy( frametimer );
-    crtemu_destroy( crtemu );
-    return 0;
-}
-
-
-// Entry point for the app thread, which is started from the `run` function. 
-// Just runs the app with the above `internal_pixie_app_proc` 
-
-static int internal_pixie_app_thread( void* user_data ) {
-    return app_run( internal_pixie_app_proc, user_data, NULL, NULL, NULL );
-}
-
-
 /*
 -----------------------
     PIXIE INTERNALS
@@ -1234,9 +1084,9 @@ typedef struct internal_pixie_t {
 } internal_pixie_t;
 
 
-// A global atomic pointer to the TLS instance for storing per-thread `internal_pixie_t` pointers. Created in the `run`
-// function unless it has already been created (through a compare-and-swap). The `run` method then sets the TLS value 
-// on the instance, for the current thread.
+// A global atomic pointer to the TLS instance for storing per-thread `internal_pixie_t` pointers. Created in the user
+// thread `internal_pixie_user_thread` unless it has already been created (through a compare-and-swap). The user thread
+// then sets the TLS value on the instance.
 
 static thread_atomic_ptr_t g_internal_pixie_tls = { NULL }; 
 
@@ -1425,6 +1275,19 @@ static void internal_pixie_destroy( internal_pixie_t* pixie ) {
     thread_mutex_term( &pixie->instance_mutex );
 
     free( pixie );
+}
+
+
+// Retrieves pointer to and size of the specified asset
+
+static void const* internal_pixie_find_asset( internal_pixie_t* pixie, int id, int* size ) {
+    if( id < 0 || id >= pixie->assets.count ) {
+        if( size ) *size = 0;
+        return NULL;
+    }
+
+    if( size ) *size = pixie->assets.assets[ id ].size;
+    return (void*)( ( (uintptr_t) mmap_data( pixie->assets.bundle ) ) + pixie->assets.assets[ id ].offset );    
 }
 
 
@@ -1813,7 +1676,7 @@ static u32* internal_pixie_frame_update( internal_pixie_t* pixie, int* out_width
     }
 
 
-// Called by audio thread (via internal_pixie_app_sound_callback) when it needs new audio samples
+// Called by audio thread (via `internal_pixie_app_sound_callback`) when it needs new audio samples
 
 static void internal_pixie_render_samples( internal_pixie_t* pixie, i16* sample_pairs, int sample_pairs_count )
     {
@@ -1830,23 +1693,10 @@ static void internal_pixie_render_samples( internal_pixie_t* pixie, i16* sample_
     for( int i = 0; i < sample_pairs_count * 2; ++i )
         {
         int sample = song[ i ];
-        sample = sample > 32767 ? 32767 : sample < -32727 ? -32727 : sample;
+        sample = sample > 32767 ? 32767 : sample < -32727 ? -32727 : sample; // TODO: soft clip?
         sample_pairs[ i ] = (i16) sample;
         }
     }
-
-
-// Retrieves pointer to and size of the specified asset
-
-static void const* internal_pixie_find_asset( internal_pixie_t* pixie, int id, int* size ) {
-    if( id < 0 || id >= pixie->assets.count ) {
-        if( size ) *size = 0;
-        return NULL;
-    }
-
-    if( size ) *size = pixie->assets.assets[ id ].size;
-    return (void*)( ( (uintptr_t) mmap_data( pixie->assets.bundle ) ) + pixie->assets.assets[ id ].offset );    
-}
 
 
 /*
@@ -1927,26 +1777,52 @@ int internal_pixie_load_bundle( char const* filename, char const* time, char con
     return EXIT_SUCCESS;
 }
 
+
+
 /*
----------------------
-    API FUNCTIONS
----------------------
+------------------
+    USER THREAD
+------------------
 */
 
 
-// The main starting point for a Pixie program. Called automatically from the standard C main function defined below,
-// unless `PIXIE_NO_MAIN` has been defined, in which case the user will have to define their own `main` function and
-// call `run` from it, passing in their pixie main function to it. The `run` function creates the `internal_pixie_t` 
-// engine state and stores a pointer to it in thread local storage. It creates the app thread, and waits for it to be 
-// initialized before calling the users pixie main function (called `pixmain` if the built-in main is used). It also 
-// uses `setjmp` to define a jump point in order to be able to exit from the user code no matter where in the call 
-// stack it is, and still get back to the `run` function to perform a controlled shutdown.
+// Holds the parameters passed to `run`, so they can be forwarded through `internal_pixie_app_proc` to the user thread
+// `internal_pixie_user_thread` where the user supplied `main` function will be called with the provided arguments.
 
-int run( int (*main)( int, char** ) ) {
-    int const SOUND_BUFFER_SIZE = 735 * 3; // Three frames worth of sound buffering
+struct internal_pixie_run_context_t {
+    int (*main)( int, char** );
+    int argc;
+    char** argv;
+};
 
+
+// Holds the data needed for communicating between user thread and app thread. The instance of this is defined and
+// initialized in `internal_pixie_app_proc`. The field `out_pixie` is filled out by the user thread and picked up by 
+// `internal_pixie_app_proc` after the `user_thread_initialized` signal has been raised.
+
+struct internal_pixie_user_thread_context_t {
+    struct internal_pixie_run_context_t* run_context; // The user supplied main function and arguments
+    int sound_buffer_size; // The size of the streaming sound buffer, defined in `internal_pixie_app_proc`
+    thread_signal_t user_thread_initialized; // Signals that user thread is running and pixie instance has been created
+    thread_atomic_int_t user_thread_finished; // Flags that user thread is done executing and that app loop should stop
+    thread_signal_t app_loop_finished; // Signals that app loop has finished, and it is safe to destroy pixie instance
+    internal_pixie_t* out_pixie; // Communicates the pixie instance back to `internal_pixie_app_proc`
+};
+
+
+// Entry point for the user thread, which is started from `internal_pixie_app_proc` on the app thread. Creates the
+// pixie instance and stores a pointer to it in thread local storage `g_internal_pixie_tls`. Once this is finished,
+// it stores the pixie instance pointer in the `out_pixie` field of the user thread context, and raises the signal
+// `user_thread_initialized` which the app thread starts waiting for as soon as it has started the user thread.
+// Then `main` is invoked, and the user code starts running. When it is finished (controlled or forced exit) the
+// `user_thread_finished` atomic is set, and then the user thread waits for the app thread to raise the signal
+// `app_loop_finished`, to let the user thread know it is safe to destroy the pixie instance.
+
+static int internal_pixie_user_thread( void* user_data ) {
+    struct internal_pixie_user_thread_context_t* context = (struct internal_pixie_user_thread_context_t*) user_data;
+        
     // Create and initialize the main engine state used by all of pixie
-    internal_pixie_t* pixie = internal_pixie_create( SOUND_BUFFER_SIZE );
+    internal_pixie_t* pixie = internal_pixie_create( context->sound_buffer_size );
 
     // A pointer to the `internal_pixie_t` instance needs to be stored in thread local storage, and before we do, we 
     // must create the TLS instance. But only if it is not already created, and as there's nothing stopping a user from 
@@ -1961,39 +1837,31 @@ int run( int (*main)( int, char** ) ) {
     // Store the `internal_pixie_t` pointer in the thread local storage for the current thread. It will be retrieved by 
     // all API functions so that we don't have to pass around an instance parameter to them.
     thread_tls_set( thread_atomic_ptr_load( &g_internal_pixie_tls ), pixie );
+  
+    // Signal to the `internal_pixie_app_proc` function on the app thread that user thread initialization is complete, 
+    // and the pixie instance is created, so the app thread may enter its main loop.
+    context->out_pixie = pixie;
+    thread_signal_raise( &context->user_thread_initialized );
 
-    // Define the `internal_pixie_app_context_t` instance which will be shared between `run` function and 
-    // `internal_pixie_app_proc` thread.
-    internal_pixie_app_context_t app_context = { NULL };
-    app_context.pixie = pixie;
-    app_context.sound_buffer_size = SOUND_BUFFER_SIZE;
-    thread_atomic_int_store( &app_context.exit_flag, 0 );
-    thread_signal_init( &app_context.init_complete );
-    
-    // Start the app thread. The entry point `internal_pixie_app_thread` will just run `internal_pixie_app_proc`
-    thread_ptr_t thread = thread_create( internal_pixie_app_thread, &app_context, NULL, THREAD_STACK_SIZE_DEFAULT );
-    
-    // Wait until the app thread have completed its initialization. If it takes more than 5 seconds, we just quit.
-    int result = thread_signal_wait( &app_context.init_complete, 5000 ) ? EXIT_SUCCESS : EXIT_FAILURE;
-    if( result == EXIT_SUCCESS ) {
-        // Set up the jump target for the `end` function
-        #pragma warning( push )
-        #pragma warning( disable: 4611 ) // interaction between '_setjmp' and C++ object destruction is non-portable
-        int jumpres = setjmp( pixie->exit.exit_jump );
-        #pragma warning( pop )
+    // Set up the jump target for the `end` function
+    #pragma warning( push )
+    #pragma warning( disable: 4611 ) // interaction between '_setjmp' and C++ object destruction is non-portable
+    int jumpres = setjmp( pixie->exit.exit_jump );
+    #pragma warning( pop )
 
-        // Run the user provided entry point (will be `pixmain` unless `PIXIE_NO_MAIN` was defined)
-        if( jumpres == 0 ) // First time we get here we call `main`. If `exit_jump` was jumped to we will get here again
-            result = main( /*__argc*/ 0, /*__argv*/ NULL ); /* TODO: handle args */
-        else // Second time we save the result (`INT_MAX` is mapped to 0, as a jumpres of 0 would call main again)
-            result = ( result == INT_MAX ? EXIT_SUCCESS : result );
-    }
+    // Run the user provided entry point (will be `pixmain` unless `PIXIE_NO_MAIN` was defined)
+    int result = EXIT_SUCCESS;
+    if( jumpres == 0 ) // First time we get here we call `main`. If `exit_jump` was jumped to we will get here again
+        result = context->run_context->main( context->run_context->argc, context->run_context->argv );
+    else // Second time we save the result (`INT_MAX` is mapped to 0, as a jumpres of 0 would call main again)
+        result = ( result == INT_MAX ? EXIT_SUCCESS : result );
 
-    // Terminate the app thread
-    thread_atomic_int_store( &app_context.exit_flag, 1 );
-    thread_join( thread );
-    thread_signal_term( &app_context.init_complete );
+    // Signal to the app thread that user thread has completed its execution, and it should exit its main loop
+    thread_atomic_int_store( &context->user_thread_finished, 1 );
     
+    // Wait until app thread have completed its main loop, so that is is safe to destroy the pixie instance
+    thread_signal_wait( &context->app_loop_finished, 5000 ); // Time out after 5 seconds - something's gone very wrong
+
     // Destroy pixie instance, and clear the thread local pointer to it
     internal_pixie_destroy( pixie );
     thread_tls_set( thread_atomic_ptr_load( &g_internal_pixie_tls ), NULL );
@@ -2002,14 +1870,194 @@ int run( int (*main)( int, char** ) ) {
 }
 
 
+/*
+-----------------
+    APP THREAD
+-----------------
+*/
+
+// Audio playback is started by `internal_pixie_app_proc`, and works with a streaming sound buffer. Every time the 
+// stream have played enough to need more samples, it calls this callback function, which just pass the call on to 
+// `internal_pixie_render_samples` which renders all currently playing sounds and mix all samples together for the 
+// sound buffer.
+
+void internal_pixie_app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
+    internal_pixie_t* pixie = (internal_pixie_t*) user_data;
+    internal_pixie_render_samples( pixie, sample_pairs, sample_pairs_count ); 
+}
+
+
+// Main body for the app (main) thread (invoked by calling `app_run` from the public API `run` function). The app 
+// thread starts the user thread, running `internal_pixie_user_thread`, which runs independently from the app thread.
+// The app thread handles the main window, rendering, audio and input. After performing all initialization, and the
+// user thread is started, it waits for the `user_thread_initialized` signal to be raised on the user thread, 
+// signalling that the user thread is done and the pixie instance has been created. 
+// Every iteration through the main loop, the signal `vbl.signal` is raised (as part of internal_pixie_frame_update), 
+// and the `vbl.count` value is incremented. These are used by the `wait_vbl` function to pause the user thread until 
+// the start of the next frame. If the main window is closed (by clicking on the close button), the app thread sets the 
+// `force_exit` value to `INT_MAX`, to signal to the user thread that it should exit the user code and terminate. The 
+// `force_exit` value is checked in the `internal_pixie_instance` function, which is called at the start of every API 
+// call.
+
+static int internal_pixie_app_proc( app_t* app, void* user_data ) {
+    struct internal_pixie_run_context_t* run_context = (struct internal_pixie_run_context_t*) user_data;
+
+    int const SOUND_BUFFER_SIZE = 735 * 3; // Three frames worth of sound buffering
+
+    int fullscreen = 1;
+    int crt_mode = 1;
+    
+    // Set up initial app parameters
+    app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
+    app_interpolation( app, APP_INTERPOLATION_NONE );
+
+    // Create and set up the CRT emulation instance
+    crtemu_t* crtemu = crtemu_create( NULL );
+    CRTEMU_U64 crt_time_us = 0;
+    CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( sizeof( CRT_FRAME_U32 ) * CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT );
+    crt_frame( frame );
+    crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT );
+    free( frame );
+
+    // Set up the shared data between user thread and app thread
+    struct internal_pixie_user_thread_context_t user_thread_context;
+    user_thread_context.run_context = run_context;
+    user_thread_context.sound_buffer_size = SOUND_BUFFER_SIZE;
+    thread_signal_init( &user_thread_context.user_thread_initialized );
+    thread_atomic_int_store( &user_thread_context.user_thread_finished, 0 );
+    thread_signal_init( &user_thread_context.app_loop_finished );
+    user_thread_context.out_pixie = NULL;
+
+    // Start the user thread. The entry point `internal_pixie_user_thread` will create the pixie instance and invoke
+    // the user supplied `main` function, which defaults to `pixmain` unless PIXIE_NO_MAIN is defined
+    thread_ptr_t user_thread = thread_create( internal_pixie_user_thread, &user_thread_context, NULL, 
+        THREAD_STACK_SIZE_DEFAULT );
+
+    // Wait up to 5 seconds for user thread - if it takes longer than this, everything has gone wrong so just bail
+    if( !thread_signal_wait( &user_thread_context.user_thread_initialized, 5000 ) ) {
+        thread_signal_raise( &user_thread_context.app_loop_finished );
+        thread_signal_term( &user_thread_context.user_thread_initialized );
+        thread_signal_term( &user_thread_context.app_loop_finished );
+        crtemu_destroy( crtemu );
+        return EXIT_FAILURE;
+    }    
+
+    
+    internal_pixie_t* pixie = user_thread_context.out_pixie;
+
+    // Start sound playback
+    app_sound( app, SOUND_BUFFER_SIZE * 2, internal_pixie_app_sound_callback, pixie );
+
+    // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
+    // even if the user have disabled vsync in their graphics card settings.
+    frametimer_t* frametimer = frametimer_create( NULL );
+    frametimer_lock_rate( frametimer, 60 );
+
+    // Main loop
+    APP_U64 prev_time = app_time_count( app );       
+    while( !thread_atomic_int_load( &user_thread_context.user_thread_finished ) ) {
+       
+        // Run app update (reading inputs etc)
+        app_state_t app_state = app_yield( app );
+        
+        app_input_t input = app_input( app );
+        internal_pixie_update_input( pixie, input.events, input.count );
+
+        // Check if the close button on the window was clicked (or Alt+F4 was pressed)
+        if( app_state == APP_STATE_EXIT_REQUESTED ) {
+            // Signal that we need to force the user thread to exit
+            internal_pixie_force_exit( pixie );
+            break; 
+        }
+
+        // Render screen buffer
+        int pixie_fullscreen = fullscreen;
+        int pixie_crt_mode = crt_mode;
+        int screen_width = 0;
+        int screen_height = 0;
+        APP_U32* xbgr = internal_pixie_frame_update( pixie, &screen_width, &screen_height, &pixie_fullscreen, 
+            &pixie_crt_mode );
+    
+        if( pixie_fullscreen != fullscreen ) {
+            fullscreen = pixie_fullscreen;
+            app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
+        }
+
+        if( pixie_crt_mode != crt_mode ) {
+            crt_mode = pixie_crt_mode;
+        }
+
+
+        // Present the screen buffer to the window
+        APP_U64 time = app_time_count( app );
+        APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
+        prev_time = time;
+        crt_time_us += delta_time_us;
+        if( crt_mode ) {
+            crtemu_present( crtemu, crt_time_us, xbgr, screen_width, screen_height, 0xffffff, 0x101010 );
+            app_present( app, NULL, 1, 1, 0xffffff, 0x000000 );
+        } else {
+            app_present( app, xbgr, screen_width, screen_height, 0xffffff, 0x000000 );
+        }
+
+        // Ensure we don't run faster than 60 frames per second
+        frametimer_update( frametimer );
+    }
+
+    // Stop sound playback
+    app_sound( app, 0, NULL, NULL );
+
+    // Signal to the user thread that app loop has terminated, so it can destroy the pixie instance and exit
+    thread_signal_raise( &user_thread_context.app_loop_finished );
+
+    // Cleanup and exit
+    int result = thread_join( user_thread );
+    thread_signal_term( &user_thread_context.user_thread_initialized );
+    thread_signal_term( &user_thread_context.app_loop_finished );
+    frametimer_destroy( frametimer );
+    crtemu_destroy( crtemu );
+
+    return result;
+}
+
+
+
+/*
+---------------------
+    API FUNCTIONS
+---------------------
+*/
+
+
+// The main starting point for a Pixie program. Called automatically from the standard C main function defined below,
+// unless `PIXIE_NO_MAIN` has been defined, in which case the user will have to define their own `main` function and
+// call `run` from it, passing in their pixie main function to it. 
+
+
+// The `run` function creates the `internal_pixie_t` 
+// engine state and stores a pointer to it in thread local storage. It creates the app thread, and waits for it to be 
+// initialized before calling the users pixie main function (called `pixmain` if the built-in main is used). It also 
+// uses `setjmp` to define a jump point in order to be able to exit from the user code no matter where in the call 
+// stack it is, and still get back to the `run` function to perform a controlled shutdown.
+
+int run( int (*main)( int, char** ), int argc, char** argv ) {
+    struct internal_pixie_run_context_t run_context;
+    run_context.main = main;
+    run_context.argc = argc;
+    run_context.argv = argv;
+    return app_run( internal_pixie_app_proc, &run_context, NULL, NULL, NULL );
+}
+
+
 // Terminates the user code, performing a controlled shutdown of the engine. Can be called from deep down a call stack
-// as it will use `longjmp` to branch back to the top level of the `run` function.
+// as it will use `longjmp` to branch back to the top level of the user thread and perform a controlled exit.
+// Note that any resources allocated manually outside of Pixie will leak unless manually released before calling `end`.
 
 void end( int return_code ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
    
     // Jump back into the middle of the `run` function, to where `setjmp` was called, regardless of where we called from
-    longjmp( pixie->exit.exit_jump, return_code );
+    longjmp( pixie->exit.exit_jump, return_code == 0 ? INT_MAX : return_code ); 
 }
 
 
@@ -3007,7 +3055,7 @@ u32 hash_string( string str ) {
             using pixie::run;
         #endif
 
-        return run( pixmain );
+        return run( pixmain, argc, argv );
     } 
 
     #ifdef _WIN32
