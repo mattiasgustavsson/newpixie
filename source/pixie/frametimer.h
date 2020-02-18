@@ -62,6 +62,8 @@ int frametimer_frame_counter( frametimer_t* frametimer );
     #endif
 #elif defined( __APPLE__ )
 	#include <mach/mach_time.h> 	
+#else
+	#include <time.h>
 #endif
 
 #ifndef FRAMETIMER_MALLOC
@@ -114,12 +116,8 @@ frametimer_t* frametimer_create( void* memctx )
 		LARGE_INTEGER f;
 		QueryPerformanceFrequency( &f );
 		frametimer->clock_freq = (FRAMETIMER_U64) f.QuadPart;
-	#elif __APPLE__
-		mach_timebase_info_data_t info;
-		mach_timebase_info( &info );
-		frametimer->clock_freq = (FRAMETIMER_U64)( info.denom / info.numer );
 	#else
-		#error unsupported platform
+		frametimer->clock_freq = 1000000000ull;
 	#endif
 
 	frametimer->prev_clock = 0;
@@ -159,9 +157,13 @@ float frametimer_update( frametimer_t* frametimer )
 			QueryPerformanceCounter( &c );
 			frametimer->prev_clock = (FRAMETIMER_U64) c.QuadPart;
 		#elif __APPLE__
-			frametimer->prev_clock = (FRAMETIMER_U64) mach_absolute_time();
+			frametimer->prev_clock = clock_gettime_nsec_np( CLOCK_UPTIME_RAW );
 		#else
-			#error unsupported platform
+			struct timespec t;
+			clock_gettime( CLOCK_MONOTONIC_RAW, &t );
+			frametimer->prev_clock = (FRAMETIMER_U64)t.tv_sec;
+			frametimer->prev_clock *= 1000000000ull;
+			frametimer->prev_clock += (FRAMETIMER_U64)t.tv_nsec;
 		#endif
 		frametimer->initialized = 1;
 		}
@@ -175,9 +177,13 @@ float frametimer_update( frametimer_t* frametimer )
 		QueryPerformanceCounter( &c );
 		curr_clock = (FRAMETIMER_U64) c.QuadPart;
 	#elif __APPLE__
-		curr_clock = (FRAMETIMER_U64) mach_absolute_time();
+		curr_clock = (FRAMETIMER_U64) clock_gettime_nsec_np( CLOCK_UPTIME_RAW );
 	#else
-		#error unsupported platform
+		struct timespec t;
+		clock_gettime( CLOCK_MONOTONIC_RAW, &t );
+		curr_clock = (FRAMETIMER_U64)t.tv_sec;
+		curr_clock *= 1000000000ull;
+		curr_clock += (FRAMETIMER_U64)t.tv_nsec;
 	#endif
 
 	if( frametimer->frame_rate_lock > 0 )
@@ -198,10 +204,15 @@ float frametimer_update( frametimer_t* frametimer )
 					WaitForSingleObject( frametimer->waitable_timer, 200 ); // wait long enough for timer to trigger ( 200ms == 5fps )
 					CancelWaitableTimer( frametimer->waitable_timer ); // in case we timed out
 					}
-			#elif __APPLE__
-				curr_clock = (FRAMETIMER_U64) mach_absolute_time();
 			#else
-				#error unsupported platform
+				struct timespec t = { 0, 0 };
+				t.tv_nsec = wait;				
+				while( t.tv_nsec > 0 )
+					{
+					struct timespec r = { 0, 0 };
+					if( nanosleep( &t, &r ) >= 0 ) break;
+					t = r;
+					}				
 			#endif
 			curr_clock += wait;
 			}

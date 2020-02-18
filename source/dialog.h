@@ -172,7 +172,9 @@ void test_dialog( dialog_t* dialog ) {
 
 #define _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_SECURE_NO_WARNINGS
+#define wait PIXIE_STD_WAIT /* osx defines a conflicting "wait" */
 #include <stdlib.h>
+#undef wait
 #include <string.h>
 
 
@@ -757,7 +759,11 @@ void dialog_unload( dialog_t* dialog ) {
 int dialog_find_conversation( dialog_t const* dialog, char const* id ) {
     for( int i = 0; i < dialog->conversation_count; ++i ) {
         char const* conv_id = ( (char const*) dialog ) + dialog->data[ i ].data.conversation.id_offset;
-        if( stricmp( id, conv_id ) == 0 ) {
+		#ifdef _WIN32
+		if( stricmp( id, conv_id ) == 0 ) {
+		#else
+		if( strcasecmp( id, conv_id ) == 0 ) {
+		#endif
             return i;
         }
     }

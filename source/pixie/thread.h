@@ -534,7 +534,11 @@ union thread_signal_t
 union thread_atomic_int_t 
     {
     void* align;
-    long i;
+	#ifdef _WIN32
+		long i;
+	#else
+		int i;
+	#endif
     };
 
 union thread_atomic_ptr_t 
@@ -1016,7 +1020,9 @@ int thread_atomic_int_load( thread_atomic_int_t* atomic )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_fetch_and_add( &atomic->i, 0 );
+        int ret;
+        __atomic_load( &atomic->i, &ret, __ATOMIC_SEQ_CST );
+        return ret;
     
     #else 
         #error Unknown platform.
@@ -1032,8 +1038,7 @@ void thread_atomic_int_store( thread_atomic_int_t* atomic, int desired )
 
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        __sync_lock_test_and_set( &atomic->i, desired );
-        __sync_lock_release( &atomic->i );
+        __atomic_store( &atomic->i, &desired, __ATOMIC_SEQ_CST );
     
     #else 
         #error Unknown platform.
@@ -1049,7 +1054,7 @@ int thread_atomic_int_inc( thread_atomic_int_t* atomic )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_fetch_and_add( &atomic->i, 1 );
+        return (int)__atomic_fetch_add( &atomic->i, 1, __ATOMIC_SEQ_CST );
     
     #else 
         #error Unknown platform.
@@ -1065,7 +1070,7 @@ int thread_atomic_int_dec( thread_atomic_int_t* atomic )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_fetch_and_sub( &atomic->i, 1 );
+        return (int)__atomic_fetch_sub( &atomic->i, 1, __ATOMIC_SEQ_CST );
 
     #else 
         #error Unknown platform.
@@ -1082,7 +1087,7 @@ int thread_atomic_int_add( thread_atomic_int_t* atomic, int value )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_fetch_and_add( &atomic->i, value );
+        return (int)__atomic_fetch_add( &atomic->i, value, __ATOMIC_SEQ_CST );
     
     #else 
         #error Unknown platform.
@@ -1098,7 +1103,7 @@ int thread_atomic_int_sub( thread_atomic_int_t* atomic, int value )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_fetch_and_sub( &atomic->i, value );
+        return (int)__atomic_fetch_sub( &atomic->i, value, __ATOMIC_SEQ_CST );
 
     #else 
         #error Unknown platform.
@@ -1115,8 +1120,8 @@ int thread_atomic_int_swap( thread_atomic_int_t* atomic, int desired )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        int old = (int)__sync_lock_test_and_set( &atomic->i, desired );
-        __sync_lock_release( &atomic->i );
+        int old;
+        __atomic_exchange( &atomic->i, &desired, &old, __ATOMIC_SEQ_CST );
         return old;
     
     #else 
@@ -1133,7 +1138,8 @@ int thread_atomic_int_compare_and_swap( thread_atomic_int_t* atomic, int expecte
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return (int)__sync_val_compare_and_swap( &atomic->i, expected, desired );
+        __atomic_compare_exchange( &atomic->i, &expected, &desired, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST );
+        return expected;
     
     #else 
         #error Unknown platform.
@@ -1149,7 +1155,9 @@ void* thread_atomic_ptr_load( thread_atomic_ptr_t* atomic )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return __sync_fetch_and_add( &atomic->ptr, 0 );
+        void* ret;
+        __atomic_load( &atomic->ptr, &ret, __ATOMIC_SEQ_CST );
+        return ret;
     
     #else 
         #error Unknown platform.
@@ -1171,9 +1179,7 @@ void thread_atomic_ptr_store( thread_atomic_ptr_t* atomic, void* desired )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        __sync_lock_test_and_set( &atomic->ptr, desired );
-        __sync_lock_release( &atomic->ptr );
-    
+        __atomic_store( &atomic->ptr, &desired, 0 );
     #else 
         #error Unknown platform.
     #endif
@@ -1193,8 +1199,8 @@ void* thread_atomic_ptr_swap( thread_atomic_ptr_t* atomic, void* desired )
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        void* old = __sync_lock_test_and_set( &atomic->ptr, desired );
-        __sync_lock_release( &atomic->ptr );
+        void* old;
+        __atomic_exchange( &atomic->ptr, &desired, &old, __ATOMIC_SEQ_CST );
         return old;
     
     #else 
@@ -1211,7 +1217,8 @@ void* thread_atomic_ptr_compare_and_swap( thread_atomic_ptr_t* atomic, void* exp
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
-        return __sync_val_compare_and_swap( &atomic->ptr, expected, desired );
+        __atomic_compare_exchange( &atomic->ptr, &expected, &desired, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST );
+        return expected;
 
     #else 
         #error Unknown platform.

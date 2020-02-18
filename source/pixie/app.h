@@ -3253,7 +3253,10 @@ void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x
 
 #include <string.h>
 #include <stdio.h>
+
+#define key_t APP_INTERNAL_KEY_T
 #include <SDL2/SDL.h>
+#undef key_t
 
 #ifndef APP_FATAL_ERROR
     #define APP_FATAL_ERROR( ctx, message ) { \

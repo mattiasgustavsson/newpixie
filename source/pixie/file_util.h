@@ -276,7 +276,7 @@ char const* absolute_path( char const* filename )
 		if( _fullpath( path, filename, MAX_PATH ) )
 			return path;
 	#else
-		if( realpath( path, filename ) )
+		if( realpath( path, (char*)filename ) )
 			return path;
 	#endif
 	return 0;

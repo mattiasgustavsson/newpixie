@@ -614,6 +614,12 @@ void* build_font( char const* filenames[], int count, int* out_size ) {
 }
 
 
+#ifdef _WIN32
+    SORT_FUNCTION( internal_pixie_sort_files, char*, stricmp )
+#else
+    SORT_FUNCTION( internal_pixie_sort_files, char*, strcasecmp )
+#endif
+
 char** internal_pixie_list_files( char const* filename, int* out_count ) {
     int count = 0;
     int capacity = 256;
@@ -637,6 +643,7 @@ char** internal_pixie_list_files( char const* filename, int* out_count ) {
         entry = dir_read( dir );
     }
     dir_close( dir );
+    internal_pixie_sort_files( files, count );
     *out_count = count;
     return files;
 }

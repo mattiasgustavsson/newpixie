@@ -420,7 +420,11 @@ static void dialog_playback_run_conversation_option( dialog_playback_t* playback
 			
 
 static void dialog_playback_redirect( dialog_playback_t* playback, char const* target ) {
+	#ifdef _WIN32
 	if( stricmp( target, "RETURN" ) == 0 && playback->stack_count > 1 ) {
+	#else
+	if( strcasecmp( target, "RETURN" ) == 0 && playback->stack_count > 1 ) {
+	#endif
 		dialog_playback_stack_pop( playback );
 		playback->current_state = DIALOG_PLAYBACK_STATE_RUN_CONVERSATION;
 		int dlg = -1;
@@ -430,7 +434,11 @@ static void dialog_playback_redirect( dialog_playback_t* playback, char const* t
             dialog_playback_stack_pop( playback );
             dialog_playback_stack_push( playback, dlg, conv, 0 );
         }
+	#ifdef _WIN32
     } else if( stricmp( target, "EXIT" ) == 0 || ( stricmp( target, "RETURN" ) == 0 && playback->stack_count <= 1 ) ) {
+	#else
+    } else if( strcasecmp( target, "EXIT" ) == 0 || ( strcasecmp( target, "RETURN" ) == 0 && playback->stack_count <= 1 ) ) {
+	#endif
 		playback->current_state = DIALOG_PLAYBACK_STATE_READY;
 		playback->current_option_list_count = 0;
 		playback->stack_count = 0;

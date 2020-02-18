@@ -206,13 +206,15 @@ void img_adjust_contrast( img_t* img, float value ) {
     }
 }
 
+#define img_min( x, y ) ( (x) < (y) ? (x) : (y) )
+#define img_max( x, y ) ( (x) > (y) ? (x) : (y) )
 
 img_hsva_t img_rgba_to_hsva( img_rgba_t rgb ) {
 	img_hsva_t hsv;
     hsv.a = rgb.a;
 
-	float cmin = min( rgb.r, min( rgb.g, rgb.b ) );	//Min. value of RGB
-	float cmax = max( rgb.r, max( rgb.g, rgb.b ) );	//Max. value of RGB
+	float cmin = img_min( rgb.r, img_min( rgb.g, rgb.b ) );	//Min. value of RGB
+	float cmax = img_max( rgb.r, img_max( rgb.g, rgb.b ) );	//Max. value of RGB
 	float cdel = cmax - cmin;	//Delta RGB value 
 
 	hsv.v = cmax;
