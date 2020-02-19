@@ -871,6 +871,7 @@ u32 hash_string( string str );
 #include <string.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <stdint.h>
 
 
 // Libraries includes
