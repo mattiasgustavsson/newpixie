@@ -12,4 +12,4 @@ jobs:
       - name: build pixie
         run: |
           cd .runtime
-          clang ..\source\main.c -lSDL2 -lGLEW -framework OpenGL
+          clang ../source/main.c -lSDL2 -lGLEW -framework OpenGL
