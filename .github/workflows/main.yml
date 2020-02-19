@@ -13,6 +13,9 @@ jobs:
         run: |
           cd runtime
           cl ../source/main.c
+      - name: build stranded
+        run: |
+          cl ../source/stranded.c
   build-macos:
     runs-on: macOS-latest
     steps:
@@ -23,6 +26,9 @@ jobs:
         run: |
           cd runtime
           clang ../source/main.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build stranded
+        run: |
+          clang ../source/stranded.c -lSDL2 -lGLEW -framework OpenGL
   build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
@@ -36,3 +42,6 @@ jobs:
         run: |
           cd runtime
           gcc ../source/main.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build stranded
+        run: |
+          gcc ../source/stranded.c -lSDL2 -lGLEW -lGL -lm -lpthread
