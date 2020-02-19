@@ -34,4 +34,5 @@ jobs:
           sudo apt-get install -qq libglew-dev
       - name: build pixie
         run: |
+          cd .runtime
           gcc ../source/main.c -lSDL2 -lGLEW -lGL
