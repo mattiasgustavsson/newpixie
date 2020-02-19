@@ -3,11 +3,13 @@ name: build
 on: [push, pull_request]
 
 jobs:
-    windows:
-        runs-on: windows-latest
-        steps:
-        - uses: actions/checkout@v1
-        - name: msvc-x64
-          run: |
-            cd runtime
-            cl ..\source\main.c
+  build-macos:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: brew install sdl2 glew
+      - name: build pixie
+        run: |
+          cd runtime
+          clang ..\source\main.c -lSDL2 -lGLEW -framework OpenGL
