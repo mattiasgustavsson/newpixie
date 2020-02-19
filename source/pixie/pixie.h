@@ -3333,7 +3333,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... ) {
     #include <math.h>
     #pragma warning( pop )
 
-    #ifdef __TINYC__
+    #if defined( __TINYC__ ) || defined( __GNUC__ )
         float internal_pixie_acos( float x ) { return (float)acos( (double) x ); }
         float internal_pixie_asin( float x ) { return (float)asin( (double) x ); }
         float internal_pixie_atan( float x ) { return (float)atan( (double) x ); }
@@ -3354,7 +3354,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... ) {
         float internal_pixie_sinh( float x ) { return (float)sinh( (double) x ); }
         float internal_pixie_tan( float x ) { return (float)tan( (double) x ); }
         float internal_pixie_tanh( float x ) { return (float)tanh( (double) x ); }
-    #else /* __TINYC__ */
+    #else /* __TINYC__ || __GNUC__ */
         float internal_pixie_acos( float x ) { return acosf( x ); }
         float internal_pixie_asin( float x ) { return asinf( x ); }
         float internal_pixie_atan( float x ) { return atanf( x ); }
