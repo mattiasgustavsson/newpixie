@@ -1,0 +1,13 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+    windows:
+        runs-on: windows-latest
+        steps:
+        - uses: actions/checkout@v1
+        - name: msvc-x64
+          run: |
+            cd runtume
+            cl ..\source\main.c
