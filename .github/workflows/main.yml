@@ -11,5 +11,5 @@ jobs:
         run: brew install sdl2 glew
       - name: build pixie
         run: |
-          cd runtime
+          cd .runtime
           clang ..\source\main.c -lSDL2 -lGLEW -framework OpenGL
