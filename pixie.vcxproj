@@ -66,7 +66,7 @@
     <_ProjectFileVersion>15.0.25909.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.runtime/</OutDir>
+    <OutDir>runtime/</OutDir>
     <IntDir>.build_temp/x86/debug/</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>$(ProjectName)_debug</TargetName>
@@ -74,17 +74,17 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>$(ProjectName)_x64_debug</TargetName>
-    <OutDir>.runtime/</OutDir>
+    <OutDir>runtime/</OutDir>
     <IntDir>.build_temp/x64/debug/</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.runtime/</OutDir>
+    <OutDir>runtime/</OutDir>
     <IntDir>.build_temp/x86/release/</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>.runtime/</OutDir>
+    <OutDir>runtime/</OutDir>
     <IntDir>.build_temp/x64/release/</IntDir>
     <TargetName>$(ProjectName)_x64</TargetName>
   </PropertyGroup>

@@ -151,7 +151,7 @@ void text( int x, int y, char const* str, int color, int font_asset
 	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, 
     bool underline */ );
 
-typedef enum key_t { 
+typedef enum keys_t { 
 	KEY_INVALID, KEY_LBUTTON, KEY_RBUTTON, KEY_CANCEL, KEY_MBUTTON,  KEY_XBUTTON1, KEY_XBUTTON2, KEY_BACK, KEY_TAB, 
 	KEY_CLEAR, KEY_RETURN, KEY_SHIFT,  KEY_CONTROL, KEY_MENU, KEY_PAUSE, KEY_CAPITAL, KEY_KANA, KEY_HANGUL = KEY_KANA, 
 	KEY_JUNJA, KEY_FINAL, KEY_HANJA, KEY_KANJI = KEY_HANJA, KEY_ESCAPE, KEY_CONVERT, KEY_NONCONVERT, KEY_ACCEPT, 
@@ -170,11 +170,11 @@ typedef enum key_t {
 	KEY_OEM_1, KEY_OEM_PLUS, KEY_OEM_COMMA, KEY_OEM_MINUS, KEY_OEM_PERIOD, KEY_OEM_2, KEY_OEM_3, KEY_OEM_4, KEY_OEM_5, 
 	KEY_OEM_6, KEY_OEM_7, KEY_OEM_8, KEY_OEM_102, KEY_PROCESSKEY, KEY_ATTN, KEY_CRSEL, KEY_EXSEL, KEY_EREOF, KEY_PLAY, 
 	KEY_ZOOM, KEY_NONAME, KEY_PA1, KEY_OEM_CLEAR, KEY_PEN_TOUCH, KEY_PEN_LOWER_BUTTON, KEY_PEN_UPPER_BUTTON, KEYCOUNT 
-} key_t;
+} keys_t;
 
-int key_is_down( key_t key );
-int key_was_pressed( key_t key );
-int key_was_released( key_t key );
+int key_is_down( keys_t key );
+int key_was_pressed( keys_t key );
+int key_was_released( keys_t key );
 
 
 int min( int a, int b );
@@ -1303,7 +1303,7 @@ static void internal_pixie_force_exit( internal_pixie_t* pixie ) {
 }
 
 
-static key_t internal_pixie_key_from_app_key( app_key_t key ) {
+static keys_t internal_pixie_key_from_app_key( app_key_t key ) {
 	int index = (int) key;
 	if( key < 0 || key >= APP_KEYCOUNT ) return KEY_INVALID;
 	
@@ -1356,7 +1356,7 @@ static key_t internal_pixie_key_from_app_key( app_key_t key ) {
 	ASSERT( map[ index * 2 ] == key, "Invalid mapping from app_key to pixie key" );
 	if( map[ index * 2 ] != key ) return KEY_INVALID;
 
-	return (key_t) map[ index * 2 + 1 ];
+	return (keys_t) map[ index * 2 + 1 ];
 }
 
 
@@ -1377,13 +1377,13 @@ static void internal_pixie_update_input( internal_pixie_t* pixie, app_input_even
 		app_input_event_t* event = &events[ i ];
 		switch( event->type ) {
 			case APP_INPUT_KEY_DOWN: {
-				key_t key = internal_pixie_key_from_app_key( event->data.key );
+				keys_t key = internal_pixie_key_from_app_key( event->data.key );
 				if( key >= 0 && key < keyboard_array_size ) {
 					pixie->app_thread.keyboard.state[ key ] = 1;                          
                 }
 			} break;
 			case APP_INPUT_KEY_UP: {
-				key_t key = internal_pixie_key_from_app_key( event->data.key );
+				keys_t key = internal_pixie_key_from_app_key( event->data.key );
 				if( key >= 0 && key < keyboard_array_size ) {
 					pixie->app_thread.keyboard.state[ key ] = 0;                          
                 }
@@ -2786,7 +2786,7 @@ void text( int x, int y, char const* str, int color, int font_asset
 }
 
 
-int key_is_down( key_t key ) {
+int key_is_down( keys_t key ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->user_thread.keyboard.state ) / sizeof( *pixie->user_thread.keyboard.state ) ) {
@@ -2801,7 +2801,7 @@ int key_is_down( key_t key ) {
 }
 
 
-int key_was_pressed( key_t key ) {
+int key_was_pressed( keys_t key ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->user_thread.keyboard.state ) / sizeof( *pixie->user_thread.keyboard.state ) ) {
@@ -2820,7 +2820,7 @@ int key_was_pressed( key_t key ) {
 }
 
 
-int key_was_released( key_t key ) {
+int key_was_released( keys_t key ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
 	if( key < 0 || key >= sizeof( pixie->user_thread.keyboard.state ) / sizeof( *pixie->user_thread.keyboard.state ) ) {
