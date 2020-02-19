@@ -35,4 +35,4 @@ jobs:
       - name: build pixie
         run: |
           cd runtime
-          gcc ../source/main.c -lSDL2 -lGLEW -lGL -lm -pthread
+          gcc ../source/main.c -lSDL2 -lGLEW -lGL -lm -lpthread
