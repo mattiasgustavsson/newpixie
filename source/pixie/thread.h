@@ -26,7 +26,7 @@ void thread_yield( void );
 void thread_exit( int return_code );
 
 typedef void* thread_ptr_t;
-thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char const* name, int stack_size );
+thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, int stack_size );
 void thread_destroy( thread_ptr_t thread );
 int thread_join( thread_ptr_t thread );
 void thread_set_high_priority( thread_ptr_t thread );
@@ -118,7 +118,7 @@ Here's a basic sample program which starts a second thread which just waits and 
         thread_atomic_int_t exit_flag;
         thread_atomic_int_store( &exit_flag, 0 );
 
-        thread_ptr_t thread = thread_create( thread_proc, &exit_flag, "Example thread", THREAD_STACK_SIZE_DEFAULT );
+        thread_ptr_t thread = thread_create( thread_proc, &exit_flag, THREAD_STACK_SIZE_DEFAULT );
 
         thread_timer_t timer;
         thread_timer_init( &timer );
@@ -189,14 +189,13 @@ Exits the calling thread, as if you had done `return return_code;` from the main
 thread_create
 -------------
 
-    thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char const* name, int stack_size )
+    thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, int stack_size )
 
-Creates a new thread running the `thread_proc` function, passing the `user_data` through to it. The thread will be 
-given the debug name given in the `name` parameter, if supported on the platform, and it will have the stack size
-specified in the `stack_size` parameter. To get the operating system default stack size, use the defined constant
-`THREAD_STACK_SIZE_DEFAULT`. When returning from the thread_proc function, the value you return can be received in
-another thread by calling thread_join. `thread_create` returns a pointer to the thread instance, which can be used 
-as a parameter to the functions `thread_destroy`, `thread_join` and `thread_set_high_priority`.
+Creates a new thread running the `thread_proc` function, passing the `user_data` through to it. The thread will have 
+the stack size specified in the `stack_size` parameter. To get the operating system default stack size, use the 
+defined constant `THREAD_STACK_SIZE_DEFAULT`. When returning from the thread_proc function, the value you return can 
+be received in another thread by calling thread_join. `thread_create` returns a pointer to the thread instance, which 
+can be used  as a parameter to the functions `thread_destroy`, `thread_join` and `thread_set_high_priority`.
 
 
 thread_destroy
@@ -673,7 +672,7 @@ void thread_exit( int return_code )
     }
 
 
-thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char const* name, int stack_size )
+thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, int stack_size )
     {
     #if defined( _WIN32 )
 
@@ -682,26 +681,6 @@ thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char c
             (LPTHREAD_START_ROUTINE)(uintptr_t) thread_proc, user_data, 0, &thread_id );
         if( !handle ) return NULL;
 
-        // Yes, this crazy construct with __try and RaiseException is how you name a thread in Visual Studio :S
-        #ifndef __TINYC__
-            if( name && IsDebuggerPresent() )
-                {
-                THREADNAME_INFO info;
-                info.dwType = 0x1000;
-                info.szName = name;
-                info.dwThreadID = thread_id;
-                info.dwFlags = 0;
-
-                __try
-                    {
-                    RaiseException( MS_VC_EXCEPTION, 0, sizeof( info ) / sizeof( ULONG_PTR ), (ULONG_PTR*) &info );
-                    }
-                __except( EXCEPTION_EXECUTE_HANDLER )
-                    {
-                    }
-                }
-        #endif
-
         return (thread_ptr_t) handle;
     
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
@@ -709,10 +688,6 @@ thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, char c
         pthread_t thread;
         if( 0 != pthread_create( &thread, NULL, ( void* (*)( void * ) ) thread_proc, user_data ) )
             return NULL;
-
-        #if !defined( __APPLE__ ) // max doesn't support pthread_setname_np. alternatives?
-            if( name ) pthread_setname_np( thread, name );
-        #endif
 
         return (thread_ptr_t) thread;
     

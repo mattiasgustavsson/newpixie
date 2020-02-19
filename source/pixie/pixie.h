@@ -1931,7 +1931,7 @@ static int internal_pixie_app_proc( app_t* app, void* user_data ) {
 
     // Start the user thread. The entry point `internal_pixie_user_thread` will create the pixie instance and invoke
     // the user supplied `main` function, which defaults to `pixmain` unless PIXIE_NO_MAIN is defined
-    thread_ptr_t user_thread = thread_create( internal_pixie_user_thread, &user_thread_context, NULL, 
+    thread_ptr_t user_thread = thread_create( internal_pixie_user_thread, &user_thread_context, 
         THREAD_STACK_SIZE_DEFAULT );
 
     // Wait up to 5 seconds for user thread - if it takes longer than this, everything has gone wrong so just bail
