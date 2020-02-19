@@ -23,3 +23,15 @@ jobs:
         run: |
           cd .runtime
           clang ../source/main.c -lSDL2 -lGLEW -framework OpenGL
+  build-linux-gcc:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -qq libsdl2-dev
+          sudo apt-get install -qq libglew-dev
+      - name: build pixie
+        run: |
+          gcc ../source/main.c -lSDL2 -lGLEW -lGL
