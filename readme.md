@@ -32,4 +32,14 @@ Go to the `runtime` folder and do
 gcc ../source/main.c -lSDL2 -lGLEW -lGL -lm -lpthread
 ```
 
+SDL2 and GLEW are required - if you don't hsve them installed you can do so by running
+```
+sudo apt-get install libsdl2-dev
+sudo apt-get install libglew-dev
+```
+
+Demo game
+---------
 Alternatively, compile `stranded.c` instead of `main.c` for a more comprehensive demo project.
+
+
