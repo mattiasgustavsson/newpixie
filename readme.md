@@ -21,6 +21,11 @@ Go to the `runtime` folder and do
 clang ../source/main.c -lSDL2 -lGLEW -framework OpenGL
 ```
 
+SDL2 and GLEW are required - if you don't have then installed you can do so by running
+```
+brew install sdl2 glew
+```
+
 ### Linux
 Go to the `runtime` folder and do
 ```
