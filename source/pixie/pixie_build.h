@@ -102,6 +102,7 @@ void* build_font( char const* filenames[], int count, int* out_size );
 #include <string.h>
 
 // Libraries includes
+#include "crc32.h"
 #include "dir.h"
 #include "file_util.h"
 #include "palettize.h"
@@ -111,6 +112,7 @@ void* build_font( char const* filenames[], int count, int* out_size );
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include "stb_truetype.h"
+
 
 #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
 namespace pixie {
@@ -659,6 +661,22 @@ void internal_pixie_free_file_list( char** filenames, int count ) {
 
 int internal_pixie_load_bundle( char const* filename, char const* time, char const* definitions, int count );
 
+int internal_pixie_calculate_hash( char const* filenames[], int count, u32* out_crc ) {
+    u32 crc = 0;
+    for( int i = 0; i < count; ++i ) {
+        size_t size = file_size( filenames[ i ] );
+        mmap_t* mmap = mmap_open_read_only( filenames[ i ], size );
+        if( !mmap ) {
+            printf( "\n\nFailed to open file: %s\n", filenames[ i ] );
+            return EXIT_FAILURE;
+        }
+        crc = crc32( (uint8_t const*) mmap_data( mmap ), mmap_size( mmap ), crc );
+        mmap_close( mmap );
+    }
+    *out_crc = crc;
+    return EXIT_SUCCESS;
+}
+
 
 int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, 
     char const* definitions_file, int definitions_line, int assets_count ) { 
@@ -666,8 +684,21 @@ int internal_pixie_build_and_load_assets( char const* bundle_filename, char cons
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     (void) definitions_line; // TODO: verify definition line
-    if( internal_pixie_load_bundle( bundle_filename, build_time, definitions_file, assets_count ) == EXIT_SUCCESS ) {
-        return EXIT_SUCCESS;
+    int rebuild_all = 1;
+    if( internal_pixie_load_bundle( bundle_filename, NULL, definitions_file, -1 ) == EXIT_SUCCESS ) {
+        if( strcmp( pixie->assets.build_time, build_time ) == 0 ) {
+            return EXIT_SUCCESS;
+        }
+        FILE* fp = fopen( "temp_bundle.tmp", "wb" ); // TODO: proper temp filenames
+        fwrite( mmap_data( pixie->assets.bundle ), 1, mmap_size( pixie->assets.bundle ), fp );
+        fclose( fp );
+        mmap_close( pixie->assets.bundle );
+        memset( &pixie->assets, 0, sizeof( pixie->assets ) );
+        if( internal_pixie_load_bundle( "temp_bundle.tmp", NULL, NULL, -1 ) == EXIT_SUCCESS ) {
+            rebuild_all = 0;
+        } else {
+            delete_file( "temp_bundle.tmp" );
+        }
     }
 
     register_asset_type( "BINARY", build_binary );
@@ -711,6 +742,7 @@ int internal_pixie_build_and_load_assets( char const* bundle_filename, char cons
     
     struct file_list_t {
         int id;
+        u32 crc;
         int offset;
         int size;
     };
@@ -739,10 +771,31 @@ int internal_pixie_build_and_load_assets( char const* bundle_filename, char cons
                 break;
             }
         }
+        u32 source_hash = 0;
+        int found = -1;
         if( build_function ) {
             int files_count = 0;
             char const** filenames = (char const**)internal_pixie_list_files( items[ i ].filename, &files_count );
-            data = build_function( filenames, files_count, &size );
+            if( internal_pixie_calculate_hash( filenames, files_count, &source_hash ) != EXIT_SUCCESS ) {
+                internal_pixie_free_file_list( (char**)filenames, files_count );
+                free( items );
+                free( file_list );
+                return EXIT_FAILURE;
+            }
+            if( !rebuild_all ) {
+                for( int j = 0; j < pixie->assets.count; ++j ) {
+                    if( pixie->assets.assets[ j ].crc == source_hash ) {
+                        found = j;
+                        break;
+                    }
+                }
+            }
+            if( found >= 0 ) {
+                data = (void*)( ((uintptr_t)mmap_data( pixie->assets.bundle ) ) + pixie->assets.assets[ found ].offset );
+                size = pixie->assets.assets[ found ].size;
+            } else {
+                data = build_function( filenames, files_count, &size );
+            }
             internal_pixie_free_file_list( (char**)filenames, files_count );
         } else {
             printf( "\n\nAsset type '%s' is unknown\n", items[ i ].type );
@@ -760,11 +813,19 @@ int internal_pixie_build_and_load_assets( char const* bundle_filename, char cons
         }
 
         file_list[ i ].id = i;
+        file_list[ i ].crc = source_hash;
         file_list[ i ].offset = running_offset;
         file_list[ i ].size = size;
         running_offset += size;
         fwrite( data, 1, (size_t) size, bundle );
-        free( data );
+        if( found < 0 ) {
+            free( data );
+        }
+    }
+    if( rebuild_all == 0 ) {
+        mmap_close( pixie->assets.bundle );
+        memset( &pixie->assets, 0, sizeof( pixie->assets ) );
+        delete_file( "temp_bundle.tmp" );
     }
     printf( "%d bytes, %d assets\n", (int) ftell( bundle ), count );
     fseek( bundle, file_list_pos, SEEK_SET );

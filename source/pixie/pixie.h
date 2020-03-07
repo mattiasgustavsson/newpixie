@@ -1038,9 +1038,11 @@ typedef struct internal_pixie_t {
     // TODO: Mutex to protect concurrent access when initializing
     struct {
         mmap_t* bundle; // Memory mapped file containing all assets
+        char build_time[ 64 ];
         int count; // Total number of assets
         struct {
             int id; // The id as given in the enum defined by the user through the ASSET_... macros
+            u32 crc; // Checksum of the source data this asset was built from
             int offset; // Offset, in bytes from the start of the bundle, to this asset
             int size; // Size, in bytes, of the asset
         }* assets; // Index of all assets in the bundle
@@ -1744,7 +1746,7 @@ int internal_pixie_load_bundle( char const* filename, char const* time, char con
 
     // Verify the header data. If `definitions` or `time` are NULL, or `count` is negative, they are not checked against
     if( strcmp( header->file_id, "PIXIE_ASSETS_BUNDLE" ) != 0 || 
-        strcmp( header->bundle_file, filename ) != 0 ||  
+        ( ( strlen( filename ) < 4 || strcmp( filename + strlen( filename ) - 4, ".tmp" ) != 0 ) && strcmp( header->bundle_file, filename ) != 0 ) ||  
         ( definitions && strcmp( header->definitions_file, definitions ) != 0 ) ||  
         ( time && strcmp( header->build_time, time ) != 0 ) ||  
         ( count > 0 && header->assets_count != count ) ) {
@@ -1753,7 +1755,7 @@ int internal_pixie_load_bundle( char const* filename, char const* time, char con
     }
 
     // Check that the size of all files match the size of the bundle, and that IDs and offsets are as expected.
-    struct { int id; int offset; int size; }* assets = VOID_CAST( (void*)( header + 1 ) );
+    struct { int id; u32 crc; int offset; int size; }* assets = VOID_CAST( (void*)( header + 1 ) );
     size_t total_size = sizeof( *header ) + sizeof( *assets ) * header->assets_count;
     int offset = (int) total_size;
     for( int i = 0; i < header->assets_count; ++i ) {
@@ -1772,6 +1774,7 @@ int internal_pixie_load_bundle( char const* filename, char const* time, char con
 
 
     pixie->assets.bundle = bundle;
+    strcpy( pixie->assets.build_time, header->build_time );
     pixie->assets.count = header->assets_count;
     pixie->assets.assets = VOID_CAST( (void*) assets );
 

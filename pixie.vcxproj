@@ -227,6 +227,7 @@
     <ClInclude Include="source\img.h" />
     <ClInclude Include="source\pixie.h" />
     <ClInclude Include="source\pixie\app.h" />
+    <ClInclude Include="source\pixie\crc32.h" />
     <ClInclude Include="source\pixie\crtemu.h" />
     <ClInclude Include="source\pixie\crt_frame.h" />
     <ClInclude Include="source\pixie\dir.h" />

@@ -76,6 +76,9 @@
       <Filter>pixie</Filter>
     </ClInclude>
     <ClInclude Include="source\dialog_playback.h" />
+    <ClInclude Include="source\pixie\crc32.h">
+      <Filter>pixie</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.c" />
