@@ -1,10 +1,6 @@
 #ifndef pixie_data_h
 #define pixie_data_h
 
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
-
 #ifndef PIXIE_DATA_U8
     #define PIXIE_DATA_U8 unsigned char
 #endif
@@ -21,11 +17,6 @@ static PIXIE_DATA_U64 const* default_font( void );
 /*TODO: static */PIXIE_DATA_U32 const* default_palette( void );
 static PIXIE_DATA_U8 const* default_soundfont( int* size );
 
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
-
 #endif /* pixie_data_h */
 
 
@@ -38,10 +29,6 @@ static PIXIE_DATA_U8 const* default_soundfont( int* size );
 #ifdef PIXIE_DATA_IMPLEMENTATION
 #undef PIXIE_DATA_IMPLEMENTATION
 
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
 
 static PIXIE_DATA_U64 const* default_font( void ) {
     static PIXIE_DATA_U64 const data[ 256 ] = {
@@ -585,10 +572,6 @@ static PIXIE_DATA_U8 const* default_soundfont( int* size ) {
     *size = (int) sizeof( data );
     return data;
 }
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
 
 
 #endif /* PIXIE_DATA_IMPLEMENTATION */

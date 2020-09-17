@@ -15,45 +15,22 @@ before you include this file in *one* C/C++ file to create the implementation.
 #define pixie_build_h
 
 
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-    #define ASSETS_BEGIN( bundle_filename_param ) \
-        namespace pixie { \
-            static void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line )\
-                { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
-            enum internal_pixie_assets_t {
+#define ASSETS_BEGIN( bundle_filename_param ) \
+    static void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line ) \
+        { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
+    enum internal_pixie_assets_t {
 
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-            int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
-                char const* definitions_file, int definitions_line, int assets_count ); \
-            static int load_assets( void ) { \
-                char const* bundle_filename; \
-                int definitions_line; \
-                multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &bundle_filename, &definitions_line ); \
-                return internal_pixie_build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, \
-                    definitions_line, TEMP_PIXIE_ASSETS_COUNT ); \
-            } \
-        } /* namespace pixie */
-#else
-    #define ASSETS_BEGIN( bundle_filename_param ) \
-        static void multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( char const** bundle_filename, int* line ) \
-            { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
-        enum internal_pixie_assets_t {
+#define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
+    int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
+        char const* definitions_file, int definitions_line, int assets_count ); \
+    static int load_assets( void ) { \
+        char const* bundle_filename; \
+        int definitions_line; \
+        multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &bundle_filename, &definitions_line ); \
+        return internal_pixie_build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, \
+            definitions_line, TEMP_PIXIE_ASSETS_COUNT ); \
+    } 
 
-    #define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
-        int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
-            char const* definitions_file, int definitions_line, int assets_count ); \
-        static int load_assets( void ) { \
-            char const* bundle_filename; \
-            int definitions_line; \
-            multiple_pixie_ASSETS_BEGIN_declarations_not_allowed( &bundle_filename, &definitions_line ); \
-            return internal_pixie_build_and_load_assets( bundle_filename, __DATE__ " " __TIME__, __FILE__, \
-                definitions_line, TEMP_PIXIE_ASSETS_COUNT ); \
-        } 
-#endif
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
 
 typedef void* (*asset_build_function_t)( char const* filenames[], int count, int* out_size );
 void register_asset_type( char const* name, asset_build_function_t build_function );
@@ -70,10 +47,6 @@ void* build_song( char const* filenames[], int count, int* out_size );
 void* build_text( char const* filenames[], int count, int* out_size );
 void* build_binary( char const* filenames[], int count, int* out_size );
 void* build_font( char const* filenames[], int count, int* out_size );
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
 
 #endif /* pixie_build_h */
 
@@ -113,10 +86,6 @@ void* build_font( char const* filenames[], int count, int* out_size );
 #include "stb_image_write.h"
 #include "stb_truetype.h"
 
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-namespace pixie {
-#endif
 
 // In C, a void* can be implicitly cast to any other kind of pointer, while in C++ you need an explicit cast. In most
 // cases, the explicit cast works for both C and C++, but if we consider the case where we have nested structs, then
@@ -889,12 +858,6 @@ void free_text_file( char* text ) {
     free( text );
 }
 
-
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-} /* namespace pixie */
-#endif
-
-
 #define DIR_IMPLEMENTATION
 #ifdef _WIN32
     #define DIR_WINDOWS
@@ -934,25 +897,14 @@ void free_text_file( char* text ) {
 #define STBTT_MAX_OVERSAMPLE 1
 #define STBTT_RASTERIZER_VERSION 1
 #if !defined( PIXIE_NO_MATH ) || defined( __TINYC__ )
-    #if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-        #define STBTT_ifloor( x ) ( (int) pixie::floor( x ) )
-        #define STBTT_iceil( x ) ( (int) pixie::ceil( x ) )
-        #define STBTT_sqrt( x ) pixie::sqrt( x )
-        #define STBTT_pow( x, y ) pixie::pow( x, y )
-        #define STBTT_fmod( x, y ) pixie::fmod( x, y )
-        #define STBTT_cos( x ) pixie::cos( (float) (x) )
-        #define STBTT_acos( x ) pixie::acos( x )
-        #define STBTT_fabs( x ) pixie::fabs( x )
-    #else
-        #define STBTT_ifloor( x ) ( (int) internal_pixie_floor( x ) )
-        #define STBTT_iceil( x ) ( (int) internal_pixie_ceil( x ) )
-        #define STBTT_sqrt( x ) internal_pixie_sqrt( x )
-        #define STBTT_pow( x, y ) internal_pixie_pow( x, y )
-        #define STBTT_fmod( x, y ) internal_pixie_fmod( x, y )
-        #define STBTT_cos( x ) internal_pixie_cos( (float) (x) )
-        #define STBTT_acos( x ) internal_pixie_acos( x )
-        #define STBTT_fabs( x ) internal_pixie_fabs( x )
-    #endif
+    #define STBTT_ifloor( x ) ( (int) internal_pixie_floor( x ) )
+    #define STBTT_iceil( x ) ( (int) internal_pixie_ceil( x ) )
+    #define STBTT_sqrt( x ) internal_pixie_sqrt( x )
+    #define STBTT_pow( x, y ) internal_pixie_pow( x, y )
+    #define STBTT_fmod( x, y ) internal_pixie_fmod( x, y )
+    #define STBTT_cos( x ) internal_pixie_cos( (float) (x) )
+    #define STBTT_acos( x ) internal_pixie_acos( x )
+    #define STBTT_fabs( x ) internal_pixie_fabs( x )
 #endif
 #include "stb_truetype.h"
 #undef STB_TRUETYPE_IMPLEMENTATION

@@ -1,9 +1,5 @@
 #include "pixie.h"
 
-#if defined( __cplusplus ) && !defined( PIXIE_NO_NAMESPACE )
-using namespace pixie;
-#endif
-
 ASSETS_BEGIN( "data.dat" )
 ASSET_PALETTE( PAL, "pal.png" )
 ASSET_SPRITE( BALL, "ball.png" )
