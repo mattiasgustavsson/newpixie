@@ -99,23 +99,18 @@ void setup_speech( int speech, char const* character )
 void title_screen( void ) {
     int spr_index = 1;
     sprite( spr_index++, -1050, 0, BACKGROUND );
-    sprite( spr_index++, -1050, 0, TREELINE ) ;
+    sprite( spr_index++, -1050, 0, TREELINE );
+
     int face = sprite( spr_index++, 0, 200, FACE ) ;
     int logo = sprite( spr_index++, 0, -200, LOGO ) ;
-
-    move_t face_move[] = { { 0, 6, MOVE_DELAY }, { 50, 120, MOVE_EASE_OUT_ELASTIC } };
-    move_sprite_y( face, face_move, ARRAY_COUNT( face_move ) );
-
-    move_t logo_move[] = { { 0, 30, MOVE_DELAY }, { 0, 60, MOVE_EASE_OUT_BOUNCE } };
-    move_sprite_y( logo, logo_move, ARRAY_COUNT( logo_move ) );
+    sprite_move_y( face, move_delay( 6 ), move_ease_out_elastic( 120, 50 ), move_end() );
+    sprite_move_y( logo, move_delay( 30 ), move_ease_out_bounce( 60, 0 ), move_end() );
 
     int credits = label( spr_index++, -160, 185, "Code, art, music and design by Mattias Gustavsson", 2, FONT );
     label_align( credits, TEXT_ALIGN_CENTER );
     label_outline( credits, 0 );
     label_shadow( credits, 0 );
-
-    move_t credits_move[] = { { 0, 30, MOVE_DELAY }, { 160, 60, MOVE_EASE_OUT_QUAD } };
-    move_sprite_x( credits, credits_move, ARRAY_COUNT( credits_move ) );
+    sprite_move_x( credits, move_delay( 30 ), move_ease_out_elastic( 60, 160 ), move_end() );
 
 	LOOP {
         wait_vbl();
@@ -277,8 +272,7 @@ int pixmain( int argc, char** argv ) {
 					if( compare( flag, str( "penguin_running" ) ) == 0 ) {
                         sprite_pos( penguin, 970 + 62, sprite_y( penguin ) );
                         sprite_bitmap( penguin, PENGUIN_WALK );
-                        move_t penguin_move[] = { { 0, 30, MOVE_DELAY }, { 970 + 62 + 160, 60, MOVE_LINEAR } };
-                        move_sprite_x( penguin, penguin_move, ARRAY_COUNT( penguin_move ) );
+                        sprite_move_x( penguin, move_delay( 30 ), move_linear( 60, 970 + 62 + 160 ), move_end() );
 						wait( 30 );
                         float penganim = 0.0f;
                         for( int i = 0; i < 90; ++i ) {
@@ -447,8 +441,7 @@ int pixmain( int argc, char** argv ) {
                 if( rescued ) {
                     sprite_bitmap( guy, GUY_JUMP );
 					xpos = 20;
-                    move_t boat_move[] = { { 0, 90, MOVE_DELAY }, { -190, 120, MOVE_EASE_OUT_QUAD } };
-                    move_sprite_x( boat, boat_move, ARRAY_COUNT( boat_move ) );
+                    sprite_move_x( boat, move_delay( 90 ), move_ease_out_quad( 120, -190 ), move_end() );
 					fadeout = 1; 
 				}
 			}

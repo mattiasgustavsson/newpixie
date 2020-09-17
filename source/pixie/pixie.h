@@ -108,24 +108,47 @@ int label_outline( int spr_index, int color );
 int label_shadow( int spr_index, int color );
 int label_wrap( int spr_index, int wrap );
 
-typedef enum move_type_t {
-    MOVE_DELAY, MOVE_LINEAR, MOVE_SMOOTHSTEP, MOVE_SMOOTHERSTEP, MOVE_EASE_OUT_QUAD, MOVE_EASE_OUT_BACK, 
-    MOVE_EASE_OUT_BOUNCE, MOVE_EASE_OUT_SINE, MOVE_EASE_OUT_ELASTIC, MOVE_EASE_OUT_EXPO, MOVE_EASE_OUT_CUBIC, 
-    MOVE_EASE_OUT_QUART, MOVE_EASE_OUT_QUINT, MOVE_EASE_OUT_CIRCLE, MOVE_EASE_IN_QUAD, MOVE_EASE_IN_BACK, 
-    MOVE_EASE_IN_BOUNCE, MOVE_EASE_IN_SINE, MOVE_EASE_IN_ELASTIC, MOVE_EASE_IN_EXPO, MOVE_EASE_IN_CUBIC, 
-    MOVE_EASE_IN_QUART, MOVE_EASE_IN_QUINT, MOVE_EASE_IN_CIRCLE, MOVE_EASE_IN_OUT_QUAD, MOVE_EASE_IN_OUT_BACK, 
-    MOVE_EASE_IN_OUT_BOUNCE, MOVE_EASE_IN_OUT_SINE, MOVE_EASE_IN_OUT_ELASTIC, MOVE_EASE_IN_OUT_EXPO, 
-    MOVE_EASE_IN_OUT_CUBIC, MOVE_EASE_IN_OUT_QUART, MOVE_EASE_IN_OUT_QUINT,MOVE_EASE_IN_OUT_CIRCLE,
-} move_type_t;
+typedef struct move_t { u32 data[ 4 ]; /* opaque struct, 16 bytes long */ } move_t;
 
-typedef struct move_t {
-    int target;
-    int duration;
-    move_type_t type;
-} move_t;
+move_t move_loop( void );
+move_t move_end( void );
+move_t move_delay( int duration ); 
+move_t move_linear( int duration, int target ); 
+move_t move_smoothstep( int duration, int target ); 
+move_t move_smootherstep( int duration, int target ); 
+move_t move_ease_out_quad( int duration, int target ); 
+move_t move_ease_out_back( int duration, int target ); 
+move_t move_ease_out_bounce( int duration, int target ); 
+move_t move_ease_out_sine( int duration, int target ); 
+move_t move_ease_out_elastic( int duration, int target ); 
+move_t move_ease_out_expo( int duration, int target ); 
+move_t move_ease_out_cubic( int duration, int target ); 
+move_t move_ease_out_quart( int duration, int target ); 
+move_t move_ease_out_quint( int duration, int target ); 
+move_t move_ease_out_circle( int duration, int target ); 
+move_t move_ease_in_quad( int duration, int target ); 
+move_t move_ease_in_back( int duration, int target ); 
+move_t move_ease_in_bounce( int duration, int target ); 
+move_t move_ease_in_sine( int duration, int target ); 
+move_t move_ease_in_elastic( int duration, int target ); 
+move_t move_ease_in_expo( int duration, int target ); 
+move_t move_ease_in_cubic( int duration, int target ); 
+move_t move_ease_in_quart( int duration, int target ); 
+move_t move_ease_in_quint( int duration, int target ); 
+move_t move_ease_in_circle( int duration, int target ); 
+move_t move_ease_in_out_quad( int duration, int target ); 
+move_t move_ease_in_out_back( int duration, int target ); 
+move_t move_ease_in_out_bounce( int duration, int target ); 
+move_t move_ease_in_out_sine( int duration, int target ); 
+move_t move_ease_in_out_elastic( int duration, int target ); 
+move_t move_ease_in_out_expo( int duration, int target ); 
+move_t move_ease_in_out_cubic( int duration, int target ); 
+move_t move_ease_in_out_quart( int duration, int target ); 
+move_t move_ease_in_out_quint( int duration, int target );
+move_t move_ease_in_out_circle( int duration, int target );
 
-void move_sprite_x( int spr_index, move_t* moves, int moves_count );
-void move_sprite_y( int spr_index, move_t* moves, int moves_count );
+void sprite_move_x( int spr_index, move_t moves, ... );
+void sprite_move_y( int spr_index, move_t moves, ... );
 
 #define ARRAY_COUNT( x ) ( (int)( sizeof( x ) / sizeof( *x ) ) )
 
@@ -746,7 +769,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
 #include <limits.h>
 #include <sys/stat.h>
 #include <stdint.h>
-
+#include <stdarg.h>
 
 // Libraries includes
 #include "app.h"
@@ -804,6 +827,38 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
 -----------------------
 */
 
+typedef enum internal_pixie_move_type_t {
+    INTERNAL_PIXIE_MOVE_LOOP, INTERNAL_PIXIE_MOVE_END, INTERNAL_PIXIE_MOVE_DELAY, INTERNAL_PIXIE_MOVE_LINEAR, 
+    INTERNAL_PIXIE_MOVE_SMOOTHSTEP, INTERNAL_PIXIE_MOVE_SMOOTHERSTEP, INTERNAL_PIXIE_MOVE_EASE_OUT_QUAD, 
+    INTERNAL_PIXIE_MOVE_EASE_OUT_BACK, INTERNAL_PIXIE_MOVE_EASE_OUT_BOUNCE, INTERNAL_PIXIE_MOVE_EASE_OUT_SINE, 
+    INTERNAL_PIXIE_MOVE_EASE_OUT_ELASTIC, INTERNAL_PIXIE_MOVE_EASE_OUT_EXPO, INTERNAL_PIXIE_MOVE_EASE_OUT_CUBIC, 
+    INTERNAL_PIXIE_MOVE_EASE_OUT_QUART, INTERNAL_PIXIE_MOVE_EASE_OUT_QUINT, INTERNAL_PIXIE_MOVE_EASE_OUT_CIRCLE, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_QUAD, INTERNAL_PIXIE_MOVE_EASE_IN_BACK, INTERNAL_PIXIE_MOVE_EASE_IN_BOUNCE, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_SINE, INTERNAL_PIXIE_MOVE_EASE_IN_ELASTIC, INTERNAL_PIXIE_MOVE_EASE_IN_EXPO, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_CUBIC, INTERNAL_PIXIE_MOVE_EASE_IN_QUART, INTERNAL_PIXIE_MOVE_EASE_IN_QUINT, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_CIRCLE, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUAD, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_BACK, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_OUT_BOUNCE, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_SINE, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_OUT_ELASTIC, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_EXPO, 
+    INTERNAL_PIXIE_MOVE_EASE_IN_OUT_CUBIC, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUART, INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUINT,
+    INTERNAL_PIXIE_MOVE_EASE_IN_OUT_CIRCLE, 
+    INTERNAL_PIXIE_MOVECOUNT
+} internal_pixie_move_type_t;
+
+
+typedef struct internal_pixie_move_command_t {
+    i32 type;
+    i32 target;
+    i32 duration;
+    u32 hash;
+} internal_pixie_move_command_t;
+
+
+typedef struct internal_pixie_move_t {
+    internal_pixie_move_type_t type;
+    int target;
+    int duration;
+} internal_pixie_move_t;
+
 
 // Main engine state - *everything* is stored here, and data is accessed from both the app thread and the user thread,
 // with various mutexes being used to limit concurrent access where necessary. The instance is created within the `run` 
@@ -816,10 +871,11 @@ typedef enum internal_pixie_sprite_type_t { TYPE_NONE, TYPE_SPRITE, TYPE_LABEL, 
 
 typedef struct internal_pixie_sprite_moves_t {
     int count;
-    move_t moves[ 16 ];
+    internal_pixie_move_t moves[ 16 ];
     int index;
     int time;
     int start;
+    int loop;
 } internal_pixie_sprite_moves_t;
 
 
@@ -1238,7 +1294,7 @@ static void internal_pixie_update_input( internal_pixie_t* pixie, app_input_even
     
     int const prev_array_size = 
         sizeof( pixie->app_thread.keyboard.prev ) / sizeof( *pixie->app_thread.keyboard.prev );
-
+    (void) prev_array_size;
 	ASSERT( keyboard_array_size == prev_array_size, "Key states size mismatch" );
 
 	for( int i = 0; i < keyboard_array_size; ++i ) {
@@ -1349,21 +1405,21 @@ void internal_pixie_copy_user_thread_data( internal_pixie_user_thread_data_t* de
 
 void internal_pixie_update_sprite_movement( int* value, internal_pixie_sprite_moves_t* moves ) {
     static float (* const easefuncs[])( float ) = { 
-        NULL, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, ease_out_back, ease_out_bounce, 
-        ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, ease_out_quint, 
-        ease_out_circle, ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, ease_in_expo, 
-        ease_in_cubic, ease_in_quart, ease_in_quint, ease_in_circle, ease_in_out_quad, ease_in_out_back, 
-        ease_in_out_bounce, ease_in_out_sine, ease_in_out_elastic, ease_in_out_expo, ease_in_out_cubic, 
-        ease_in_out_quart, ease_in_out_quint, ease_in_out_circle,
+        ease_linear, ease_linear, ease_linear, ease_linear, ease_smoothstep, ease_smootherstep, ease_out_quad, 
+        ease_out_back, ease_out_bounce, ease_out_sine, ease_out_elastic, ease_out_expo, ease_out_cubic, ease_out_quart, 
+        ease_out_quint, ease_out_circle, ease_in_quad, ease_in_back, ease_in_bounce, ease_in_sine, ease_in_elastic, 
+        ease_in_expo,  ease_in_cubic, ease_in_quart, ease_in_quint, ease_in_circle, ease_in_out_quad, 
+        ease_in_out_back, ease_in_out_bounce, ease_in_out_sine, ease_in_out_elastic, ease_in_out_expo, 
+        ease_in_out_cubic, ease_in_out_quart, ease_in_out_quint, ease_in_out_circle,
     };
 
     if( moves->count > 0 ) {
         ++moves->time;
-        move_t* move = &moves->moves[ moves->index ];
+        internal_pixie_move_t* move = &moves->moves[ moves->index ];
         if( moves->time <= move->duration ) {
             float range = (float)( move->target - moves->start );
             float current = ( (float) moves->time ) / (float) move->duration;
-            if( move->type != MOVE_DELAY ) {
+            if( move->type >= INTERNAL_PIXIE_MOVE_LINEAR ) {
                 float t = easefuncs[ move->type ]( current );
                 int pos = moves->start + (int)( t * range );
                 *value = pos;
@@ -1371,10 +1427,14 @@ void internal_pixie_update_sprite_movement( int* value, internal_pixie_sprite_mo
         } else {
             ++moves->index;
             if( moves->index >= moves->count ) {
-                moves->count = 0;
+                if( moves->loop ) {
+                    moves->index = 0;
+                } else {
+                    moves->count = 0;
+                }
             } else {
                 moves->time = 0;
-                if( move->type != MOVE_DELAY ) {
+                if( move->type >= INTERNAL_PIXIE_MOVE_LINEAR ) {
                     *value = move->target;
                 }
                 moves->start = *value;
@@ -2579,42 +2639,316 @@ void const* asset_data( int asset ) {
 }
 
 
-void move_sprite_x( int spr_index, move_t* moves, int moves_count ) {
+u32 internal_pixie_move_hash( u8* data, int len ) {
+    u32 hash = 0xda442d24U;
+    while( --len ) {
+        hash = (*data++) + ( hash << 6 ) + ( hash << 16 ) - hash;
+    }
+
+    return hash;
+}
+
+
+move_t internal_pixie_make_move( internal_pixie_move_type_t type, int duration, int target ) {
+    internal_pixie_move_command_t move;
+    move.type = type;
+    move.duration = duration;
+    move.target = target;
+    move.hash = internal_pixie_move_hash( (u8*) &move, sizeof( i32 ) * 3 );
+    return *(move_t*)&move;
+}
+
+
+move_t move_loop( void ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_LOOP, 0, 0 ); 
+}
+
+
+move_t move_end( void ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_END, 0, 0 ); 
+}
+
+
+move_t move_delay( int duration ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_DELAY, duration, 0 ); 
+}
+
+ 
+move_t move_linear( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_LINEAR, duration, target ); 
+}
+
+  
+move_t move_smoothstep( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_SMOOTHSTEP, duration, target ); 
+}
+
+   
+move_t move_smootherstep( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_SMOOTHERSTEP, duration, target ); 
+}
+
+   
+move_t move_ease_out_quad( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_QUAD, duration, target ); 
+}
+
+   
+move_t move_ease_out_back( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_BACK, duration, target ); 
+}
+
+   
+move_t move_ease_out_bounce( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_BOUNCE, duration, target ); 
+}
+
+   
+move_t move_ease_out_sine( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_SINE, duration, target ); 
+}
+
+   
+move_t move_ease_out_elastic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_ELASTIC, duration, target ); 
+}
+
+   
+move_t move_ease_out_expo( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_EXPO, duration, target ); 
+}
+
+   
+move_t move_ease_out_cubic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_CUBIC, duration, target ); 
+}
+
+   
+move_t move_ease_out_quart( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_QUART, duration, target ); 
+}
+
+   
+move_t move_ease_out_quint( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_QUINT, duration, target ); 
+}
+
+   
+move_t move_ease_out_circle( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_OUT_CIRCLE, duration, target ); 
+}
+
+   
+move_t move_ease_in_quad( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_QUAD, duration, target ); 
+}
+
+   
+move_t move_ease_in_back( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_BACK, duration, target ); 
+}
+
+   
+move_t move_ease_in_bounce( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_BOUNCE, duration, target ); 
+}
+
+   
+move_t move_ease_in_sine( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_SINE, duration, target ); 
+}
+
+   
+move_t move_ease_in_elastic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_ELASTIC, duration, target ); 
+}
+
+   
+move_t move_ease_in_expo( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_EXPO, duration, target ); 
+}
+
+   
+move_t move_ease_in_cubic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_CUBIC, duration, target ); 
+}
+
+   
+move_t move_ease_in_quart( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_QUART, duration, target ); 
+}
+
+   
+move_t move_ease_in_quint( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_QUINT, duration, target ); 
+}
+
+   
+move_t move_ease_in_circle( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_CIRCLE, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_quad( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUAD, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_back( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_BACK, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_bounce( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_BOUNCE, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_sine( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_SINE, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_elastic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_ELASTIC, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_expo( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_EXPO, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_cubic( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_CUBIC, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_quart( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUART, duration, target ); 
+}
+
+   
+move_t move_ease_in_out_quint( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_QUINT, duration, target ); 
+}
+
+  
+move_t move_ease_in_out_circle( int duration, int target ) { 
+    return internal_pixie_make_move( INTERNAL_PIXIE_MOVE_EASE_IN_OUT_CIRCLE, duration, target ); 
+}
+
+  
+void sprite_move_x( int spr_index, move_t moves, ... ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
     if( spr_index < 1 || spr_index > pixie->user_thread.sprites.sprite_count ) {
-    internal_pixie_release( pixie );
+        internal_pixie_release( pixie );
     }
 
     --spr_index;
+
     int max_count = ARRAY_COUNT( pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves );
-    if( moves_count > max_count ) {
-        moves_count = max_count;
+    int count = 0;
+    
+    internal_pixie_move_command_t move = *(internal_pixie_move_command_t*)&moves;
+    va_list args;
+    va_start( args, moves );
+    for( ; ; ) {
+        ASSERT( move.type >= 0 || move.type < INTERNAL_PIXIE_MOVECOUNT, 
+            "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+        if( move.type < 0 || move.type >= INTERNAL_PIXIE_MOVECOUNT || move.type == INTERNAL_PIXIE_MOVE_END ) {
+            pixie->user_thread.sprites.sprites[ spr_index ].move_x.loop = 0;
+            break;
+        }
+        
+        u32 hash = internal_pixie_move_hash( (u8*) &move, sizeof( i32 ) * 3 );
+        ASSERT( hash == move.hash, 
+            "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+        if( hash != move.hash ) {
+            break;
+        }
+
+        if( move.type == INTERNAL_PIXIE_MOVE_LOOP ) {
+            pixie->user_thread.sprites.sprites[ spr_index ].move_x.loop = count > 0 ? 1 : 0;
+            break;
+        }
+
+        pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves[ count ].type = move.type;
+        pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves[ count ].duration = move.duration;
+        pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves[ count ].target = move.target;
+
+        ++count;
+        ASSERTF( count <= max_count, 
+            ( "Too many arguments in move command list. A maximum of %d commands supported", max_count ) );
+        if( count > max_count ) {
+            break;
+        }
+
+        move = va_arg( args, internal_pixie_move_command_t );
     }
-    memcpy( pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves, moves, sizeof( *moves ) * moves_count );
-    pixie->user_thread.sprites.sprites[ spr_index ].move_x.count = moves_count;
+    va_end( args );
+
+    pixie->user_thread.sprites.sprites[ spr_index ].move_x.count = count;
     pixie->user_thread.sprites.sprites[ spr_index ].move_x.index = 0;
     pixie->user_thread.sprites.sprites[ spr_index ].move_x.time = 0;
-    pixie->user_thread.sprites.sprites[ spr_index ].move_x.start = pixie->user_thread.sprites.sprites[ spr_index ].y;
+    pixie->user_thread.sprites.sprites[ spr_index ].move_x.start = pixie->user_thread.sprites.sprites[ spr_index ].x;
 
     internal_pixie_release( pixie );
 }
 
 
-void move_sprite_y( int spr_index, move_t* moves, int moves_count ) {
+void sprite_move_y( int spr_index, move_t moves, ... ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
     if( spr_index < 1 || spr_index > pixie->user_thread.sprites.sprite_count ) {
-    internal_pixie_release( pixie );
+        internal_pixie_release( pixie );
     }
 
     --spr_index;
-    int max_count = ARRAY_COUNT( pixie->user_thread.sprites.sprites[ spr_index ].move_y.moves );
-    if( moves_count > max_count ) {
-        moves_count = max_count;
+
+    int max_count = ARRAY_COUNT( pixie->user_thread.sprites.sprites[ spr_index ].move_x.moves );
+    int count = 0;
+    
+    internal_pixie_move_command_t move = *(internal_pixie_move_command_t*)&moves;
+    va_list args;
+    va_start( args, moves );
+    for( ; ; ) {
+        ASSERT( move.type >= 0 || move.type < INTERNAL_PIXIE_MOVECOUNT, 
+            "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+        if( move.type < 0 || move.type >= INTERNAL_PIXIE_MOVECOUNT || move.type == INTERNAL_PIXIE_MOVE_END ) {
+            pixie->user_thread.sprites.sprites[ spr_index ].move_y.loop = 0;
+            break;
+        }
+        
+        u32 hash = internal_pixie_move_hash( (u8*) &move, sizeof( i32 ) * 3 );
+        ASSERT( hash == move.hash, 
+            "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+        if( hash != move.hash ) {
+            break;
+        }
+
+        if( move.type == INTERNAL_PIXIE_MOVE_LOOP ) {
+            pixie->user_thread.sprites.sprites[ spr_index ].move_y.loop = count > 0 ? 1 : 0;
+            break;
+        }
+
+        pixie->user_thread.sprites.sprites[ spr_index ].move_y.moves[ count ].type = move.type;
+        pixie->user_thread.sprites.sprites[ spr_index ].move_y.moves[ count ].duration = move.duration;
+        pixie->user_thread.sprites.sprites[ spr_index ].move_y.moves[ count ].target = move.target;
+
+        ++count;
+        ASSERTF( count <= max_count, 
+            ( "Too many arguments in move command list. A maximum of %d commands supported", max_count ) );
+        if( count > max_count ) {
+            break;
+        }
+
+        move = va_arg( args, internal_pixie_move_command_t );
     }
-    memcpy( pixie->user_thread.sprites.sprites[ spr_index ].move_y.moves, moves, sizeof( *moves ) * moves_count );
-    pixie->user_thread.sprites.sprites[ spr_index ].move_y.count = moves_count;
+    va_end( args );
+
+    pixie->user_thread.sprites.sprites[ spr_index ].move_y.count = count;
     pixie->user_thread.sprites.sprites[ spr_index ].move_y.index = 0;
     pixie->user_thread.sprites.sprites[ spr_index ].move_y.time = 0;
     pixie->user_thread.sprites.sprites[ spr_index ].move_y.start = pixie->user_thread.sprites.sprites[ spr_index ].y;
