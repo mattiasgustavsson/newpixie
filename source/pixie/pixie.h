@@ -20,47 +20,41 @@ before you include this file in *one* C/C++ file to create the implementation.
 ---------
 */
 
-// Sized types
+// Sized int types
 #ifndef PIXIE_I8 
-    typedef signed char i8;
-#else
-    typedef PIXIE_I8 i8;
+    #define PIXIE_I8 signed char
 #endif
 #ifndef PIXIE_I16 
-    typedef signed short i16;
-#else
-    typedef PIXIE_I16 i16;
+    #define PIXIE_I16 signed short
 #endif
 #ifndef PIXIE_I32
-    typedef signed int i32;
-#else
-    typedef PIXIE_I32 i32;
+    #define PIXIE_I32 signed int
 #endif
 #ifndef PIXIE_I64
-    typedef signed long long i64;
-#else
-    typedef PIXIE_I64 i64;
+    #define PIXIE_I64 signed long long
 #endif
 #ifndef PIXIE_U8 
-    typedef unsigned char u8;
-#else
-    typedef PIXIE_U8 u8;
+    #define PIXIE_U8 unsigned char
 #endif
 #ifndef PIXIE_U16 
-    typedef unsigned short u16;
-#else
-    typedef PIXIE_U16 u16;
+    #define PIXIE_U16 unsigned short
 #endif
 #ifndef PIXIE_U32
-    typedef unsigned int u32;
-#else
-    typedef PIXIE_U32 u32;
+    #define PIXIE_U32 unsigned int
 #endif
 #ifndef PIXIE_U64
-    typedef unsigned long long u64;
-#else
-    typedef PIXIE_U64 u64;
+    #define PIXIE_U64 unsigned long long
 #endif
+
+// Sized int typedefs
+typedef PIXIE_I8 i8;
+typedef PIXIE_I16 i16;
+typedef PIXIE_I32 i32;
+typedef PIXIE_I64 i64;
+typedef PIXIE_U8 u8;
+typedef PIXIE_U16 u16;
+typedef PIXIE_U32 u32;
+typedef PIXIE_U64 u64;
 
 
 // API Functions
