@@ -489,13 +489,13 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
 ------------------
 */
 
-#define ARRAY_TYPE( NAME, TYPE, CAPACITY ) \
-    typedef struct NAME##_type { \
+#define DECLARE_ARRAY( NAME, TYPE, CAPACITY ) \
+    typedef struct NAME##_array { \
         int count; \
         TYPE items[ CAPACITY ]; \
-    } NAME##_type; \
+    } NAME##_array; \
     \
-    static int NAME##_count( NAME##_type* arr ) { \
+    static int NAME##_count( NAME##_array* arr ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when querying size of array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -506,7 +506,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static void NAME##_add( NAME##_type* arr, TYPE value ) { \
+    static void NAME##_add( NAME##_array* arr, TYPE value ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when adding an item to array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -518,7 +518,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static int NAME##_try_add( NAME##_type* arr, TYPE value ) { \
+    static int NAME##_try_add( NAME##_array* arr, TYPE value ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when trying to add an item to array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -530,7 +530,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static void NAME##_remove( NAME##_type* arr, int index ) { \
+    static void NAME##_remove( NAME##_array* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when removing an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -546,7 +546,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static int NAME##_try_remove( NAME##_type* arr, int index ) { \
+    static int NAME##_try_remove( NAME##_array* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when trying to remove an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -562,7 +562,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static TYPE NAME##_get( NAME##_type const* arr, int index ) { \
+    static TYPE NAME##_get( NAME##_array const* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \
@@ -578,7 +578,7 @@ char const* internal_pixie_format_assert_message( char const* format, ... );
         } \
     } \
     \
-    static TYPE const* NAME##_try_get( NAME##_type const* arr, int index ) { \
+    static TYPE const* NAME##_try_get( NAME##_array const* arr, int index ) { \
         ASSERTF( arr->count >= 0 && arr->count <= CAPACITY, \
             ( "Invalid array count detected when getting an item from array of TYPE '%s'.\n\n" \
             "The invalid count is: %d", #NAME, arr->count ) ); \

@@ -125,7 +125,7 @@ void title_screen( void ) {
 }
 
 
-ARRAY_TYPE( objects, int, 32 );
+DECLARE_ARRAY( objects, int, 32 );
 
 
 int pixmain( int argc, char** argv ) {
@@ -149,7 +149,7 @@ int pixmain( int argc, char** argv ) {
 
 	title_screen();
   
-    objects_type objects = { 0 };
+    objects_array objects = { 0 };
 
     int spr_index = 1;
 
