@@ -20,7 +20,7 @@ before you include this file in *one* C/C++ file to create the implementation.
         { *bundle_filename = bundle_filename_param; *line = __LINE__; } \
     enum internal_pixie_assets_t {
 
-#define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT }; \
+#define ASSETS_END() TEMP_PIXIE_ASSETS_COUNT } /* enum internal_pixie_assets_t */; \
     int internal_pixie_build_and_load_assets( char const* bundle_filename, char const* build_time, \
         char const* definitions_file, int definitions_line, int assets_count ); \
     static int load_assets( void ) { \

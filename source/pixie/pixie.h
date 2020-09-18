@@ -73,7 +73,10 @@ void crt_mode_on( void );
 void crt_mode_off( void );
 
 void print( char const* str );
-void load_palette( int asset );
+
+typedef int asset_t;
+
+void load_palette( asset_t asset );
 
 typedef struct rgb_t {
     int r;
@@ -86,8 +89,8 @@ rgb_t getcol( int index );
 
 void sprites_off( void );
 
-int sprite( int spr_index, int x, int y, int asset );
-void sprite_bitmap( int spr_index, int asset );
+int sprite( int spr_index, int x, int y, asset_t asset );
+void sprite_bitmap( int spr_index, asset_t asset );
 int sprite_visible( int spr_index );
 void sprite_show( int spr_index );
 void sprite_hide( int spr_index );
@@ -100,7 +103,7 @@ int sprite_origin_y( int spr_index );
 void sprite_cel( int spr_index, int cel );
 
 typedef enum text_align_t { TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER, } text_align_t;
-int label( int spr_index, int x, int y, char const* text, int color, int font_asset );
+int label( int spr_index, int x, int y, char const* text, int color, asset_t font );
 int label_text( int spr_index, char const* text );
 int label_align( int spr_index, text_align_t align );
 int label_color( int spr_index, int color );
@@ -152,14 +155,14 @@ void sprite_move_y( int spr_index, move_t moves, ... );
 
 #define ARRAY_COUNT( x ) ( (int)( sizeof( x ) / sizeof( *x ) ) )
 
-void set_soundfont( int asset );
-void play_song( int asset );
-char const* load_text( int asset_id );
+void set_soundfont( asset_t asset );
+void play_song( asset_t asset );
+char const* load_text( asset_t asset );
 
-int asset_size( int asset_id );
-void const* asset_data( int asset_id );
+int asset_size( asset_t asset );
+void const* asset_data( asset_t asset );
 
-void text( int x, int y, char const* str, int color, int font_asset 
+void text( int x, int y, char const* str, int color, asset_t font 
 	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, 
     bool underline */ );
 
@@ -890,7 +893,7 @@ typedef struct internal_pixie_sprite_t {
             
     union {
         struct {
-            int asset;
+            asset_t asset;
             int cel;
         } sprite;
 
@@ -2110,7 +2113,7 @@ void print( char const* str ) {
 
 // Apply palette from file to the global palette
 
-void load_palette( int asset ) {
+void load_palette( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
@@ -2173,7 +2176,7 @@ void sprites_off( void ) {
 
 // Assign a bitmap to a sprite, and give it a position
 
-int sprite( int spr_index, int x, int y, int asset ) {
+int sprite( int spr_index, int x, int y, asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
     
     if( asset < 0 || asset >= pixie->assets.count ) {
@@ -2207,7 +2210,7 @@ int sprite( int spr_index, int x, int y, int asset ) {
 }
 
 
-void sprite_bitmap( int spr_index, int asset ) {
+void sprite_bitmap( int spr_index, asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
 
     if( asset < 0 || asset >= pixie->assets.count ) {
@@ -2387,10 +2390,10 @@ void sprite_cel( int spr_index, int cel ) {
 }
 
 
-int label( int spr_index, int x, int y, char const* text, int color, int font_asset ) {
+int label( int spr_index, int x, int y, char const* text, int color, asset_t font ) {
     internal_pixie_t* pixie = internal_pixie_acquire(); // Get `internal_pixie_t` instance from thread local storage
     
-    if( font_asset < 0 || font_asset >= pixie->assets.count ) {
+    if( font < 0 || font >= pixie->assets.count ) {
         internal_pixie_release( pixie );
         return 0;
     }
@@ -2408,7 +2411,7 @@ int label( int spr_index, int x, int y, char const* text, int color, int font_as
     }
     pixie->user_thread.sprites.sprites[ spr_index ].type = TYPE_LABEL;
     pixie->user_thread.sprites.sprites[ spr_index ].data.label.text = strdup( text ? text : "" );
-    pixie->user_thread.sprites.sprites[ spr_index ].data.label.font = font_asset + 1;
+    pixie->user_thread.sprites.sprites[ spr_index ].data.label.font = font + 1;
     pixie->user_thread.sprites.sprites[ spr_index ].data.label.color = color;
     pixie->user_thread.sprites.sprites[ spr_index ].data.label.outline = -1;
     pixie->user_thread.sprites.sprites[ spr_index ].data.label.shadow = -1;
@@ -2559,7 +2562,7 @@ int label_wrap( int spr_index, int wrap ) {
 }
 
 
-void set_soundfont( int asset ) {
+void set_soundfont( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( asset < 0 || asset >= pixie->assets.count ) {
@@ -2579,7 +2582,7 @@ void set_soundfont( int asset ) {
 }
 
 
-void play_song( int asset ) {
+void play_song( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     if( asset < 0 || asset >= pixie->assets.count ) {
@@ -2611,7 +2614,7 @@ void play_song( int asset ) {
 }
 
 
-char const* load_text( int asset ) {
+char const* load_text( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
@@ -2621,7 +2624,7 @@ char const* load_text( int asset ) {
 }
 
 
-int asset_size( int asset ) {
+int asset_size( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
@@ -2631,7 +2634,7 @@ int asset_size( int asset ) {
 }
 
 
-void const* asset_data( int asset ) {
+void const* asset_data( asset_t asset ) {
     internal_pixie_t* pixie = internal_pixie_instance(); // Get `internal_pixie_t` instance from thread local storage
 
     int size = 0;
@@ -2957,7 +2960,7 @@ void sprite_move_y( int spr_index, move_t moves, ... ) {
 }
 
 
-void text( int x, int y, char const* str, int color, int font_asset 
+void text( int x, int y, char const* str, int color, asset_t font
 	/*, text_align align, int wrap_width, int hspacing, int vspacing, int limit, bool bold, bool italic, 
     bool underline */ ) {
 
@@ -2971,7 +2974,7 @@ void text( int x, int y, char const* str, int color, int font_asset
 	pixelfont_bounds.width = 0;
 	pixelfont_bounds.height = 0;
 
-    pixelfont_t* pixelfont = (pixelfont_t*) internal_pixie_find_asset( pixie, font_asset, NULL );
+    pixelfont_t* pixelfont = (pixelfont_t*) internal_pixie_find_asset( pixie, font, NULL );
 	pixelfont_blit_u8( pixelfont, x, y, str, (u8) color, 
         pixie->user_thread.screen.pixels, pixie->user_thread.screen.screen_width, pixie->user_thread.screen.screen_height,
         pixelfont_align, -1, 0, 0, -1, PIXELFONT_BOLD_OFF, PIXELFONT_ITALIC_OFF, PIXELFONT_UNDERLINE_OFF, 
