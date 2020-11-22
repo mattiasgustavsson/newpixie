@@ -2888,7 +2888,16 @@ void sprite_move_x( int spr_index, move_t moves, ... ) {
             break;
         }
 
-        move = va_arg( args, internal_pixie_move_command_t );
+        #ifdef _WIN32
+        __try {
+        #endif            
+        move = va_arg( args, internal_pixie_move_command_t );        
+        #ifdef _WIN32
+        } __except( 1 ) {
+            ASSERT( 0, "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+            break;
+        }
+        #endif
     }
     va_end( args );
 
@@ -2946,8 +2955,16 @@ void sprite_move_y( int spr_index, move_t moves, ... ) {
         if( count > max_count ) {
             break;
         }
-
-        move = va_arg( args, internal_pixie_move_command_t );
+        #ifdef _WIN32
+        __try {
+        #endif            
+        move = va_arg( args, internal_pixie_move_command_t );        
+        #ifdef _WIN32
+        } __except( 1 ) {
+            ASSERT( 0, "Invalid move command. Move command lists must end with a `move_loop` or a `move_end`." );
+            break;
+        }
+        #endif
     }
     va_end( args );
 
