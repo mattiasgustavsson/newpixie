@@ -1,4 +1,4 @@
-![build](https://github.com/mattiasgustavsson/newpixie/workflows/build/badge.svg)
+![build](https://github.com/mattiasgustavsson/newpixie/actions/workflows/main.yml/badge.svg)
 
 Pixie Game Engine
 =================
